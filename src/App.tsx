@@ -1,15 +1,17 @@
-import { Button } from './components/Button';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Home } from './pages/Home';
+import { Onboarding } from './pages/Onboarding';
 
 export default function App() {
   return (
-    <div className="flex flex-col min-h-screen items-center justify-center bg-zinc-900 gap-6">
-      <h1 className="text-3xl font-bold text-green-400">
-        Nosso App de Nutrição!
-      </h1>
-      
-      <Button onClick={() => alert('O botão está funcionando, chefe!')}>
-        Começar agora
-      </Button>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        {/* Se a URL for só a barra (/), mostre a tela Home */}
+        <Route path="/" element={<Home />} />
+        
+        {/* Se a URL for /onboarding, mostre a tela de Onboarding */}
+        <Route path="/onboarding" element={<Onboarding />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
