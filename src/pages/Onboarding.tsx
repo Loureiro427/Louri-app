@@ -5,27 +5,72 @@ import { useUserStore } from '../store/useUserStore';
 
 export function Onboarding() {
   const navigate = useNavigate();
-  // Puxando os dados e a função de salvar do Zustand
   const dadosGlobais = useUserStore((state) => state.dados);
   const setDados = useUserStore((state) => state.setDados);
 
-  // Controle de qual "página" do formulário estamos vendo
   const [step, setStep] = useState(1);
-  
-  // Memória temporária para o que o usuário está preenchendo agora
   const [formData, setFormData] = useState(dadosGlobais);
+  
+  // NOVA MEMÓRIA: Guarda a mensagem de erro atual
+  const [error, setError] = useState('');
 
-  // Função genérica para atualizar qualquer campo do formulário
+  // Toda vez que o usuário digita algo, limpamos o erro da tela
   const handleChange = (campo: string, valor: string) => {
     setFormData({ ...formData, [campo]: valor });
+    setError(''); 
   };
 
-  // Funções dos botões
-  const nextStep = () => setStep(step + 1);
-  const prevStep = () => setStep(step - 1);
+  // NOVA LÓGICA DE VALIDAÇÃO
+  const handleNextStep = () => {
+    // Validação da Etapa 1 (Nome)
+    if (step === 1) {
+      if (!formData.nome || formData.nome.trim() === '') {
+        setError('Por favor, digite seu nome.');
+        return; // Interrompe a função aqui
+      }
+    }
+
+    // Validação da Etapa 2 (Medidas)
+    if (step === 2) {
+      const idade = Number(formData.idade);
+      const peso = Number(formData.peso);
+      const altura = Number(formData.altura);
+
+      if (!idade || idade < 14 || idade > 120) {
+        setError('A idade deve ser entre 14 e 120 anos.');
+        return;
+      }
+      if (!peso || peso < 30 || peso > 300) {
+        setError('O peso deve ser entre 30 e 300 kg.');
+        return;
+      }
+      if (!altura || altura < 100 || altura > 250) {
+        setError('A altura deve ser entre 100 e 250 cm.');
+        return;
+      }
+      if (!formData.sexo) {
+        setError('Por favor, selecione seu sexo biológico.');
+        return;
+      }
+    }
+
+    // Se chegou até aqui, não tem erro. Limpa o erro e avança.
+    setError('');
+    setStep(step + 1);
+  };
+
+  const prevStep = () => {
+    setError(''); // Limpa erros ao voltar
+    setStep(step - 1);
+  };
+
   const handleFinish = () => {
-    setDados(formData); // Salva no Zustand
-    navigate('/'); // Volta pro Início
+    if (!formData.objetivo) {
+      setError('Por favor, selecione um objetivo.');
+      return;
+    }
+    setDados(formData);
+    navigate('/');
   };
 
   return (
@@ -41,7 +86,11 @@ export function Onboarding() {
             onChange={(e) => handleChange('nome', e.target.value)}
             className="px-4 py-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:border-green-500 focus:outline-none w-full"
           />
-          <Button onClick={nextStep}>Avançar</Button>
+          
+          {/* Exibição do Erro */}
+          {error && <p className="text-red-400 text-sm font-medium">{error}</p>}
+          
+          <Button onClick={handleNextStep}>Avançar</Button>
         </div>
       )}
 
@@ -81,9 +130,12 @@ export function Onboarding() {
             <option value="F">Feminino</option>
           </select>
 
+          {/* Exibição do Erro */}
+          {error && <p className="text-red-400 text-sm font-medium">{error}</p>}
+
           <div className="flex gap-4 mt-2">
             <button onClick={prevStep} className="text-zinc-400 font-bold py-3 px-6 w-full">Voltar</button>
-            <Button onClick={nextStep}>Avançar</Button>
+            <Button onClick={handleNextStep}>Avançar</Button>
           </div>
         </div>
       )}
@@ -104,6 +156,9 @@ export function Onboarding() {
             <option value="ganhar">Ganhar Massa Muscular</option>
           </select>
 
+          {/* Exibição do Erro */}
+          {error && <p className="text-red-400 text-sm font-medium">{error}</p>}
+
           <div className="flex gap-4 mt-4">
             <button onClick={prevStep} className="text-zinc-400 font-bold py-3 px-6 w-full">Voltar</button>
             <Button onClick={handleFinish}>Finalizar</Button>
@@ -113,9 +168,9 @@ export function Onboarding() {
 
       {/* Indicador de progresso visual */}
       <div className="flex gap-2 mt-4">
-        <div className={`h-2 w-8 rounded-full ${step >= 1 ? 'bg-green-500' : 'bg-zinc-700'}`}></div>
-        <div className={`h-2 w-8 rounded-full ${step >= 2 ? 'bg-green-500' : 'bg-zinc-700'}`}></div>
-        <div className={`h-2 w-8 rounded-full ${step >= 3 ? 'bg-green-500' : 'bg-zinc-700'}`}></div>
+        <div className={`h-2 w-8 rounded-full transition-colors ${step >= 1 ? 'bg-green-500' : 'bg-zinc-700'}`}></div>
+        <div className={`h-2 w-8 rounded-full transition-colors ${step >= 2 ? 'bg-green-500' : 'bg-zinc-700'}`}></div>
+        <div className={`h-2 w-8 rounded-full transition-colors ${step >= 3 ? 'bg-green-500' : 'bg-zinc-700'}`}></div>
       </div>
 
     </div>
