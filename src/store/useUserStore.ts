@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// 1. O Contrato: Agora agrupamos tudo dentro de "dados"
 interface UserData {
   nome: string;
   idade: string;
@@ -9,6 +8,10 @@ interface UserData {
   altura: string;
   sexo: string;
   objetivo: string;
+  // NOVOS DADOS DE ROTINA
+  horaAcorda: string;
+  horaDorme: string;
+  qtdRefeicoes: string;
 }
 
 interface UserStore {
@@ -16,7 +19,6 @@ interface UserStore {
   setDados: (novosDados: Partial<UserData>) => void;
 }
 
-// 2. A Caixa de Memória
 export const useUserStore = create<UserStore>()(
   persist(
     (set) => ({
@@ -27,8 +29,10 @@ export const useUserStore = create<UserStore>()(
         altura: '',
         sexo: '',
         objetivo: '',
+        horaAcorda: '',
+        horaDorme: '',
+        qtdRefeicoes: '4', // Padrão sugerido: 4 refeições
       },
-      // Aqui usamos os ... (Spread) para atualizar só o que mudou, sem apagar o resto
       setDados: (novosDados) =>
         set((state) => ({
           dados: { ...state.dados, ...novosDados },
