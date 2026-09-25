@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+interface AlimentosPorRefeicao {
+  cafeManha: string[];
+  almoco: string[];
+  cafeTarde: string[];
+  janta: string[];
+}
+
 interface UserData {
   nome: string;
   idade: string;
@@ -11,12 +18,15 @@ interface UserData {
   horaAcorda: string;
   horaDorme: string;
   qtdRefeicoes: string;
-  alimentos: string[];
+  alimentos: AlimentosPorRefeicao;
+  aguaConsumida: number;
 }
 
 interface UserStore {
   dados: UserData;
   setDados: (novosDados: Partial<UserData>) => void;
+  adicionarAgua: (quantidade: number, metaMax: number) => void;
+  zerarAgua: () => void; // NOVO: Para resetar ou desfazer tudo com segurança
 }
 
 export const useUserStore = create<UserStore>()(
@@ -32,11 +42,36 @@ export const useUserStore = create<UserStore>()(
         horaAcorda: '',
         horaDorme: '',
         qtdRefeicoes: '4',
-        alimentos: [], // Garante que nunca começa indefinido
+        alimentos: {
+          cafeManha: [],
+          almoco: [],
+          cafeTarde: [],
+          janta: [],
+        },
+        aguaConsumida: 0,
       },
       setDados: (novosDados) =>
         set((state) => ({
           dados: { ...state.dados, ...novosDados },
+        })),
+      adicionarAgua: (quantidade, metaMax) =>
+        set((state) => {
+          const novoValor = state.dados.aguaConsumida + quantidade;
+          // Impede que fique abaixo de 0 e impede que ultrapasse a meta diária
+          const valorLimitado = Math.max(0, Math.min(metaMax, novoValor));
+          return {
+            dados: {
+              ...state.dados,
+              aguaConsumida: valorLimitado,
+            },
+          };
+        }),
+      zerarAgua: () =>
+        set((state) => ({
+          dados: {
+            ...state.dados,
+            aguaConsumida: 0,
+          },
         })),
     }),
     {

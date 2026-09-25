@@ -3,20 +3,60 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { useUserStore } from '../store/useUserStore';
 
-const ALIMENTOS_COMUNS = [
-  { id: 'arroz', nome: 'Arroz', emoji: '🍚' },
-  { id: 'feijao', nome: 'Feijão', emoji: '🍲' },
-  { id: 'frango', nome: 'Frango', emoji: '🍗' },
-  { id: 'ovo', nome: 'Ovo', emoji: '🍳' },
-  { id: 'carne', nome: 'Carne', emoji: '🥩' },
-  { id: 'pao', nome: 'Pão Francês', emoji: '🥖' },
-  { id: 'aveia', nome: 'Aveia', emoji: '🥣' },
-  { id: 'banana', nome: 'Banana', emoji: '🍌' },
-  { id: 'maca', nome: 'Maçã', emoji: '🍎' },
-  { id: 'leite', nome: 'Leite', emoji: '🥛' },
-  { id: 'cafe', nome: 'Café', emoji: '☕' },
-  { id: 'mandioca', nome: 'Batata / Mandioca', emoji: '🥔' },
-];
+const ALIMENTOS_POR_REFEICAO = {
+  cafeManha: [
+    { id: 'pao', nome: 'Pão Francês', emoji: '🥖' },
+    { id: 'tapioca', nome: 'Tapioca / Crepioca', emoji: '🌮' },
+    { id: 'ovo', nome: 'Ovo Mexido / Cozido', emoji: '🍳' },
+    { id: 'queijo', nome: 'Queijo Minas / Mussarela', emoji: '🧀' },
+    { id: 'cuscuz', nome: 'Cuscuz', emoji: '🌽' },
+    { id: 'aveia', nome: 'Aveia', emoji: '🥣' },
+    { id: 'banana', nome: 'Banana', emoji: '🍌' },
+    { id: 'maca', nome: 'Maçã', emoji: '🍎' },
+    { id: 'mamao', nome: 'Mamão', emoji: '🍈' },
+    { id: 'leite', nome: 'Leite / Iogurte', emoji: '🥛' },
+    { id: 'cafe', nome: 'Café', emoji: '☕' },
+    { id: 'bolo', nome: 'Bolo Caseiro', emoji: '🥮' },
+  ],
+  almoco: [
+    { id: 'arroz', nome: 'Arroz Branco / Integral', emoji: '🍚' },
+    { id: 'feijao', nome: 'Feijão', emoji: '🍲' },
+    { id: 'frango', nome: 'Frango Grelhado', emoji: '🍗' },
+    { id: 'carne', nome: 'Carne Bovina / Patinho', emoji: '🥩' },
+    { id: 'peixe', nome: 'Peixe / Filé', emoji: '🐟' },
+    { id: 'batatadoce', nome: 'Batata Doce / Mandioca', emoji: '🍠' },
+    { id: 'pure', nome: 'Purê de Batata', emoji: '🥔' },
+    { id: 'macarrao', nome: 'Macarrão', emoji: '🍝' },
+    { id: 'salada', nome: 'Salada Verde', emoji: '🥗' },
+    { id: 'legumes', nome: 'Legumes Cozidos', emoji: '🥦' },
+    { id: 'ovo_almoco', nome: 'Ovo Cozido', emoji: '🥚' },
+    { id: 'farofa', nome: 'Farofa', emoji: '🌾' },
+  ],
+  cafeTarde: [
+    { id: 'paodequeijo', nome: 'Pão de Queijo', emoji: '🧀' },
+    { id: 'fruta_tarde', nome: 'Frutas Variadas', emoji: '🍌' },
+    { id: 'vitamina', nome: 'Vitamina', emoji: '🥤' },
+    { id: 'tapioca_tarde', nome: 'Tapioca', emoji: '🌮' },
+    { id: 'castanhas', nome: 'Castanhas / Nozes', emoji: '🥜' },
+    { id: 'iogurte', nome: 'Iogurte Natural', emoji: '🍶' },
+    { id: 'cafe_tarde', nome: 'Café ou Chá', emoji: '☕' },
+    { id: 'biscoito', nome: 'Biscoito Integral', emoji: '🍪' },
+    { id: 'crepioca', nome: 'Crepioca', emoji: '🍳' },
+    { id: 'sanduiche', nome: 'Sanduíche Natural', emoji: '🥪' },
+  ],
+  janta: [
+    { id: 'frango_janta', nome: 'Frango Desfiado', emoji: '🍗' },
+    { id: 'sopa', nome: 'Sopa de Legumes', emoji: '🍲' },
+    { id: 'omelete', nome: 'Omelete', emoji: '🍳' },
+    { id: 'salada_janta', nome: 'Salada Completa', emoji: '🥗' },
+    { id: 'arroz_janta', nome: 'Arroz (Porção leve)', emoji: '🍚' },
+    { id: 'pure_janta', nome: 'Purê', emoji: '🥔' },
+    { id: 'wrap', nome: 'Wrap / Panqueca Fit', emoji: '🌯' },
+    { id: 'legumes_assados', nome: 'Legumes Assados', emoji: '🥕' },
+    { id: 'carne_janta', nome: 'Carne Magra', emoji: '🥩' },
+    { id: 'peixe_janta', nome: 'Peixe Grelhado', emoji: '🐟' },
+  ],
+};
 
 export function Onboarding() {
   const navigate = useNavigate();
@@ -24,13 +64,17 @@ export function Onboarding() {
   const setDados = useUserStore((state) => state.setDados);
 
   const [step, setStep] = useState(1);
-  
-  // Garantia absoluta de que alimentos é sempre um array
   const [formData, setFormData] = useState({
     ...dadosGlobais,
-    alimentos: Array.isArray(dadosGlobais.alimentos) ? dadosGlobais.alimentos : [],
+    alimentos: dadosGlobais.alimentos || {
+      cafeManha: [],
+      almoco: [],
+      cafeTarde: [],
+      janta: [],
+    },
   });
-  
+
+  const [refeicaoAtiva, setRefeicaoAtiva] = useState<'cafeManha' | 'almoco' | 'cafeTarde' | 'janta'>('cafeManha');
   const [error, setError] = useState('');
   const totalSteps = 5;
 
@@ -39,19 +83,23 @@ export function Onboarding() {
     setError(''); 
   };
 
-  const toggleAlimento = (idAlimento: string) => {
-    const alimentosAtuais = Array.isArray(formData.alimentos) ? formData.alimentos : [];
-    if (alimentosAtuais.includes(idAlimento)) {
-      setFormData({
-        ...formData,
-        alimentos: alimentosAtuais.filter((item) => item !== idAlimento),
-      });
+  const toggleAlimentoRefeicao = (idAlimento: string) => {
+    const listaAtual = formData.alimentos[refeicaoAtiva] || [];
+    let novaLista;
+
+    if (listaAtual.includes(idAlimento)) {
+      novaLista = listaAtual.filter((item) => item !== idAlimento);
     } else {
-      setFormData({
-        ...formData,
-        alimentos: [...alimentosAtuais, idAlimento],
-      });
+      novaLista = [...listaAtual, idAlimento];
     }
+
+    setFormData({
+      ...formData,
+      alimentos: {
+        ...formData.alimentos,
+        [refeicaoAtiva]: novaLista,
+      },
+    });
     setError('');
   };
 
@@ -89,17 +137,25 @@ export function Onboarding() {
   };
 
   const handleFinish = () => {
-    const alimentosSelecionados = Array.isArray(formData.alimentos) ? formData.alimentos : [];
-    if (alimentosSelecionados.length === 0) {
-      setError('Selecione pelo menos 1 alimento que costuma comer.');
+    const { cafeManha, almoco, cafeTarde, janta } = formData.alimentos;
+    if (cafeManha.length < 2 || almoco.length < 2 || cafeTarde.length < 2 || janta.length < 2) {
+      setError('Escolha pelo menos 2 alimentos em cada uma das 4 refeições.');
       return;
     }
     setDados(formData);
     navigate('/');
   };
 
+  const nomesRefeicoes = {
+    cafeManha: 'Café da Manhã',
+    almoco: 'Almoço',
+    cafeTarde: 'Café da Tarde',
+    janta: 'Janta',
+  };
+
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-900 px-6 py-8">
+    // min-h-[100dvh] e overscroll-none travam a tela para não ultrapassar os limites
+    <div className="flex flex-col min-h-[100dvh] bg-zinc-900 px-6 py-8 overscroll-none overflow-x-hidden">
       
       {/* CABEÇALHO */}
       <header className="flex items-center relative mb-8">
@@ -136,9 +192,10 @@ export function Onboarding() {
               <label className="text-zinc-400 text-sm font-medium pl-1">O seu nome</label>
               <input
                 type="text"
+                maxLength={25} // LIMITE DE CARACTERES ADICIONADO AQUI
                 value={formData.nome}
                 onChange={(e) => handleChange('nome', e.target.value)}
-                placeholder="Ex: Gabriel Loureiro"
+                placeholder="Ex: Gabriel"
                 className="px-4 py-4 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:border-green-500 focus:outline-none w-full text-lg"
               />
             </div>
@@ -234,33 +291,57 @@ export function Onboarding() {
         {step === 5 && (
           <div className="flex flex-col gap-4 w-full max-w-md animate-in fade-in slide-in-from-right-4">
             <div>
-              <h1 className="text-3xl font-bold text-white tracking-tight">Seus Alimentos</h1>
-              <p className="text-zinc-400 text-sm mt-1">Toque nos alimentos que consome regularmente</p>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Preferências por Refeição</h1>
+              <p className="text-zinc-400 text-xs mt-1">Selecione no mínimo 2 alimentos para cada horário</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 max-h-72 overflow-y-auto p-1">
-              {ALIMENTOS_COMUNS.map((alimento) => {
-                const selecionados = Array.isArray(formData.alimentos) ? formData.alimentos : [];
-                const estaSelecionado = selecionados.includes(alimento.id);
+            <div className="grid grid-cols-2 gap-2 bg-zinc-800 p-1.5 rounded-2xl border border-zinc-700">
+              {(['cafeManha', 'almoco', 'cafeTarde', 'janta'] as const).map((refeicaoKey) => {
+                const qtdSelecionada = formData.alimentos[refeicaoKey]?.length || 0;
+                const estaAtiva = refeicaoAtiva === refeicaoKey;
                 return (
                   <button
-                    key={alimento.id}
-                    onClick={() => toggleAlimento(alimento.id)}
-                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-200 gap-1 ${
-                      estaSelecionado
-                        ? 'bg-green-500/10 border-green-500 text-green-400 shadow-lg shadow-green-500/10'
-                        : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-600'
+                    key={refeicaoKey}
+                    onClick={() => setRefeicaoAtiva(refeicaoKey)}
+                    className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-between ${
+                      estaAtiva
+                        ? 'bg-green-500 text-zinc-900 shadow-md'
+                        : 'text-zinc-300 hover:text-white bg-transparent'
                     }`}
                   >
-                    <span className="text-2xl">{alimento.emoji}</span>
-                    <span className="text-xs font-medium truncate w-full">{alimento.nome}</span>
+                    <span>{nomesRefeicoes[refeicaoKey]}</span>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${estaAtiva ? 'bg-zinc-900 text-green-400' : 'bg-zinc-700 text-zinc-300'}`}>
+                      {qtdSelecionada}/2+
+                    </span>
                   </button>
                 );
               })}
             </div>
 
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-            <div className="mt-2">
+            <div className="grid grid-cols-3 gap-2.5 max-h-56 overflow-y-auto p-1 custom-scrollbar">
+              {ALIMENTOS_POR_REFEICAO[refeicaoAtiva].map((alimento) => {
+                const listaRefeicao = formData.alimentos[refeicaoAtiva] || [];
+                const estaSelecionado = listaRefeicao.includes(alimento.id);
+                return (
+                  <button
+                    key={alimento.id}
+                    onClick={() => toggleAlimentoRefeicao(alimento.id)}
+                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all duration-200 gap-1 ${
+                      estaSelecionado
+                        ? 'bg-green-500/10 border-green-500 text-green-400 shadow-md'
+                        : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-600'
+                    }`}
+                  >
+                    <span className="text-xl">{alimento.emoji}</span>
+                    <span className="text-[11px] font-medium truncate w-full">{alimento.nome}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {error && <p className="text-red-400 text-xs font-medium">{error}</p>}
+            
+            <div className="mt-1">
               <Button onClick={handleFinish}>Finalizar Registo</Button>
             </div>
           </div>
