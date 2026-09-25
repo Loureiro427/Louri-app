@@ -8,10 +8,10 @@ interface UserData {
   altura: string;
   sexo: string;
   objetivo: string;
-  // NOVOS DADOS DE ROTINA
   horaAcorda: string;
   horaDorme: string;
   qtdRefeicoes: string;
+  alimentos: string[];
 }
 
 interface UserStore {
@@ -31,7 +31,8 @@ export const useUserStore = create<UserStore>()(
         objetivo: '',
         horaAcorda: '',
         horaDorme: '',
-        qtdRefeicoes: '4', // Padrão sugerido: 4 refeições
+        qtdRefeicoes: '4',
+        alimentos: [], // Garante que nunca começa indefinido
       },
       setDados: (novosDados) =>
         set((state) => ({
