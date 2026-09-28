@@ -4,34 +4,34 @@ import { useUserStore } from '../store/useUserStore';
 
 const DICIONARIO_ALIMENTOS = {
   cafeManha: [
-    { id: 'pao', nome: 'Pão Francês', emoji: '🥖', kcal: 140 }, { id: 'tapioca', nome: 'Tapioca', emoji: '🌮', kcal: 150 },
-    { id: 'ovo', nome: 'Ovo', emoji: '🍳', kcal: 70 }, { id: 'queijo', nome: 'Queijo', emoji: '🧀', kcal: 100 },
-    { id: 'cuscuz', nome: 'Cuscuz', emoji: '🌽', kcal: 120 }, { id: 'aveia', nome: 'Aveia', emoji: '🥣', kcal: 110 },
-    { id: 'banana', nome: 'Banana', emoji: '🍌', kcal: 90 }, { id: 'maca', nome: 'Maçã', emoji: '🍎', kcal: 60 },
-    { id: 'mamao', nome: 'Mamão', emoji: '🍈', kcal: 50 }, { id: 'leite', nome: 'Leite / Iogurte', emoji: '🥛', kcal: 120 },
-    { id: 'cafe', nome: 'Café', emoji: '☕', kcal: 5 }, { id: 'bolo', nome: 'Bolo Caseiro', emoji: '🥮', kcal: 200 },
+    { id: 'pao', nome: 'Pão Francês', emoji: '🥖', kcal100g: 280 }, { id: 'tapioca', nome: 'Tapioca', emoji: '🌮', kcal100g: 340 },
+    { id: 'ovo', nome: 'Ovo', emoji: '🍳', kcal100g: 155 }, { id: 'queijo', nome: 'Queijo', emoji: '🧀', kcal100g: 350 },
+    { id: 'cuscuz', nome: 'Cuscuz', emoji: '🌽', kcal100g: 110 }, { id: 'aveia', nome: 'Aveia', emoji: '🥣', kcal100g: 380 },
+    { id: 'banana', nome: 'Banana', emoji: '🍌', kcal100g: 90 }, { id: 'maca', nome: 'Maçã', emoji: '🍎', kcal100g: 52 },
+    { id: 'mamao', nome: 'Mamão', emoji: '🍈', kcal100g: 43 }, { id: 'leite', nome: 'Leite / Iogurte', emoji: '🥛', kcal100g: 60 },
+    { id: 'cafe', nome: 'Café', emoji: '☕', kcal100g: 2 }, { id: 'bolo', nome: 'Bolo Caseiro', emoji: '🥮', kcal100g: 350 },
   ],
   almoco: [
-    { id: 'arroz', nome: 'Arroz', emoji: '🍚', kcal: 130 }, { id: 'feijao', nome: 'Feijão', emoji: '🍲', kcal: 100 },
-    { id: 'frango', nome: 'Frango', emoji: '🍗', kcal: 160 }, { id: 'carne', nome: 'Carne', emoji: '🥩', kcal: 200 },
-    { id: 'peixe', nome: 'Peixe', emoji: '🐟', kcal: 140 }, { id: 'batatadoce', nome: 'Batata / Mandioca', emoji: '🍠', kcal: 110 },
-    { id: 'pure', nome: 'Purê', emoji: '🥔', kcal: 150 }, { id: 'macarrao', nome: 'Macarrão', emoji: '🍝', kcal: 180 },
-    { id: 'salada', nome: 'Salada', emoji: '🥗', kcal: 30 }, { id: 'legumes', nome: 'Legumes', emoji: '🥦', kcal: 50 },
-    { id: 'ovo_almoco', nome: 'Ovo Cozido', emoji: '🥚', kcal: 70 }, { id: 'farofa', nome: 'Farofa', emoji: '🌾', kcal: 120 },
+    { id: 'arroz', nome: 'Arroz', emoji: '🍚', kcal100g: 130 }, { id: 'feijao', nome: 'Feijão', emoji: '🍲', kcal100g: 75 },
+    { id: 'frango', nome: 'Frango', emoji: '🍗', kcal100g: 165 }, { id: 'carne', nome: 'Carne', emoji: '🥩', kcal100g: 250 },
+    { id: 'peixe', nome: 'Peixe', emoji: '🐟', kcal100g: 105 }, { id: 'batatadoce', nome: 'Batata / Mandioca', emoji: '🍠', kcal100g: 86 },
+    { id: 'pure', nome: 'Purê', emoji: '🥔', kcal100g: 110 }, { id: 'macarrao', nome: 'Macarrão', emoji: '🍝', kcal100g: 158 },
+    { id: 'salada', nome: 'Salada', emoji: '🥗', kcal100g: 15 }, { id: 'legumes', nome: 'Legumes', emoji: '🥦', kcal100g: 35 },
+    { id: 'ovo_almoco', nome: 'Ovo Cozido', emoji: '🥚', kcal100g: 155 }, { id: 'farofa', nome: 'Farofa', emoji: '🌾', kcal100g: 400 },
   ],
   cafeTarde: [
-    { id: 'paodequeijo', nome: 'Pão de Queijo', emoji: '🧀', kcal: 150 }, { id: 'fruta_tarde', nome: 'Frutas', emoji: '🍌', kcal: 80 },
-    { id: 'vitamina', nome: 'Vitamina', emoji: '🥤', kcal: 150 }, { id: 'tapioca_tarde', nome: 'Tapioca', emoji: '🌮', kcal: 150 },
-    { id: 'castanhas', nome: 'Castanhas', emoji: '🥜', kcal: 170 }, { id: 'iogurte', nome: 'Iogurte', emoji: '🍶', kcal: 100 },
-    { id: 'cafe_tarde', nome: 'Café / Chá', emoji: '☕', kcal: 5 }, { id: 'biscoito', nome: 'Biscoito', emoji: '🍪', kcal: 130 },
-    { id: 'crepioca', nome: 'Crepioca', emoji: '🍳', kcal: 150 }, { id: 'sanduiche', nome: 'Sanduíche', emoji: '🥪', kcal: 250 },
+    { id: 'paodequeijo', nome: 'Pão de Queijo', emoji: '🧀', kcal100g: 330 }, { id: 'fruta_tarde', nome: 'Frutas', emoji: '🍌', kcal100g: 80 },
+    { id: 'vitamina', nome: 'Vitamina', emoji: '🥤', kcal100g: 85 }, { id: 'tapioca_tarde', nome: 'Tapioca', emoji: '🌮', kcal100g: 340 },
+    { id: 'castanhas', nome: 'Castanhas', emoji: '🥜', kcal100g: 600 }, { id: 'iogurte', nome: 'Iogurte', emoji: '🍶', kcal100g: 60 },
+    { id: 'cafe_tarde', nome: 'Café / Chá', emoji: '☕', kcal100g: 2 }, { id: 'biscoito', nome: 'Biscoito', emoji: '🍪', kcal100g: 450 },
+    { id: 'crepioca', nome: 'Crepioca', emoji: '🍳', kcal100g: 200 }, { id: 'sanduiche', nome: 'Sanduíche', emoji: '🥪', kcal100g: 250 },
   ],
   janta: [
-    { id: 'frango_janta', nome: 'Frango', emoji: '🍗', kcal: 160 }, { id: 'sopa', nome: 'Sopa', emoji: '🍲', kcal: 120 },
-    { id: 'omelete', nome: 'Omelete', emoji: '🍳', kcal: 150 }, { id: 'salada_janta', nome: 'Salada', emoji: '🥗', kcal: 40 },
-    { id: 'arroz_janta', nome: 'Arroz', emoji: '🍚', kcal: 100 }, { id: 'pure_janta', nome: 'Purê', emoji: '🥔', kcal: 150 },
-    { id: 'wrap', nome: 'Wrap Fit', emoji: '🌯', kcal: 180 }, { id: 'legumes_assados', nome: 'Legumes', emoji: '🥕', kcal: 60 },
-    { id: 'carne_janta', nome: 'Carne Magra', emoji: '🥩', kcal: 200 }, { id: 'peixe_janta', nome: 'Peixe', emoji: '🐟', kcal: 140 },
+    { id: 'frango_janta', nome: 'Frango', emoji: '🍗', kcal100g: 165 }, { id: 'sopa', nome: 'Sopa', emoji: '🍲', kcal100g: 50 },
+    { id: 'omelete', nome: 'Omelete', emoji: '🍳', kcal100g: 155 }, { id: 'salada_janta', nome: 'Salada', emoji: '🥗', kcal100g: 15 },
+    { id: 'arroz_janta', nome: 'Arroz', emoji: '🍚', kcal100g: 130 }, { id: 'pure_janta', nome: 'Purê', emoji: '🥔', kcal100g: 110 },
+    { id: 'wrap', nome: 'Wrap Fit', emoji: '🌯', kcal100g: 220 }, { id: 'legumes_assados', nome: 'Legumes', emoji: '🥕', kcal100g: 65 },
+    { id: 'carne_janta', nome: 'Carne Magra', emoji: '🥩', kcal100g: 180 }, { id: 'peixe_janta', nome: 'Peixe', emoji: '🐟', kcal100g: 105 },
   ],
 };
 
@@ -51,16 +51,15 @@ export function Home() {
   const [mostrarModalDesfazerDieta, setMostrarModalDesfazerDieta] = useState(false);
   
   const [refeicaoModal, setRefeicaoModal] = useState<any>(null); 
-  const [alimentosModal, setAlimentosModal] = useState<string[]>([]); 
+  // Novo Estado: Guarda as gramas de cada alimento ex: { 'pao': 100, 'ovo': 50 }
+  const [porcoesModal, setPorcoesModal] = useState<Record<string, number>>({}); 
   const [minutosAtuais, setMinutosAtuais] = useState(0);
 
   useEffect(() => {
-    // 1. Verifica se virou o dia logo que a app abre
     if (dados.nome) {
       verificarViradaDeDia();
     }
 
-    // 2. Controla o relógio interno
     const atualizarTempo = () => {
       const agora = new Date();
       setMinutosAtuais(agora.getHours() * 60 + agora.getMinutes());
@@ -143,35 +142,40 @@ export function Home() {
   const abrirModalRefeicao = (refeicao: any) => {
     if (refeicoesFeitas.includes(refeicao.key)) return; 
     setRefeicaoModal(refeicao);
-    setAlimentosModal(dados.alimentos[refeicao.key as keyof typeof dados.alimentos] || []);
+    setPorcoesModal({}); // Zera as porções ao abrir
   };
 
   const toggleAlimentoModal = (idAlimento: string) => {
-    if (alimentosModal.includes(idAlimento)) {
-      setAlimentosModal(alimentosModal.filter(item => item !== idAlimento));
-    } else {
-      setAlimentosModal([...alimentosModal, idAlimento]);
-    }
+    setPorcoesModal(prev => {
+      const novo = { ...prev };
+      if (novo[idAlimento] !== undefined) {
+        delete novo[idAlimento]; // Desmarca e remove as calorias
+      } else {
+        novo[idAlimento] = 100; // Inicia com 100g por padrão
+      }
+      return novo;
+    });
   };
 
-  const caloriasTotaisModal = alimentosModal.reduce((acc, id) => {
+  const atualizarGramas = (idAlimento: string, gramas: string) => {
+    setPorcoesModal(prev => ({ ...prev, [idAlimento]: Number(gramas) || 0 }));
+  };
+
+  const caloriasTotaisModal = Object.entries(porcoesModal).reduce((acc, [id, gramas]) => {
     const alimento = DICIONARIO_ALIMENTOS[refeicaoModal?.key as keyof typeof DICIONARIO_ALIMENTOS]?.find(a => a.id === id);
-    return acc + (alimento?.kcal || 0);
+    if (!alimento) return acc;
+    return acc + Math.round((alimento.kcal100g / 100) * gramas);
   }, 0);
 
   const confirmarRefeicao = () => {
     if (caloriasTotaisModal > 0) {
-      registrarRefeicao(refeicaoModal.key, caloriasTotaisModal, alimentosModal);
+      registrarRefeicao(refeicaoModal.key, caloriasTotaisModal, Object.keys(porcoesModal));
       setRefeicaoModal(null);
     }
   };
 
   const cancelarRefeicaoFeita = (refeicaoKey: string) => {
-    const caloriasPadrao = (dados.alimentos[refeicaoKey as keyof typeof dados.alimentos] || []).reduce((acc, id) => {
-      const alimento = DICIONARIO_ALIMENTOS[refeicaoKey as keyof typeof DICIONARIO_ALIMENTOS]?.find(a => a.id === id);
-      return acc + (alimento?.kcal || 0);
-    }, 0);
-    desfazerRefeicao(refeicaoKey, caloriasPadrao);
+    desfazerRefeicao(refeicaoKey);
   };
 
   const confirmarDesfazerAgua = () => {
@@ -199,7 +203,6 @@ export function Home() {
       <div className="flex flex-col gap-5">
         
         <div className="grid grid-cols-2 gap-3 shrink-0">
-          {/* Cartão de Dieta agora é Clicável */}
           <div 
             onClick={() => setMostrarModalDieta(true)}
             className="bg-zinc-900/80 border border-zinc-800 rounded-3xl p-4 shadow-lg flex flex-col justify-between gap-3 cursor-pointer hover:bg-zinc-900 transition-colors"
@@ -268,7 +271,6 @@ export function Home() {
               
               const isFeita = refeicoesFeitas.includes(refeicao.key);
               
-              // Define que a refeição só "abre" 1 hora antes do horário programado
               const isFuturo = minutosAtuais < refeicao.minutos - 60 && !isFeita;
               const isAgora = minutosAtuais >= refeicao.minutos - 60 && minutosAtuais <= refeicao.minutos + 120 && !isFeita;
 
@@ -296,7 +298,7 @@ export function Home() {
                   {/* Cartão de Refeição */}
                   <div 
                     onClick={() => {
-                      if (isFuturo) return; // Bloqueia o clique se for futuro
+                      if (isFuturo) return;
                       isFeita ? cancelarRefeicaoFeita(refeicao.key) : abrirModalRefeicao(refeicao);
                     }}
                     className={`flex-1 rounded-2xl p-4 flex flex-col gap-3 transition-all ${isFuturo ? 'cursor-not-allowed bg-zinc-900/20 border border-zinc-900' : isFeita ? 'bg-zinc-900/20 border border-green-500/20 opacity-60 cursor-pointer' : isAgora ? 'bg-zinc-900/80 border border-orange-500/30 cursor-pointer' : 'bg-zinc-900/40 border border-zinc-800 hover:bg-zinc-900/60 cursor-pointer'}`}
@@ -353,7 +355,7 @@ export function Home() {
                   refeicoesFeitasInfo.map(r => {
                     const cals = (dados.alimentos[r.key as keyof typeof dados.alimentos] || []).reduce((acc, id) => {
                       const alimento = DICIONARIO_ALIMENTOS[r.key as keyof typeof DICIONARIO_ALIMENTOS]?.find(a => a.id === id);
-                      return acc + (alimento?.kcal || 0);
+                      return acc + (alimento?.kcal100g || 0); // Exibição simplificada no resumo
                     }, 0);
 
                     return (
@@ -406,21 +408,51 @@ export function Home() {
 
             <div className="grid grid-cols-3 gap-2">
               {DICIONARIO_ALIMENTOS[refeicaoModal.key as keyof typeof DICIONARIO_ALIMENTOS].map((alimento) => {
-                const estaSelecionado = alimentosModal.includes(alimento.id);
+                const gramas = porcoesModal[alimento.id];
+                const estaSelecionado = gramas !== undefined;
+                const kcalCalculada = estaSelecionado ? Math.round((alimento.kcal100g / 100) * gramas) : 0;
+
                 return (
-                  <button
+                  <div
                     key={alimento.id}
-                    onClick={() => toggleAlimentoModal(alimento.id)}
-                    className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all duration-200 gap-1 ${
+                    onClick={() => !estaSelecionado && toggleAlimentoModal(alimento.id)}
+                    className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 gap-1 ${
                       estaSelecionado
                         ? 'bg-orange-500/10 border-orange-500 text-orange-400 shadow-md'
-                        : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                        : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700 cursor-pointer'
                     }`}
                   >
-                    <span className="text-xl">{alimento.emoji}</span>
+                    {estaSelecionado && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); toggleAlimentoModal(alimento.id); }}
+                        className="absolute -top-2 -right-2 bg-zinc-800 text-zinc-400 rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-500 hover:text-white shadow-lg z-10"
+                      >
+                        ×
+                      </button>
+                    )}
+
+                    <span className="text-2xl">{alimento.emoji}</span>
                     <span className="text-[10px] font-bold text-center leading-tight truncate w-full">{alimento.nome}</span>
-                    <span className="text-[9px] text-zinc-500">{alimento.kcal} kcal</span>
-                  </button>
+                    
+                    {estaSelecionado ? (
+                      <div className="flex flex-col items-center w-full mt-1" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center bg-zinc-950 rounded-lg px-2 py-1 border border-orange-500/30 w-full justify-center">
+                          <input 
+                            type="number" 
+                            value={gramas === 0 ? '' : gramas}
+                            onChange={(e) => atualizarGramas(alimento.id, e.target.value)}
+                            className="w-10 bg-transparent text-center text-xs text-white outline-none appearance-none font-bold"
+                            placeholder="0"
+                            autoFocus
+                          />
+                          <span className="text-[9px] text-zinc-500">g</span>
+                        </div>
+                        <span className="text-[9px] text-orange-500/70 mt-1">{kcalCalculada} kcal</span>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] text-zinc-600 opacity-0 hover:opacity-100 transition-opacity hidden md:block">Toque para adicionar</span>
+                    )}
+                  </div>
                 );
               })}
             </div>
