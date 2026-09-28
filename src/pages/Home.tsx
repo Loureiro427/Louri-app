@@ -4,34 +4,56 @@ import { useUserStore } from '../store/useUserStore';
 
 const DICIONARIO_ALIMENTOS = {
   cafeManha: [
-    { id: 'pao', nome: 'Pão Francês', emoji: '🥖', kcal100g: 280 }, { id: 'tapioca', nome: 'Tapioca', emoji: '🌮', kcal100g: 340 },
-    { id: 'ovo', nome: 'Ovo', emoji: '🍳', kcal100g: 155 }, { id: 'queijo', nome: 'Queijo', emoji: '🧀', kcal100g: 350 },
-    { id: 'cuscuz', nome: 'Cuscuz', emoji: '🌽', kcal100g: 110 }, { id: 'aveia', nome: 'Aveia', emoji: '🥣', kcal100g: 380 },
-    { id: 'banana', nome: 'Banana', emoji: '🍌', kcal100g: 90 }, { id: 'maca', nome: 'Maçã', emoji: '🍎', kcal100g: 52 },
-    { id: 'mamao', nome: 'Mamão', emoji: '🍈', kcal100g: 43 }, { id: 'leite', nome: 'Leite / Iogurte', emoji: '🥛', kcal100g: 60 },
-    { id: 'cafe', nome: 'Café', emoji: '☕', kcal100g: 2 }, { id: 'bolo', nome: 'Bolo Caseiro', emoji: '🥮', kcal100g: 350 },
+    { id: 'pao', nome: 'Pão Francês', emoji: '🥖', kcal100g: 280, prot: 9, carbo: 58, gord: 3 }, 
+    { id: 'tapioca', nome: 'Tapioca', emoji: '🌮', kcal100g: 340, prot: 0, carbo: 85, gord: 0 },
+    { id: 'ovo', nome: 'Ovo', emoji: '🍳', kcal100g: 155, prot: 13, carbo: 1, gord: 11 }, 
+    { id: 'queijo', nome: 'Queijo', emoji: '🧀', kcal100g: 350, prot: 25, carbo: 2, gord: 30 },
+    { id: 'cuscuz', nome: 'Cuscuz', emoji: '🌽', kcal100g: 110, prot: 3, carbo: 23, gord: 1 }, 
+    { id: 'aveia', nome: 'Aveia', emoji: '🥣', kcal100g: 380, prot: 16, carbo: 66, gord: 7 },
+    { id: 'banana', nome: 'Banana', emoji: '🍌', kcal100g: 90, prot: 1, carbo: 23, gord: 0 }, 
+    { id: 'maca', nome: 'Maçã', emoji: '🍎', kcal100g: 52, prot: 0, carbo: 14, gord: 0 },
+    { id: 'mamao', nome: 'Mamão', emoji: '🍈', kcal100g: 43, prot: 0, carbo: 11, gord: 0 }, 
+    { id: 'leite', nome: 'Leite / Iogurte', emoji: '🥛', kcal100g: 60, prot: 3, carbo: 5, gord: 3 },
+    { id: 'cafe', nome: 'Café', emoji: '☕', kcal100g: 2, prot: 0, carbo: 0, gord: 0 }, 
+    { id: 'bolo', nome: 'Bolo Caseiro', emoji: '🥮', kcal100g: 350, prot: 5, carbo: 50, gord: 15 },
   ],
   almoco: [
-    { id: 'arroz', nome: 'Arroz', emoji: '🍚', kcal100g: 130 }, { id: 'feijao', nome: 'Feijão', emoji: '🍲', kcal100g: 75 },
-    { id: 'frango', nome: 'Frango', emoji: '🍗', kcal100g: 165 }, { id: 'carne', nome: 'Carne', emoji: '🥩', kcal100g: 250 },
-    { id: 'peixe', nome: 'Peixe', emoji: '🐟', kcal100g: 105 }, { id: 'batatadoce', nome: 'Batata / Mandioca', emoji: '🍠', kcal100g: 86 },
-    { id: 'pure', nome: 'Purê', emoji: '🥔', kcal100g: 110 }, { id: 'macarrao', nome: 'Macarrão', emoji: '🍝', kcal100g: 158 },
-    { id: 'salada', nome: 'Salada', emoji: '🥗', kcal100g: 15 }, { id: 'legumes', nome: 'Legumes', emoji: '🥦', kcal100g: 35 },
-    { id: 'ovo_almoco', nome: 'Ovo Cozido', emoji: '🥚', kcal100g: 155 }, { id: 'farofa', nome: 'Farofa', emoji: '🌾', kcal100g: 400 },
+    { id: 'arroz', nome: 'Arroz', emoji: '🍚', kcal100g: 130, prot: 2, carbo: 28, gord: 0 }, 
+    { id: 'feijao', nome: 'Feijão', emoji: '🍲', kcal100g: 75, prot: 5, carbo: 14, gord: 0 },
+    { id: 'frango', nome: 'Frango', emoji: '🍗', kcal100g: 165, prot: 31, carbo: 0, gord: 3 }, 
+    { id: 'carne', nome: 'Carne', emoji: '🥩', kcal100g: 250, prot: 26, carbo: 0, gord: 15 },
+    { id: 'peixe', nome: 'Peixe', emoji: '🐟', kcal100g: 105, prot: 20, carbo: 0, gord: 2 }, 
+    { id: 'batatadoce', nome: 'Batata / Mandioca', emoji: '🍠', kcal100g: 86, prot: 1, carbo: 20, gord: 0 },
+    { id: 'pure', nome: 'Purê', emoji: '🥔', kcal100g: 110, prot: 2, carbo: 15, gord: 4 }, 
+    { id: 'macarrao', nome: 'Macarrão', emoji: '🍝', kcal100g: 158, prot: 5, carbo: 30, gord: 1 },
+    { id: 'salada', nome: 'Salada', emoji: '🥗', kcal100g: 15, prot: 1, carbo: 3, gord: 0 }, 
+    { id: 'legumes', nome: 'Legumes', emoji: '🥦', kcal100g: 35, prot: 2, carbo: 7, gord: 0 },
+    { id: 'ovo_almoco', nome: 'Ovo Cozido', emoji: '🥚', kcal100g: 155, prot: 13, carbo: 1, gord: 11 }, 
+    { id: 'farofa', nome: 'Farofa', emoji: '🌾', kcal100g: 400, prot: 2, carbo: 80, gord: 8 },
   ],
   cafeTarde: [
-    { id: 'paodequeijo', nome: 'Pão de Queijo', emoji: '🧀', kcal100g: 330 }, { id: 'fruta_tarde', nome: 'Frutas', emoji: '🍌', kcal100g: 80 },
-    { id: 'vitamina', nome: 'Vitamina', emoji: '🥤', kcal100g: 85 }, { id: 'tapioca_tarde', nome: 'Tapioca', emoji: '🌮', kcal100g: 340 },
-    { id: 'castanhas', nome: 'Castanhas', emoji: '🥜', kcal100g: 600 }, { id: 'iogurte', nome: 'Iogurte', emoji: '🍶', kcal100g: 60 },
-    { id: 'cafe_tarde', nome: 'Café / Chá', emoji: '☕', kcal100g: 2 }, { id: 'biscoito', nome: 'Biscoito', emoji: '🍪', kcal100g: 450 },
-    { id: 'crepioca', nome: 'Crepioca', emoji: '🍳', kcal100g: 200 }, { id: 'sanduiche', nome: 'Sanduíche', emoji: '🥪', kcal100g: 250 },
+    { id: 'paodequeijo', nome: 'Pão de Queijo', emoji: '🧀', kcal100g: 330, prot: 5, carbo: 40, gord: 15 }, 
+    { id: 'fruta_tarde', nome: 'Frutas', emoji: '🍌', kcal100g: 80, prot: 1, carbo: 20, gord: 0 },
+    { id: 'vitamina', nome: 'Vitamina', emoji: '🥤', kcal100g: 85, prot: 3, carbo: 12, gord: 2 }, 
+    { id: 'tapioca_tarde', nome: 'Tapioca', emoji: '🌮', kcal100g: 340, prot: 0, carbo: 85, gord: 0 },
+    { id: 'castanhas', nome: 'Castanhas', emoji: '🥜', kcal100g: 600, prot: 15, carbo: 20, gord: 55 }, 
+    { id: 'iogurte', nome: 'Iogurte', emoji: '🍶', kcal100g: 60, prot: 3, carbo: 5, gord: 3 },
+    { id: 'cafe_tarde', nome: 'Café / Chá', emoji: '☕', kcal100g: 2, prot: 0, carbo: 0, gord: 0 }, 
+    { id: 'biscoito', nome: 'Biscoito', emoji: '🍪', kcal100g: 450, prot: 6, carbo: 70, gord: 15 },
+    { id: 'crepioca', nome: 'Crepioca', emoji: '🍳', kcal100g: 200, prot: 8, carbo: 25, gord: 7 }, 
+    { id: 'sanduiche', nome: 'Sanduíche', emoji: '🥪', kcal100g: 250, prot: 12, carbo: 30, gord: 8 },
   ],
   janta: [
-    { id: 'frango_janta', nome: 'Frango', emoji: '🍗', kcal100g: 165 }, { id: 'sopa', nome: 'Sopa', emoji: '🍲', kcal100g: 50 },
-    { id: 'omelete', nome: 'Omelete', emoji: '🍳', kcal100g: 155 }, { id: 'salada_janta', nome: 'Salada', emoji: '🥗', kcal100g: 15 },
-    { id: 'arroz_janta', nome: 'Arroz', emoji: '🍚', kcal100g: 130 }, { id: 'pure_janta', nome: 'Purê', emoji: '🥔', kcal100g: 110 },
-    { id: 'wrap', nome: 'Wrap Fit', emoji: '🌯', kcal100g: 220 }, { id: 'legumes_assados', nome: 'Legumes', emoji: '🥕', kcal100g: 65 },
-    { id: 'carne_janta', nome: 'Carne Magra', emoji: '🥩', kcal100g: 180 }, { id: 'peixe_janta', nome: 'Peixe', emoji: '🐟', kcal100g: 105 },
+    { id: 'frango_janta', nome: 'Frango', emoji: '🍗', kcal100g: 165, prot: 31, carbo: 0, gord: 3 }, 
+    { id: 'sopa', nome: 'Sopa', emoji: '🍲', kcal100g: 50, prot: 2, carbo: 8, gord: 1 },
+    { id: 'omelete', nome: 'Omelete', emoji: '🍳', kcal100g: 155, prot: 13, carbo: 1, gord: 11 }, 
+    { id: 'salada_janta', nome: 'Salada', emoji: '🥗', kcal100g: 15, prot: 1, carbo: 3, gord: 0 },
+    { id: 'arroz_janta', nome: 'Arroz', emoji: '🍚', kcal100g: 130, prot: 2, carbo: 28, gord: 0 }, 
+    { id: 'pure_janta', nome: 'Purê', emoji: '🥔', kcal100g: 110, prot: 2, carbo: 15, gord: 4 },
+    { id: 'wrap', nome: 'Wrap Fit', emoji: '🌯', kcal100g: 220, prot: 10, carbo: 25, gord: 8 }, 
+    { id: 'legumes_assados', nome: 'Legumes', emoji: '🥕', kcal100g: 65, prot: 2, carbo: 10, gord: 2 },
+    { id: 'carne_janta', nome: 'Carne Magra', emoji: '🥩', kcal100g: 180, prot: 26, carbo: 0, gord: 7 }, 
+    { id: 'peixe_janta', nome: 'Peixe', emoji: '🐟', kcal100g: 105, prot: 20, carbo: 0, gord: 2 },
   ],
 };
 
@@ -172,7 +194,18 @@ export function Home() {
 
   const confirmarRefeicao = () => {
     if (caloriasTotaisModal > 0) {
-      registrarRefeicao(refeicaoModal.key, caloriasTotaisModal, Object.keys(porcoesModal));
+      // Calcula as gramas totais de cada macro com base nas porções escolhidas
+      const macrosTotaisModal = Object.entries(porcoesModal).reduce((acc, [id, gramas]) => {
+        const alimento = DICIONARIO_ALIMENTOS[refeicaoModal?.key as keyof typeof DICIONARIO_ALIMENTOS]?.find(a => a.id === id) as any;
+        if (!alimento) return acc;
+        acc.proteina += Math.round((alimento.prot / 100) * gramas);
+        acc.carbo += Math.round((alimento.carbo / 100) * gramas);
+        acc.gordura += Math.round((alimento.gord / 100) * gramas);
+        return acc;
+      }, { proteina: 0, carbo: 0, gordura: 0 });
+
+      // Envia os 4 dados para o Zustand: chave, calorias, ids, e os macros
+      registrarRefeicao(refeicaoModal.key, caloriasTotaisModal, Object.keys(porcoesModal), macrosTotaisModal);
       setRefeicaoModal(null);
     }
   };
