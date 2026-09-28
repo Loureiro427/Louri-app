@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
+import { configurarNotificacoesNativas } from '../services/notificationService';
 
 export function Perfil() {
   const navigate = useNavigate();
@@ -8,9 +9,9 @@ export function Perfil() {
   const setDados = useUserStore((state) => state.setDados);
 
   const temaEscuro = dados.temaEscuro ?? true;
+  const notificacoes = dados.notificacoes ?? true;
 
   const [mostrarModalSair, setMostrarModalSair] = useState(false);
-  const [notificacoes, setNotificacoes] = useState(true);
   const [modalSuporte, setModalSuporte] = useState(false);
   const [modalFeedback, setModalFeedback] = useState(false);
   
@@ -169,7 +170,11 @@ export function Perfil() {
           <div className={`flex justify-between items-center p-4 border-b ${temaEscuro ? 'border-zinc-800/50' : 'border-zinc-100'}`}>
             <span className={`text-sm font-medium ${temaEscuro ? 'text-zinc-300' : 'text-zinc-600'}`}>Notificações</span>
             <button 
-              onClick={() => setNotificacoes(!notificacoes)}
+              onClick={() => {
+                const novoEstado = !notificacoes;
+                setDados({ notificacoes: novoEstado });
+                configurarNotificacoesNativas(); // Atualiza os agendamentos nativos na hora
+              }}
               className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${notificacoes ? 'bg-green-500' : 'bg-zinc-700'}`}
             >
               <div className={`w-4 h-4 rounded-full shadow-md transform transition-transform ${notificacoes ? 'translate-x-6 bg-zinc-950' : 'translate-x-0 bg-white'}`} />

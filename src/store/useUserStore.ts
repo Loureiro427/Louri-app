@@ -21,7 +21,8 @@ interface UserData {
   ultimaData: string;
   streak: number; 
   ultimoDiaPontuado: string;
-  temaEscuro: boolean; // NOVO: Guarda se o modo escuro está ativo
+  temaEscuro: boolean;
+  notificacoes: boolean; // NOVO: Guarda se as notificações estão ativas
 }
 
 interface UserStore {
@@ -64,7 +65,8 @@ export const useUserStore = create<UserStore>()(
         ultimaData: '',
         streak: 0,
         ultimoDiaPontuado: '',
-        temaEscuro: true, // Inicia ativado por padrão (Dark Mode)
+        temaEscuro: true,
+        notificacoes: true, // Inicia ativado por predefinição
       },
       mostrarNavbar: true,
       setMostrarNavbar: (visivel) => set({ mostrarNavbar: visivel }),
