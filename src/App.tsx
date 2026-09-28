@@ -1,17 +1,23 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Onboarding } from './pages/Onboarding';
+import { Plano } from './pages/Plano';
+import { Evolucao } from './pages/Evolucao';
+import { Perfil } from './pages/Perfil';
+import { Layout } from './components/Layout';
 
-export default function App() {
+export function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Se a URL for só a barra (/), mostre a tela Home */}
-        <Route path="/" element={<Home />} />
-        
-        {/* Se a URL for /onboarding, mostre a tela de Onboarding */}
-        <Route path="/onboarding" element={<Onboarding />} />
-      </Routes>
-    </BrowserRouter>
+    <HashRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/plano" element={<Plano />} />
+          <Route path="/evolucao" element={<Evolucao />} />
+          <Route path="/perfil" element={<Perfil />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+        </Routes>
+      </Layout>
+    </HashRouter>
   );
 }

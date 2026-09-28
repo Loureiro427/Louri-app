@@ -1,27 +1,81 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
+
+
+const DICIONARIO_ALIMENTOS = {
+  cafeManha: [
+    { id: 'pao', nome: 'Pão Francês', emoji: '🥖', kcal: 140 }, { id: 'tapioca', nome: 'Tapioca', emoji: '🌮', kcal: 150 },
+    { id: 'ovo', nome: 'Ovo', emoji: '🍳', kcal: 70 }, { id: 'queijo', nome: 'Queijo', emoji: '🧀', kcal: 100 },
+    { id: 'cuscuz', nome: 'Cuscuz', emoji: '🌽', kcal: 120 }, { id: 'aveia', nome: 'Aveia', emoji: '🥣', kcal: 110 },
+    { id: 'banana', nome: 'Banana', emoji: '🍌', kcal: 90 }, { id: 'maca', nome: 'Maçã', emoji: '🍎', kcal: 60 },
+    { id: 'mamao', nome: 'Mamão', emoji: '🍈', kcal: 50 }, { id: 'leite', nome: 'Leite / Iogurte', emoji: '🥛', kcal: 120 },
+    { id: 'cafe', nome: 'Café', emoji: '☕', kcal: 5 }, { id: 'bolo', nome: 'Bolo Caseiro', emoji: '🥮', kcal: 200 },
+  ],
+  almoco: [
+    { id: 'arroz', nome: 'Arroz', emoji: '🍚', kcal: 130 }, { id: 'feijao', nome: 'Feijão', emoji: '🍲', kcal: 100 },
+    { id: 'frango', nome: 'Frango', emoji: '🍗', kcal: 160 }, { id: 'carne', nome: 'Carne', emoji: '🥩', kcal: 200 },
+    { id: 'peixe', nome: 'Peixe', emoji: '🐟', kcal: 140 }, { id: 'batatadoce', nome: 'Batata / Mandioca', emoji: '🍠', kcal: 110 },
+    { id: 'pure', nome: 'Purê', emoji: '🥔', kcal: 150 }, { id: 'macarrao', nome: 'Macarrão', emoji: '🍝', kcal: 180 },
+    { id: 'salada', nome: 'Salada', emoji: '🥗', kcal: 30 }, { id: 'legumes', nome: 'Legumes', emoji: '🥦', kcal: 50 },
+    { id: 'ovo_almoco', nome: 'Ovo Cozido', emoji: '🥚', kcal: 70 }, { id: 'farofa', nome: 'Farofa', emoji: '🌾', kcal: 120 },
+  ],
+  cafeTarde: [
+    { id: 'paodequeijo', nome: 'Pão de Queijo', emoji: '🧀', kcal: 150 }, { id: 'fruta_tarde', nome: 'Frutas', emoji: '🍌', kcal: 80 },
+    { id: 'vitamina', nome: 'Vitamina', emoji: '🥤', kcal: 150 }, { id: 'tapioca_tarde', nome: 'Tapioca', emoji: '🌮', kcal: 150 },
+    { id: 'castanhas', nome: 'Castanhas', emoji: '🥜', kcal: 170 }, { id: 'iogurte', nome: 'Iogurte', emoji: '🍶', kcal: 100 },
+    { id: 'cafe_tarde', nome: 'Café / Chá', emoji: '☕', kcal: 5 }, { id: 'biscoito', nome: 'Biscoito', emoji: '🍪', kcal: 130 },
+    { id: 'crepioca', nome: 'Crepioca', emoji: '🍳', kcal: 150 }, { id: 'sanduiche', nome: 'Sanduíche', emoji: '🥪', kcal: 250 },
+  ],
+  janta: [
+    { id: 'frango_janta', nome: 'Frango', emoji: '🍗', kcal: 160 }, { id: 'sopa', nome: 'Sopa', emoji: '🍲', kcal: 120 },
+    { id: 'omelete', nome: 'Omelete', emoji: '🍳', kcal: 150 }, { id: 'salada_janta', nome: 'Salada', emoji: '🥗', kcal: 40 },
+    { id: 'arroz_janta', nome: 'Arroz', emoji: '🍚', kcal: 100 }, { id: 'pure_janta', nome: 'Purê', emoji: '🥔', kcal: 150 },
+    { id: 'wrap', nome: 'Wrap Fit', emoji: '🌯', kcal: 180 }, { id: 'legumes_assados', nome: 'Legumes', emoji: '🥕', kcal: 60 },
+    { id: 'carne_janta', nome: 'Carne Magra', emoji: '🥩', kcal: 200 }, { id: 'peixe_janta', nome: 'Peixe', emoji: '🐟', kcal: 140 },
+  ],
+};
 
 export function Home() {
   const navigate = useNavigate();
   const dados = useUserStore((state) => state.dados);
-  const setDados = useUserStore((state) => state.setDados);
   const adicionarAgua = useUserStore((state) => state.adicionarAgua);
   const zerarAgua = useUserStore((state) => state.zerarAgua);
+  const registrarRefeicao = useUserStore((state) => state.registrarRefeicao);
+  const desfazerRefeicao = useUserStore((state) => state.desfazerRefeicao);
+  const zerarDieta = useUserStore((state) => state.zerarDieta);
+  const verificarViradaDeDia = useUserStore((state) => state.verificarViradaDeDia);
 
-  const [mostrarModalDesfazer, setMostrarModalDesfazer] = useState(false);
+  // Estados dos Modais
+  const [mostrarModalDesfazerAgua, setMostrarModalDesfazerAgua] = useState(false);
+  const [mostrarModalDieta, setMostrarModalDieta] = useState(false);
+  const [mostrarModalDesfazerDieta, setMostrarModalDesfazerDieta] = useState(false);
+  
+  const [refeicaoModal, setRefeicaoModal] = useState<any>(null); 
+  const [alimentosModal, setAlimentosModal] = useState<string[]>([]); 
+  const [minutosAtuais, setMinutosAtuais] = useState(0);
 
-  // Se o utilizador não tem nome salvo, mostra o ecrã de boas-vindas do Louri
+  useEffect(() => {
+    // 1. Verifica se virou o dia logo que a app abre
+    if (dados.nome) {
+      verificarViradaDeDia();
+    }
+
+    // 2. Controla o relógio interno
+    const atualizarTempo = () => {
+      const agora = new Date();
+      setMinutosAtuais(agora.getHours() * 60 + agora.getMinutes());
+    };
+    atualizarTempo();
+    const timer = setInterval(atualizarTempo, 60000); 
+    return () => clearInterval(timer);
+  }, [dados.nome, verificarViradaDeDia]);
+
   if (!dados.nome) {
     return (
-      // overscroll-none impede que a tela seja "puxada" no celular
-      <div className="flex flex-col min-h-[100dvh] bg-zinc-900 px-6 py-12 overflow-hidden overscroll-none">
-        
-        {/* Área Central com Logotipo e Emojis Orbitando */}
+      <div className="flex flex-col h-[100dvh] bg-zinc-900 px-6 py-12 overflow-hidden overscroll-none">
         <div className="flex-1 flex flex-col items-center justify-center mt-10 z-10">
-          
           <div className="relative w-64 h-64 flex items-center justify-center mb-2">
-            
             <div className="absolute inset-0 animate-[spin_25s_linear_infinite]">
               <div className="absolute top-4 left-0 text-3xl opacity-80">🔥</div>
               <div className="absolute top-0 right-4 text-4xl opacity-80">💪</div>
@@ -30,235 +84,368 @@ export function Home() {
               <div className="absolute bottom-4 left-4 text-4xl opacity-80">🍊</div>
               <div className="absolute bottom-0 right-2 text-3xl opacity-80">👟</div>
             </div>
-
             <div className="text-8xl drop-shadow-lg z-10">🍃</div>
-            
           </div>
-
-          <h1 className="text-4xl font-bold text-white tracking-tight">
-            Louri
-          </h1>
+          <h1 className="text-4xl font-bold text-white tracking-tight">Louri</h1>
         </div>
-
-        {/* Área de Textos e Botões */}
         <div className="flex flex-col items-center text-center z-10 gap-6 mt-auto">
-          <div className="flex flex-col gap-2">
-            <h2 className="text-2xl font-bold text-white">Sua dieta, do seu jeito!</h2>
-            <p className="text-zinc-400 text-sm px-2">
-              Descubra um app completo para organizar sua alimentação, rotina e progresso de forma simples e prática.
-            </p>
-          </div>
-
           <div className="w-full flex flex-col gap-4 mt-4">
-            <button
-              onClick={() => navigate('/onboarding')}
-              className="w-full bg-green-500 hover:bg-green-600 text-zinc-900 font-bold py-4 rounded-full transition-colors text-lg shadow-lg shadow-green-500/20"
-            >
-              Sou novo por aqui
-            </button>
-            <button
-              onClick={() => alert('A funcionalidade de conta online será lançada em breve! Por enquanto, utilize a versão local.')}
-              className="w-full bg-transparent border-2 border-green-500 text-green-500 font-bold py-4 rounded-full transition-colors text-lg hover:bg-green-500/10"
-            >
-              Já tenho uma conta
-            </button>
+            <button onClick={() => navigate('/onboarding')} className="w-full bg-green-500 hover:bg-green-600 text-zinc-900 font-bold py-4 rounded-full text-lg shadow-lg">Sou novo por aqui</button>
+            <button onClick={() => alert('Em breve!')} className="w-full bg-transparent border-2 border-green-500 text-green-500 font-bold py-4 rounded-full text-lg">Já tenho uma conta</button>
           </div>
         </div>
       </div>
     );
   }
 
-  // --- LÓGICA DA DASHBOARD ---
-  // Pega apenas a primeira palavra do nome (Ex: "Gabriel Loureiro" vira "Gabriel")
   const primeiroNome = dados.nome ? dados.nome.trim().split(' ')[0] : '';
-
-  const pesoNumerico = Number(dados.peso) || 70;
-  const metaAguaMl = Math.round(pesoNumerico * 35 / 1000) * 1000; 
-  const metaLitros = (metaAguaMl / 1000).toFixed(1);
+  const pesoNum = Number(dados.peso) || 70;
   
+  const metaAguaMl = Math.round(pesoNum * 35 / 1000) * 1000; 
   const aguaAtualMl = dados.aguaConsumida || 0;
-  const aguaLitros = (aguaAtualMl / 1000).toFixed(2);
   const progressoAgua = Math.min(100, Math.round((aguaAtualMl / metaAguaMl) * 100));
   
-  const metaConcluida = aguaAtualMl >= metaAguaMl;
+  let tmb = 10 * pesoNum + 6.25 * (Number(dados.altura) || 170) - 5 * (Number(dados.idade) || 25);
+  tmb = dados.sexo === 'M' ? tmb + 5 : tmb - 161;
+  let metaCalorias = Math.round(tmb * 1.3);
+  if (dados.objetivo === 'perder') metaCalorias -= 400; 
+  if (dados.objetivo === 'ganhar') metaCalorias += 400; 
 
-  const confirmarDesfazer = () => {
+  const caloriasConsumidas = dados.caloriasConsumidas || 0;
+  const progressoCalorias = Math.min(100, Math.round((caloriasConsumidas / metaCalorias) * 100));
+  
+  const converterParaMinutos = (horaStr: string) => {
+    if (!horaStr) return 0;
+    const [h, m] = horaStr.split(':').map(Number);
+    return h * 60 + m;
+  };
+  const formatarMinutos = (minutosTotal: number) => {
+    const h = Math.floor(minutosTotal / 60) % 24;
+    const m = Math.floor(minutosTotal % 60);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
+  const acordaMin = converterParaMinutos(dados.horaAcorda || '07:00');
+  let dormeMin = converterParaMinutos(dados.horaDorme || '22:00');
+  if (dormeMin < acordaMin) dormeMin += 24 * 60; 
+
+  const tempoAcordado = dormeMin - acordaMin;
+  
+  const REFEICOES = [
+    { key: 'cafeManha', titulo: 'Café da Manhã', minutos: acordaMin + 30, icone: '☕' },
+    { key: 'almoco', titulo: 'Almoço', minutos: acordaMin + (tempoAcordado * 0.35), icone: '🍛' },
+    { key: 'cafeTarde', titulo: 'Café da Tarde', minutos: acordaMin + (tempoAcordado * 0.65), icone: '🥪' },
+    { key: 'janta', titulo: 'Jantar', minutos: dormeMin - 120, icone: '🍲' },
+  ].map(r => ({ ...r, horario: formatarMinutos(r.minutos) }));
+
+  const refeicoesFeitas = dados.refeicoesConcluidas || [];
+  const refeicoesFeitasInfo = REFEICOES.filter(r => refeicoesFeitas.includes(r.key));
+
+  const abrirModalRefeicao = (refeicao: any) => {
+    if (refeicoesFeitas.includes(refeicao.key)) return; 
+    setRefeicaoModal(refeicao);
+    setAlimentosModal(dados.alimentos[refeicao.key as keyof typeof dados.alimentos] || []);
+  };
+
+  const toggleAlimentoModal = (idAlimento: string) => {
+    if (alimentosModal.includes(idAlimento)) {
+      setAlimentosModal(alimentosModal.filter(item => item !== idAlimento));
+    } else {
+      setAlimentosModal([...alimentosModal, idAlimento]);
+    }
+  };
+
+  const caloriasTotaisModal = alimentosModal.reduce((acc, id) => {
+    const alimento = DICIONARIO_ALIMENTOS[refeicaoModal?.key as keyof typeof DICIONARIO_ALIMENTOS]?.find(a => a.id === id);
+    return acc + (alimento?.kcal || 0);
+  }, 0);
+
+  const confirmarRefeicao = () => {
+    if (caloriasTotaisModal > 0) {
+      registrarRefeicao(refeicaoModal.key, caloriasTotaisModal, alimentosModal);
+      setRefeicaoModal(null);
+    }
+  };
+
+  const cancelarRefeicaoFeita = (refeicaoKey: string) => {
+    const caloriasPadrao = (dados.alimentos[refeicaoKey as keyof typeof dados.alimentos] || []).reduce((acc, id) => {
+      const alimento = DICIONARIO_ALIMENTOS[refeicaoKey as keyof typeof DICIONARIO_ALIMENTOS]?.find(a => a.id === id);
+      return acc + (alimento?.kcal || 0);
+    }, 0);
+    desfazerRefeicao(refeicaoKey, caloriasPadrao);
+  };
+
+  const confirmarDesfazerAgua = () => {
     zerarAgua();
-    setMostrarModalDesfazer(false);
+    setMostrarModalDesfazerAgua(false);
+  };
+
+  const confirmarDesfazerDieta = () => {
+    zerarDieta();
+    setMostrarModalDesfazerDieta(false);
+    setMostrarModalDieta(false);
   };
 
   return (
-    // min-h-[100dvh] garante preenchimento total e overscroll-none trava o arrasto da tela
-    <div className="flex flex-col min-h-[100dvh] bg-zinc-900 px-6 py-8 text-white w-full max-w-md mx-auto relative overscroll-none overflow-x-hidden">
+    <div className="flex flex-col h-[100dvh] overflow-y-auto bg-zinc-950 px-6 py-8 text-white w-full max-w-md mx-auto relative overscroll-none custom-scrollbar pb-28">
       
-      {/* Cabeçalho do Painel */}
-      <header className="flex justify-between items-center mb-6">
+      {/* Cabeçalho Limpo */}
+      <header className="flex justify-between items-center mb-6 shrink-0">
         <div>
-          <p className="text-zinc-400 text-xs uppercase tracking-wider">Bom dia,</p>
+          <p className="text-zinc-400 text-xs uppercase tracking-wider">Olá!,</p>
           <h1 className="text-2xl font-bold text-white capitalize">{primeiroNome}</h1>
-        </div>
-        
-        <div className="flex gap-2">
-          <button 
-            onClick={() => navigate('/onboarding')}
-            className="text-xs bg-zinc-800 text-zinc-300 px-3 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-700 transition-colors"
-          >
-            Editar
-          </button>
-          
-          <button 
-            onClick={() => setDados({ nome: '' })}
-            className="text-xs bg-red-500/10 text-red-400 px-3 py-2 rounded-xl border border-red-500/20 hover:bg-red-500/20 transition-colors"
-          >
-            Sair
-          </button>
         </div>
       </header>
 
-      {/* DASHBOARD CONTEÚDO */}
       <div className="flex flex-col gap-5">
         
-        {/* CARTÃO DE HIDRATAÇÃO DIÁRIA COM LIMITE DE META */}
-        <div className={`rounded-3xl p-5 shadow-xl flex flex-col gap-4 border transition-all duration-500 ${
-          metaConcluida 
-            ? 'bg-gradient-to-br from-zinc-800 to-green-950/40 border-green-500/50 shadow-green-500/10' 
-            : 'bg-zinc-800/80 border-zinc-700/80'
-        }`}>
-          
+        <div className="grid grid-cols-2 gap-3 shrink-0">
+          {/* Cartão de Dieta agora é Clicável */}
+          <div 
+            onClick={() => setMostrarModalDieta(true)}
+            className="bg-zinc-900/80 border border-zinc-800 rounded-3xl p-4 shadow-lg flex flex-col justify-between gap-3 cursor-pointer hover:bg-zinc-900 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-sm">🔥</span>
+              <span className="text-xs text-zinc-400 font-medium">Dieta (Ver)</span>
+            </div>
+            <div>
+              <p className="text-xl font-bold text-white">{caloriasConsumidas} <span className="text-xs text-zinc-400 font-normal">/ {metaCalorias}</span></p>
+              <div className="w-full bg-zinc-950 h-1.5 rounded-full overflow-hidden mt-2 border border-zinc-800">
+                <div className="bg-orange-500 h-full rounded-full transition-all duration-500" style={{ width: `${progressoCalorias}%` }} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-3xl p-4 shadow-lg flex flex-col justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 text-sm">🎯</span>
+              <span className="text-xs text-zinc-400 font-medium">Foco</span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-green-400 uppercase leading-tight">
+                {dados.objetivo === 'perder' ? 'Emagrecer' : dados.objetivo === 'ganhar' ? 'Massa' : 'Manutenção'}
+              </p>
+              <p className="text-[10px] text-zinc-400 mt-0.5">{pesoNum}kg atual</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Hidratação */}
+        <div className={`shrink-0 rounded-3xl p-5 shadow-xl flex flex-col gap-4 border transition-all duration-500 ${aguaAtualMl >= metaAguaMl ? 'bg-gradient-to-br from-zinc-900 to-green-950/40 border-green-500/50' : 'bg-zinc-900/80 border-zinc-800'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border transition-all ${
-                metaConcluida 
-                  ? 'bg-green-500/20 border-green-500/40 animate-bounce' 
-                  : 'bg-blue-500/20 border-blue-500/30'
-              }`}>
-                {metaConcluida ? '🎉' : '💧'}
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border transition-all ${aguaAtualMl >= metaAguaMl ? 'bg-green-500/20 border-green-500/40 animate-bounce' : 'bg-blue-500/20 border-blue-500/30'}`}>
+                {aguaAtualMl >= metaAguaMl ? '🎉' : '💧'}
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  Hidratação
-                  {metaConcluida && <span className="text-xs bg-green-500 text-zinc-900 font-extrabold px-2 py-0.5 rounded-full">100%</span>}
-                </h2>
-                <p className="text-xs text-zinc-400">
-                  {metaConcluida ? 'Parabéns! Meta atingida!' : 'Mantenha o metabolismo ativo'}
-                </p>
+                <h2 className="text-lg font-bold text-white">Hidratação</h2>
               </div>
             </div>
-            
             <div className="text-right">
-              <span className={`text-xl font-bold ${metaConcluida ? 'text-green-400' : 'text-blue-400'}`}>
-                {aguaLitros}L
-              </span>
-              <span className="text-xs text-zinc-400 block">de {metaLitros}L</span>
+              <span className={`text-xl font-bold ${aguaAtualMl >= metaAguaMl ? 'text-green-400' : 'text-blue-400'}`}>{(aguaAtualMl / 1000).toFixed(2)}L</span>
+              <span className="text-xs text-zinc-400 block">de {(metaAguaMl / 1000).toFixed(1)}L</span>
             </div>
           </div>
-
-          {/* Barra de Progresso */}
-          <div className="w-full bg-zinc-900 h-3 rounded-full overflow-hidden p-0.5 border border-zinc-700">
-            <div 
-              className={`h-full rounded-full transition-all duration-500 shadow-lg ${
-                metaConcluida 
-                  ? 'bg-green-500 shadow-green-500/50 w-full' 
-                  : 'bg-blue-500 shadow-blue-500/50'
-              }`}
-              style={{ width: metaConcluida ? '100%' : `${progressoAgua}%` }}
-            />
+          <div className="w-full bg-zinc-950 h-3 rounded-full overflow-hidden p-0.5 border border-zinc-800">
+            <div className={`h-full rounded-full transition-all duration-500 ${aguaAtualMl >= metaAguaMl ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: aguaAtualMl >= metaAguaMl ? '100%' : `${progressoAgua}%` }} />
           </div>
-
-          {/* Botões Rápidos */}
           <div className="grid grid-cols-4 gap-2 mt-1">
-            <button
-              onClick={() => adicionarAgua(200, metaAguaMl)}
-              disabled={metaConcluida}
-              className={`py-2.5 rounded-xl text-xs font-semibold transition-all flex flex-col items-center gap-0.5 border ${
-                metaConcluida 
-                  ? 'bg-zinc-900/50 border-zinc-800 text-zinc-600 cursor-not-allowed' 
-                  : 'bg-zinc-900 hover:bg-blue-600/20 border-zinc-700 hover:border-blue-500 text-zinc-200'
-              }`}
-            >
-              <span className="text-sm">🥛</span>
-              <span>+200ml</span>
-            </button>
-
-            <button
-              onClick={() => adicionarAgua(300, metaAguaMl)}
-              disabled={metaConcluida}
-              className={`py-2.5 rounded-xl text-xs font-semibold transition-all flex flex-col items-center gap-0.5 border ${
-                metaConcluida 
-                  ? 'bg-zinc-900/50 border-zinc-800 text-zinc-600 cursor-not-allowed' 
-                  : 'bg-zinc-900 hover:bg-blue-600/20 border-zinc-700 hover:border-blue-500 text-zinc-200'
-              }`}
-            >
-              <span className="text-sm">🥤</span>
-              <span>+300ml</span>
-            </button>
-
-            <button
-              onClick={() => adicionarAgua(500, metaAguaMl)}
-              disabled={metaConcluida}
-              className={`py-2.5 rounded-xl text-xs font-semibold transition-all flex flex-col items-center gap-0.5 border ${
-                metaConcluida 
-                  ? 'bg-zinc-900/50 border-zinc-800 text-zinc-600 cursor-not-allowed' 
-                  : 'bg-zinc-900 hover:bg-blue-600/20 border-zinc-700 hover:border-blue-500 text-zinc-200'
-              }`}
-            >
-              <span className="text-sm">🍶</span>
-              <span>+500ml</span>
-            </button>
-
-            <button
-              onClick={() => setMostrarModalDesfazer(true)}
-              title="Zerar registo de água"
-              className="bg-zinc-900 hover:bg-red-500/20 border border-zinc-700 hover:border-red-500 text-zinc-400 hover:text-red-400 py-2.5 rounded-xl text-xs font-semibold transition-all flex flex-col items-center gap-0.5"
-            >
-              <span className="text-sm">🔄</span>
-              <span>Desfazer</span>
-            </button>
+            <button onClick={() => adicionarAgua(200, metaAguaMl)} disabled={aguaAtualMl >= metaAguaMl} className="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border bg-zinc-950 border-zinc-800 text-zinc-200">🥛 <span>+200</span></button>
+            <button onClick={() => adicionarAgua(300, metaAguaMl)} disabled={aguaAtualMl >= metaAguaMl} className="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border bg-zinc-950 border-zinc-800 text-zinc-200">🥤 <span>+300</span></button>
+            <button onClick={() => adicionarAgua(500, metaAguaMl)} disabled={aguaAtualMl >= metaAguaMl} className="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border bg-zinc-950 border-zinc-800 text-zinc-200">🍶 <span>+500</span></button>
+            <button onClick={() => setMostrarModalDesfazerAgua(true)} className="bg-zinc-950 border-zinc-800 text-zinc-400 py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5">🔄 <span>Desfazer</span></button>
           </div>
         </div>
 
-        {/* RESUMO RÁPIDO DA ROTINA */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-zinc-800/50 border border-zinc-700/60 rounded-2xl p-4 flex flex-col gap-1">
-            <span className="text-xs text-zinc-400 uppercase font-medium">Foco Atual</span>
-            <span className="text-sm font-bold text-green-400 uppercase">
-              {dados.objetivo === 'perder' ? 'Emagrecimento' : dados.objetivo === 'ganhar' ? 'Ganho de Massa' : 'Manutenção'}
-            </span>
-          </div>
+        {/* Timeline */}
+        <div className="mt-2 shrink-0">
+          <h2 className="text-xl font-bold text-white mb-4">Plano de Hoje</h2>
+          
+          <div className="flex flex-col gap-4">
+            {REFEICOES.map((refeicao, index) => {
+              const idsEscolhidos = dados.alimentos[refeicao.key as keyof typeof dados.alimentos] || [];
+              const alimentosCompletos = idsEscolhidos.map(id => DICIONARIO_ALIMENTOS[refeicao.key as keyof typeof DICIONARIO_ALIMENTOS].find(item => item.id === id)).filter(Boolean); 
+              
+              const isFeita = refeicoesFeitas.includes(refeicao.key);
+              const isAgora = minutosAtuais >= refeicao.minutos - 30 && minutosAtuais <= refeicao.minutos + 120;
 
-          <div className="bg-zinc-800/50 border border-zinc-700/60 rounded-2xl p-4 flex flex-col gap-1">
-            <span className="text-xs text-zinc-400 uppercase font-medium">Horários</span>
-            <span className="text-xs text-zinc-200">⏰ {dados.horaAcorda || '07:00'} ➔ 🌙 {dados.horaDorme || '22:00'}</span>
+              return (
+                <div key={refeicao.key} className="flex gap-4 relative">
+                  {index !== REFEICOES.length - 1 && (
+                    <div className={`absolute left-[27px] top-12 bottom-[-16px] w-0.5 z-0 transition-colors ${isFeita ? 'bg-green-500' : 'bg-zinc-800'}`}></div>
+                  )}
+
+                  <div className="flex flex-col items-center gap-1 z-10">
+                    <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shadow-md transition-all duration-300 ${isFeita ? 'bg-green-500 text-zinc-950' : isAgora ? 'bg-orange-500/20 border border-orange-500/50 text-orange-400 animate-pulse' : 'bg-zinc-900 border border-zinc-800 text-zinc-400'}`}>
+                      {isFeita ? <span className="text-2xl">✓</span> : <span className="text-xl">{refeicao.icone}</span>}
+                    </div>
+                    <span className={`text-[10px] font-bold mt-1 ${isAgora && !isFeita ? 'text-orange-400' : 'text-zinc-500'}`}>{refeicao.horario}</span>
+                  </div>
+
+                  <div 
+                    onClick={() => isFeita ? cancelarRefeicaoFeita(refeicao.key) : abrirModalRefeicao(refeicao)}
+                    className={`flex-1 rounded-2xl p-4 flex flex-col gap-3 transition-all cursor-pointer ${isFeita ? 'bg-zinc-900/20 border border-green-500/20 opacity-60' : isAgora ? 'bg-zinc-900/80 border border-orange-500/30' : 'bg-zinc-900/40 border border-zinc-800 hover:bg-zinc-900/60'}`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <h3 className={`text-sm font-bold ${isFeita ? 'text-green-500 line-through' : 'text-white'}`}>{refeicao.titulo}</h3>
+                      {!isFeita && <span className="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-1 rounded-lg">Registar</span>}
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      {alimentosCompletos.map((alimento: any) => (
+                        <div key={alimento.id} className="bg-zinc-950/80 border border-zinc-800 px-2 py-1 rounded-md flex items-center gap-1">
+                          <span className="text-xs">{alimento.emoji}</span>
+                          <span className="text-[10px] text-zinc-300">{alimento.nome}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              );
+            })}
           </div>
         </div>
 
       </div>
 
-      {/* MODAL DE CONFIRMAÇÃO DE DESFAZER */}
-      {mostrarModalDesfazer && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none">
-          <div className="bg-zinc-800 border border-zinc-700 rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center shadow-2xl">
-            <div className="text-4xl">⚠️</div>
-            <div>
-              <h3 className="text-lg font-bold text-white">Tem certeza?</h3>
-              <p className="text-xs text-zinc-400 mt-1">
-                Deseja realmente zerar o registo da sua hidratação diária?
-              </p>
+      {/* MODAL: RESUMO DA DIETA */}
+      {mostrarModalDieta && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end justify-center z-50 animate-in slide-in-from-bottom-4 overscroll-none">
+          <div className="bg-zinc-900 border-t border-zinc-800 rounded-t-3xl p-6 w-full max-w-md flex flex-col gap-5 pb-10">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <span>🔥</span> Resumo da Dieta
+              </h3>
+              <button onClick={() => setMostrarModalDieta(false)} className="text-zinc-400 text-2xl font-bold">×</button>
+            </div>
+            
+            <div className="flex flex-col items-center justify-center p-4 bg-zinc-950/50 rounded-2xl border border-zinc-800">
+              <p className="text-4xl font-black text-white">{caloriasConsumidas} <span className="text-sm text-zinc-400 font-normal">/ {metaCalorias} Kcal</span></p>
+              <div className="w-full bg-zinc-900 h-2 rounded-full overflow-hidden mt-3 border border-zinc-800">
+                <div className="bg-orange-500 h-full rounded-full transition-all duration-500" style={{ width: `${progressoCalorias}%` }} />
+              </div>
             </div>
 
+            <div>
+              <p className="text-xs text-zinc-400 uppercase tracking-wider font-semibold mb-3">Refeições de Hoje:</p>
+              <div className="flex flex-col gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                {refeicoesFeitasInfo.length > 0 ? (
+                  refeicoesFeitasInfo.map(r => {
+                    const cals = (dados.alimentos[r.key as keyof typeof dados.alimentos] || []).reduce((acc, id) => {
+                      const alimento = DICIONARIO_ALIMENTOS[r.key as keyof typeof DICIONARIO_ALIMENTOS]?.find(a => a.id === id);
+                      return acc + (alimento?.kcal || 0);
+                    }, 0);
+
+                    return (
+                      <div key={r.key} className="flex justify-between items-center bg-zinc-900 p-3 rounded-xl border border-zinc-800">
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-500">✓</span>
+                          <span className="text-sm font-medium text-white">{r.titulo}</span>
+                        </div>
+                        <span className="text-xs text-orange-400 font-bold">+{cals} kcal</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-zinc-500 italic text-center py-4">Nenhuma refeição registada hoje.</p>
+                )}
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setMostrarModalDesfazerDieta(true)}
+              className="w-full bg-zinc-900 hover:bg-red-500/10 border border-zinc-800 hover:border-red-500/50 text-red-400 font-bold py-4 rounded-xl text-lg mt-2 transition-colors flex items-center justify-center gap-2"
+            >
+              <span>🔄</span> Zerar Registo Diário
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: REGISTAR REFEIÇÃO */}
+      {refeicaoModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end justify-center z-50 animate-in slide-in-from-bottom-4 overscroll-none">
+          <div className="bg-zinc-900 border-t border-zinc-800 rounded-t-3xl p-6 w-full max-w-md flex flex-col gap-4 pb-10 max-h-[85vh] overflow-y-auto">
+            
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <span>{refeicaoModal.icone}</span> O que comeu?
+              </h3>
+              <button onClick={() => setRefeicaoModal(null)} className="text-zinc-400 text-2xl font-bold">×</button>
+            </div>
+            
+            <div className="flex items-center gap-4 bg-zinc-950/50 p-4 rounded-2xl border border-zinc-800">
+              <span className="text-3xl">🔥</span>
+              <div className="flex-1 text-center">
+                <p className="text-4xl font-black text-white">{caloriasTotaisModal} <span className="text-sm text-zinc-400 font-normal">Kcal</span></p>
+                <p className="text-xs text-zinc-500 mt-1">Calculado automaticamente</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-400 uppercase tracking-wider font-semibold mt-2">Personalize a sua refeição:</p>
+
+            <div className="grid grid-cols-3 gap-2">
+              {DICIONARIO_ALIMENTOS[refeicaoModal.key as keyof typeof DICIONARIO_ALIMENTOS].map((alimento) => {
+                const estaSelecionado = alimentosModal.includes(alimento.id);
+                return (
+                  <button
+                    key={alimento.id}
+                    onClick={() => toggleAlimentoModal(alimento.id)}
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all duration-200 gap-1 ${
+                      estaSelecionado
+                        ? 'bg-orange-500/10 border-orange-500 text-orange-400 shadow-md'
+                        : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                    }`}
+                  >
+                    <span className="text-xl">{alimento.emoji}</span>
+                    <span className="text-[10px] font-bold text-center leading-tight truncate w-full">{alimento.nome}</span>
+                    <span className="text-[9px] text-zinc-500">{alimento.kcal} kcal</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button 
+              onClick={confirmarRefeicao}
+              disabled={caloriasTotaisModal === 0}
+              className={`w-full font-bold py-4 rounded-xl text-lg mt-4 shadow-lg transition-all ${caloriasTotaisModal > 0 ? 'bg-green-500 hover:bg-green-600 text-zinc-950 shadow-green-500/20' : 'bg-zinc-900 text-zinc-600 cursor-not-allowed'}`}
+            >
+              Confirmar Refeição
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Desfazer Água */}
+      {mostrarModalDesfazerAgua && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center">
+            <div className="text-4xl">⚠️</div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Zerar Água?</h3>
+            </div>
             <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => setMostrarModalDesfazer(false)}
-                className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-semibold py-3 rounded-xl text-sm transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmarDesfazer}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-zinc-950 font-bold py-3 rounded-xl text-sm transition-colors"
-              >
-                Confirmar
-              </button>
+              <button onClick={() => setMostrarModalDesfazerAgua(false)} className="flex-1 bg-zinc-800 text-zinc-200 py-3 rounded-xl font-semibold text-sm">Cancelar</button>
+              <button onClick={confirmarDesfazerAgua} className="flex-1 bg-red-500 text-zinc-950 font-bold py-3 rounded-xl text-sm">Confirmar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Desfazer Dieta (Confirmação) */}
+      {mostrarModalDesfazerDieta && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center shadow-2xl">
+            <div className="text-4xl">⚠️</div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Zerar a Dieta?</h3>
+              <p className="text-xs text-zinc-400 mt-1">Deseja realmente desmarcar todas as refeições e zerar as calorias de hoje?</p>
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => setMostrarModalDesfazerDieta(false)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 py-3 rounded-xl font-semibold text-sm transition-colors">Cancelar</button>
+              <button onClick={confirmarDesfazerDieta} className="flex-1 bg-red-500 hover:bg-red-600 text-zinc-950 font-bold py-3 rounded-xl text-sm transition-colors">Confirmar</button>
             </div>
           </div>
         </div>

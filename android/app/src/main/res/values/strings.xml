@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Louri</string>
+    <string name="title_activity_main">Louri</string>
+    <string name="package_name">com.loureiro.louri</string>
+    <string name="custom_url_scheme">com.loureiro.louri</string>
+</resources>
