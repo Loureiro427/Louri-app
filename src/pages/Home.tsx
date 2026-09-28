@@ -190,23 +190,37 @@ export function Home() {
   let dormeMin = converterParaMinutos(dados.horaDorme || '22:00');
   if (dormeMin < acordaMin) dormeMin += 24 * 60; 
 
-  const tempoAcordado = dormeMin - acordaMin;
-  
-  // Geração dinâmica das refeições baseada estritamente nas refeicoesAtivas do utilizador
-  const ativas = dados.refeicoesAtivas && dados.refeicoesAtivas.length > 0 
+  // --- ORDENAÇÃO CRONOLÓGICA E HORÁRIOS INTELIGENTES ---
+  const ORDEM_CRONOLOGICA = ['cafeManha', 'almoco', 'lancheTarde', 'cafeTarde', 'janta', 'lancheNoite'];
+
+  const ativasBrutas = dados.refeicoesAtivas && dados.refeicoesAtivas.length > 0 
     ? dados.refeicoesAtivas 
     : ['cafeManha', 'almoco', 'lancheTarde', 'janta'];
 
+  const ativas = ORDEM_CRONOLOGICA.filter(key => ativasBrutas.includes(key));
+
   const totalRef = ativas.length;
-  const tempoDisponivel = Math.max(60, tempoAcordado - 150);
+  const inicio = acordaMin + 30; 
+  const fim = Math.max(inicio + 60, dormeMin - 90); 
+  const span = fim - inicio;
 
   const REFEICOES = ativas.map((key, index) => {
     let minutosOffset;
+
     if (totalRef === 1) {
-      minutosOffset = acordaMin + 120;
+      if (key === 'cafeManha') {
+        minutosOffset = acordaMin + 30;
+      } else if (key === 'almoco') {
+        minutosOffset = Math.min(dormeMin - 120, Math.max(acordaMin + 120, 12 * 60 + 30));
+      } else if (key === 'janta') {
+        minutosOffset = Math.min(dormeMin - 120, Math.max(acordaMin + 180, 20 * 60));
+      } else {
+        minutosOffset = acordaMin + span / 2;
+      }
     } else {
-      minutosOffset = (acordaMin + 30) + (tempoDisponivel * (index / (totalRef - 1)));
+      minutosOffset = inicio + (span * (index / (totalRef - 1)));
     }
+
     const config = CONFIG_REFEICOES[key] || { titulo: key, icone: '🍽️' };
     return {
       key,
@@ -351,7 +365,7 @@ export function Home() {
           </div>
         </div>
 
-        {/* Timeline Dinâmica (Lê as refeições ativas do utilizador) */}
+        {/* Timeline Dinâmica */}
         <div className="mt-2 shrink-0">
           <h2 className="text-xl font-bold text-white mb-4">Plano de Hoje</h2>
           

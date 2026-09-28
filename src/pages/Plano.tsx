@@ -72,21 +72,37 @@ export function Plano() {
   const tempoAcordado = dormeMin - acordaMin;
   const horasJejum = Math.floor((24 * 60 - tempoAcordado) / 60);
 
-  // Lê as refeições ativas guardadas no estado global
-  const ativas = dados.refeicoesAtivas && dados.refeicoesAtivas.length > 0 
+  // --- ORDENAÇÃO CRONOLÓGICA E HORÁRIOS INTELIGENTES ---
+  const ORDEM_CRONOLOGICA = ['cafeManha', 'almoco', 'lancheTarde', 'cafeTarde', 'janta', 'lancheNoite'];
+
+  const ativasBrutas = dados.refeicoesAtivas && dados.refeicoesAtivas.length > 0 
     ? dados.refeicoesAtivas 
     : ['cafeManha', 'almoco', 'lancheTarde', 'janta'];
 
+  const ativas = ORDEM_CRONOLOGICA.filter(key => ativasBrutas.includes(key));
+
   const totalRef = ativas.length;
-  const tempoDisponivel = Math.max(60, tempoAcordado - 150);
+  const inicio = acordaMin + 30; 
+  const fim = Math.max(inicio + 60, dormeMin - 90); 
+  const span = fim - inicio;
 
   const cronograma = ativas.map((key, index) => {
     let minutosOffset;
+
     if (totalRef === 1) {
-      minutosOffset = acordaMin + 120;
+      if (key === 'cafeManha') {
+        minutosOffset = acordaMin + 30;
+      } else if (key === 'almoco') {
+        minutosOffset = Math.min(dormeMin - 120, Math.max(acordaMin + 120, 12 * 60 + 30));
+      } else if (key === 'janta') {
+        minutosOffset = Math.min(dormeMin - 120, Math.max(acordaMin + 180, 20 * 60));
+      } else {
+        minutosOffset = acordaMin + span / 2;
+      }
     } else {
-      minutosOffset = (acordaMin + 30) + (tempoDisponivel * (index / (totalRef - 1)));
+      minutosOffset = inicio + (span * (index / (totalRef - 1)));
     }
+
     const config = CONFIG_REFEICOES[key] || { titulo: key, icone: '🍽️' };
     return {
       titulo: config.titulo,
