@@ -158,6 +158,9 @@ export function Home() {
   };
 
   const atualizarGramas = (idAlimento: string, gramas: string) => {
+    // Bloqueia a atualização do estado se passar de 4 caracteres
+    if (gramas.length > 4) return; 
+    
     setPorcoesModal(prev => ({ ...prev, [idAlimento]: Number(gramas) || 0 }));
   };
 
@@ -439,6 +442,7 @@ export function Home() {
                         <div className="flex items-center bg-zinc-950 rounded-lg px-2 py-1 border border-orange-500/30 w-full justify-center">
                           <input 
                             type="number" 
+                            maxLength={4}
                             value={gramas === 0 ? '' : gramas}
                             onChange={(e) => atualizarGramas(alimento.id, e.target.value)}
                             className="w-10 bg-transparent text-center text-xs text-white outline-none appearance-none font-bold"
