@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
-import logoImg from '../assets/logo.png'; // Importa o teu logótipo oficial
+import logoImg from '../assets/logo.png'; // Logótipo oficial
 
-const DICIONARIO_ALIMENTOS = {
+const DICIONARIO_ALIMENTOS: Record<string, { id: string; nome: string; emoji: string; kcal100g: number; prot: number; carbo: number; gord: number }[]> = {
   cafeManha: [
     { id: 'pao', nome: 'Pão Francês', emoji: '🥖', kcal100g: 280, prot: 9, carbo: 58, gord: 3 }, 
     { id: 'tapioca', nome: 'Tapioca', emoji: '🌮', kcal100g: 340, prot: 0, carbo: 85, gord: 0 },
@@ -32,7 +32,7 @@ const DICIONARIO_ALIMENTOS = {
     { id: 'ovo_almoco', nome: 'Ovo Cozido', emoji: '🥚', kcal100g: 155, prot: 13, carbo: 1, gord: 11 }, 
     { id: 'farofa', nome: 'Farofa', emoji: '🌾', kcal100g: 400, prot: 2, carbo: 80, gord: 8 },
   ],
-  cafeTarde: [
+  lancheTarde: [
     { id: 'paodequeijo', nome: 'Pão de Queijo', emoji: '🧀', kcal100g: 330, prot: 5, carbo: 40, gord: 15 }, 
     { id: 'fruta_tarde', nome: 'Frutas', emoji: '🍌', kcal100g: 80, prot: 1, carbo: 20, gord: 0 },
     { id: 'vitamina', nome: 'Vitamina', emoji: '🥤', kcal100g: 85, prot: 3, carbo: 12, gord: 2 }, 
@@ -43,6 +43,13 @@ const DICIONARIO_ALIMENTOS = {
     { id: 'biscoito', nome: 'Biscoito', emoji: '🍪', kcal100g: 450, prot: 6, carbo: 70, gord: 15 },
     { id: 'crepioca', nome: 'Crepioca', emoji: '🍳', kcal100g: 200, prot: 8, carbo: 25, gord: 7 }, 
     { id: 'sanduiche', nome: 'Sanduíche', emoji: '🥪', kcal100g: 250, prot: 12, carbo: 30, gord: 8 },
+  ],
+  cafeTarde: [
+    { id: 'cuscuz_tarde', nome: 'Cuscuz', emoji: '🌽', kcal100g: 110, prot: 3, carbo: 23, gord: 1 },
+    { id: 'pao_chapa', nome: 'Pão na Chapa', emoji: '🍞', kcal100g: 300, prot: 7, carbo: 50, gord: 8 },
+    { id: 'bolo_tarde', nome: 'Bolo Simples', emoji: '🥮', kcal100g: 350, prot: 5, carbo: 50, gord: 15 },
+    { id: 'fruta_l', nome: 'Fruta', emoji: '🍎', kcal100g: 52, prot: 0, carbo: 14, gord: 0 },
+    { id: 'cha', nome: 'Chá', emoji: '🍵', kcal100g: 2, prot: 0, carbo: 0, gord: 0 },
   ],
   janta: [
     { id: 'frango_janta', nome: 'Frango', emoji: '🍗', kcal100g: 165, prot: 31, carbo: 0, gord: 3 }, 
@@ -56,6 +63,21 @@ const DICIONARIO_ALIMENTOS = {
     { id: 'carne_janta', nome: 'Carne Magra', emoji: '🥩', kcal100g: 180, prot: 26, carbo: 0, gord: 7 }, 
     { id: 'peixe_janta', nome: 'Peixe', emoji: '🐟', kcal100g: 105, prot: 20, carbo: 0, gord: 2 },
   ],
+  lancheNoite: [
+    { id: 'chapa_noite', nome: 'Chá Relaxante', emoji: '🍵', kcal100g: 2, prot: 0, carbo: 0, gord: 0 },
+    { id: 'ceia_fruta', nome: 'Fruta Leve', emoji: '🍌', kcal100g: 90, prot: 1, carbo: 23, gord: 0 },
+    { id: 'iogurte_noite', nome: 'Iogurte Proteico', emoji: '🥛', kcal100g: 65, prot: 8, carbo: 6, gord: 1 },
+    { id: 'barra_cereal', nome: 'Barra de Cereal', emoji: '🥜', kcal100g: 400, prot: 6, carbo: 65, gord: 10 },
+  ],
+};
+
+const CONFIG_REFEICOES: Record<string, { titulo: string; icone: string }> = {
+  cafeManha: { titulo: 'Café da Manhã', icone: '☕' },
+  almoco: { titulo: 'Almoço', icone: '🍽️' },
+  lancheTarde: { titulo: 'Lanche da Tarde', icone: '🍎' },
+  cafeTarde: { titulo: 'Café da Tarde', icone: '🧋' },
+  janta: { titulo: 'Jantar', icone: '🍲' },
+  lancheNoite: { titulo: 'Lanche da Noite', icone: '🌙' },
 };
 
 export function Home() {
@@ -68,13 +90,12 @@ export function Home() {
   const zerarDieta = useUserStore((state) => state.zerarDieta);
   const verificarViradaDeDia = useUserStore((state) => state.verificarViradaDeDia);
 
-  // Estados dos Modais
+  // Modais
   const [mostrarModalDesfazerAgua, setMostrarModalDesfazerAgua] = useState(false);
   const [mostrarModalDieta, setMostrarModalDieta] = useState(false);
   const [mostrarModalDesfazerDieta, setMostrarModalDesfazerDieta] = useState(false);
   
   const [refeicaoModal, setRefeicaoModal] = useState<any>(null); 
-  // Novo Estado: Guarda as gramas de cada alimento ex: { 'pao': 100, 'ovo': 50 }
   const [porcoesModal, setPorcoesModal] = useState<Record<string, number>>({}); 
   const [minutosAtuais, setMinutosAtuais] = useState(0);
 
@@ -96,18 +117,11 @@ export function Home() {
     return (
       <div className="flex flex-col h-[100dvh] bg-zinc-950 px-6 py-10 justify-between items-center overflow-hidden overscroll-none relative select-none">
         
-        {/* Elemento decorativo de fundo subtil (Glow subtil) */}
         <div className="absolute top-1/4 w-72 h-72 bg-green-500/5 rounded-full blur-3xl pointer-events-none"></div>
-
-        {/* Espaço Superior Vazio para Equilíbrio */}
         <div className="w-full"></div>
 
-        {/* --- CENTRO: LOGÓTIPO COM ÓRBITA FLUIDA E ESTÁVEL --- */}
         <div className="relative w-64 h-64 flex items-center justify-center">
-          
-            {/* Órbita em rotação suave */}
             <div className="absolute inset-0 animate-[spin_30s_linear_infinite]">
-              {/* Cada emoji faz o spin contrário (-spin) para se manter perfeitamente na vertical */}
               <div className="absolute top-3 left-6 text-2xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">🍎</div>
               <div className="absolute top-2 right-10 text-3xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">🔥</div>
               <div className="absolute top-1/2 -translate-y-1/2 -left-3 text-3xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">🍊</div>
@@ -116,17 +130,14 @@ export function Home() {
               <div className="absolute bottom-4 right-12 text-2xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">🥗</div>
             </div>
 
-            {/* LOGÓTIPO CENTRAL FIXO */}
             <div className="relative z-10 flex flex-col items-center justify-center gap-3">
-              <div className="w-24 h-24 rounded-3xl bg-zinc-900/80 border border-zinc-800/80 p-4 shadow-2xl flex items-center justify-center backdrop-blur-md">
-                <img src={logoImg} alt="Louri Logo" className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(34,197,94,0.3)]" />
+              <div className="w-24 h-24 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 p-3 shadow-2xl flex items-center justify-center backdrop-blur-md overflow-hidden">
+                <img src={logoImg} alt="Louri Logo" className="w-full h-full object-contain filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]" />
               </div>
-              <h1 className="text-3xl font-black text-white tracking-tight">Louri Fit</h1>
+              <h1 className="text-3xl font-black text-white tracking-tight">Louri</h1>
             </div>
-
         </div>
 
-        {/* --- BOTÕES DE AÇÃO INFERIORES --- */}
         <div className="w-full max-w-sm flex flex-col gap-3 z-10 pb-6">
           <button 
             onClick={() => navigate('/onboarding')} 
@@ -154,6 +165,7 @@ export function Home() {
   const aguaAtualMl = dados.aguaConsumida || 0;
   const progressoAgua = Math.min(100, Math.round((aguaAtualMl / metaAguaMl) * 100));
   
+  // Cálculo TMB exato por Sexo Biológico (Mifflin-St Jeor)
   let tmb = 10 * pesoNum + 6.25 * (Number(dados.altura) || 170) - 5 * (Number(dados.idade) || 25);
   tmb = dados.sexo === 'M' ? tmb + 5 : tmb - 161;
   let metaCalorias = Math.round(tmb * 1.3);
@@ -180,12 +192,30 @@ export function Home() {
 
   const tempoAcordado = dormeMin - acordaMin;
   
-  const REFEICOES = [
-    { key: 'cafeManha', titulo: 'Café da Manhã', minutos: acordaMin + 30, icone: '☕' },
-    { key: 'almoco', titulo: 'Almoço', minutos: acordaMin + (tempoAcordado * 0.35), icone: '🍛' },
-    { key: 'cafeTarde', titulo: 'Café da Tarde', minutos: acordaMin + (tempoAcordado * 0.65), icone: '🥪' },
-    { key: 'janta', titulo: 'Jantar', minutos: dormeMin - 120, icone: '🍲' },
-  ].map(r => ({ ...r, horario: formatarMinutos(r.minutos) }));
+  // Geração dinâmica das refeições baseada estritamente nas refeicoesAtivas do utilizador
+  const ativas = dados.refeicoesAtivas && dados.refeicoesAtivas.length > 0 
+    ? dados.refeicoesAtivas 
+    : ['cafeManha', 'almoco', 'lancheTarde', 'janta'];
+
+  const totalRef = ativas.length;
+  const tempoDisponivel = Math.max(60, tempoAcordado - 150);
+
+  const REFEICOES = ativas.map((key, index) => {
+    let minutosOffset;
+    if (totalRef === 1) {
+      minutosOffset = acordaMin + 120;
+    } else {
+      minutosOffset = (acordaMin + 30) + (tempoDisponivel * (index / (totalRef - 1)));
+    }
+    const config = CONFIG_REFEICOES[key] || { titulo: key, icone: '🍽️' };
+    return {
+      key,
+      titulo: config.titulo,
+      icone: config.icone,
+      minutos: Math.round(minutosOffset),
+      horario: formatarMinutos(Math.round(minutosOffset))
+    };
+  });
 
   const refeicoesFeitas = dados.refeicoesConcluidas || [];
   const refeicoesFeitasInfo = REFEICOES.filter(r => refeicoesFeitas.includes(r.key));
@@ -193,25 +223,23 @@ export function Home() {
   const abrirModalRefeicao = (refeicao: any) => {
     if (refeicoesFeitas.includes(refeicao.key)) return; 
     setRefeicaoModal(refeicao);
-    setPorcoesModal({}); // Zera as porções ao abrir
+    setPorcoesModal({}); 
   };
 
   const toggleAlimentoModal = (idAlimento: string) => {
     setPorcoesModal(prev => {
       const novo = { ...prev };
       if (novo[idAlimento] !== undefined) {
-        delete novo[idAlimento]; // Desmarca e remove as calorias
+        delete novo[idAlimento]; 
       } else {
-        novo[idAlimento] = 100; // Inicia com 100g por padrão
+        novo[idAlimento] = 100; 
       }
       return novo;
     });
   };
 
   const atualizarGramas = (idAlimento: string, gramas: string) => {
-    // Bloqueia a atualização do estado se passar de 4 caracteres
     if (gramas.length > 4) return; 
-    
     setPorcoesModal(prev => ({ ...prev, [idAlimento]: Number(gramas) || 0 }));
   };
 
@@ -223,7 +251,6 @@ export function Home() {
 
   const confirmarRefeicao = () => {
     if (caloriasTotaisModal > 0) {
-      // Calcula as gramas totais de cada macro com base nas porções escolhidas
       const macrosTotaisModal = Object.entries(porcoesModal).reduce((acc, [id, gramas]) => {
         const alimento = DICIONARIO_ALIMENTOS[refeicaoModal?.key as keyof typeof DICIONARIO_ALIMENTOS]?.find(a => a.id === id) as any;
         if (!alimento) return acc;
@@ -233,7 +260,6 @@ export function Home() {
         return acc;
       }, { proteina: 0, carbo: 0, gordura: 0 });
 
-      // Envia os 4 dados para o Zustand: chave, calorias, ids, e os macros
       registrarRefeicao(refeicaoModal.key, caloriasTotaisModal, Object.keys(porcoesModal), macrosTotaisModal);
       setRefeicaoModal(null);
     }
@@ -257,10 +283,10 @@ export function Home() {
   return (
     <div className="flex flex-col h-[100dvh] overflow-y-auto bg-zinc-950 px-6 py-8 text-white w-full max-w-md mx-auto relative overscroll-none custom-scrollbar pb-28">
       
-      {/* Cabeçalho Limpo */}
+      {/* Cabeçalho */}
       <header className="flex justify-between items-center mb-6 shrink-0">
         <div>
-          <p className="text-zinc-400 text-xs uppercase tracking-wider">Olá!,</p>
+          <p className="text-zinc-400 text-xs uppercase tracking-wider">Olá,</p>
           <h1 className="text-2xl font-bold text-white capitalize">{primeiroNome}</h1>
         </div>
       </header>
@@ -325,28 +351,26 @@ export function Home() {
           </div>
         </div>
 
-        {/* Timeline */}
+        {/* Timeline Dinâmica (Lê as refeições ativas do utilizador) */}
         <div className="mt-2 shrink-0">
           <h2 className="text-xl font-bold text-white mb-4">Plano de Hoje</h2>
           
           <div className="flex flex-col gap-4">
             {REFEICOES.map((refeicao, index) => {
               const idsEscolhidos = dados.alimentos[refeicao.key as keyof typeof dados.alimentos] || [];
-              const alimentosCompletos = idsEscolhidos.map(id => DICIONARIO_ALIMENTOS[refeicao.key as keyof typeof DICIONARIO_ALIMENTOS].find(item => item.id === id)).filter(Boolean); 
+              const dicionarioRef = DICIONARIO_ALIMENTOS[refeicao.key] || [];
+              const alimentosCompletos = idsEscolhidos.map(id => dicionarioRef.find(item => item.id === id)).filter(Boolean); 
               
               const isFeita = refeicoesFeitas.includes(refeicao.key);
-              
               const isFuturo = minutosAtuais < refeicao.minutos - 60 && !isFeita;
               const isAgora = minutosAtuais >= refeicao.minutos - 60 && minutosAtuais <= refeicao.minutos + 120 && !isFeita;
 
               return (
                 <div key={refeicao.key} className={`flex gap-4 relative transition-all duration-500 ${isFuturo ? 'opacity-40 grayscale' : ''}`}>
-                  {/* Linha da Timeline */}
                   {index !== REFEICOES.length - 1 && (
                     <div className={`absolute left-[27px] top-12 bottom-[-16px] w-0.5 z-0 transition-colors ${isFeita ? 'bg-green-500' : 'bg-zinc-800'}`}></div>
                   )}
 
-                  {/* Ícone Lateral */}
                   <div className="flex flex-col items-center gap-1 z-10">
                     <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shadow-md transition-all duration-300 ${isFeita ? 'bg-green-500 text-zinc-950' : isAgora ? 'bg-orange-500/20 border border-orange-500/50 text-orange-400 animate-pulse' : 'bg-zinc-900 border border-zinc-800 text-zinc-400'}`}>
                       {isFeita ? (
@@ -360,7 +384,6 @@ export function Home() {
                     <span className={`text-[10px] font-bold mt-1 ${isAgora ? 'text-orange-400' : 'text-zinc-500'}`}>{refeicao.horario}</span>
                   </div>
 
-                  {/* Cartão de Refeição */}
                   <div 
                     onClick={() => {
                       if (isFuturo) return;
@@ -386,7 +409,6 @@ export function Home() {
                       ))}
                     </div>
                   </div>
-
                 </div>
               );
             })}
@@ -420,7 +442,7 @@ export function Home() {
                   refeicoesFeitasInfo.map(r => {
                     const cals = (dados.alimentos[r.key as keyof typeof dados.alimentos] || []).reduce((acc, id) => {
                       const alimento = DICIONARIO_ALIMENTOS[r.key as keyof typeof DICIONARIO_ALIMENTOS]?.find(a => a.id === id);
-                      return acc + (alimento?.kcal100g || 0); // Exibição simplificada no resumo
+                      return acc + (alimento?.kcal100g || 0);
                     }, 0);
 
                     return (
@@ -473,11 +495,9 @@ export function Home() {
 
             <div className="grid grid-cols-3 gap-2">
               {(() => {
-                // Pega nos alimentos já associados a esta refeição nas preferências do utilizador
                 const favoritosDaRefeicao = dados.alimentos[refeicaoModal.key as keyof typeof dados.alimentos] || [];
-                const todosAlimentos = DICIONARIO_ALIMENTOS[refeicaoModal.key as keyof typeof DICIONARIO_ALIMENTOS];
+                const todosAlimentos = DICIONARIO_ALIMENTOS[refeicaoModal.key as keyof typeof DICIONARIO_ALIMENTOS] || [];
 
-                // Ordena: Alimentos favoritos/frequentes aparecem primeiro
                 const alimentosOrdenados = [...todosAlimentos].sort((a, b) => {
                   const aFav = favoritosDaRefeicao.includes(a.id) ? -1 : 1;
                   const bFav = favoritosDaRefeicao.includes(b.id) ? -1 : 1;
@@ -500,7 +520,6 @@ export function Home() {
                           : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700 cursor-pointer'
                       }`}
                     >
-                      {/* Indicador subtil de que é um alimento habitual do utilizador */}
                       {isFavorito && !estaSelecionado && (
                         <span className="absolute top-1.5 left-2 text-[8px] text-green-400 font-bold">★</span>
                       )}
@@ -569,7 +588,7 @@ export function Home() {
         </div>
       )}
 
-      {/* Modal Desfazer Dieta (Confirmação) */}
+      {/* Modal Desfazer Dieta */}
       {mostrarModalDesfazerDieta && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center shadow-2xl">

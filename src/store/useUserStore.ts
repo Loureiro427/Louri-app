@@ -1,13 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface AlimentosPorRefeicao {
-  cafeManha: string[];
-  almoco: string[];
-  cafeTarde: string[];
-  janta: string[];
-}
-
 interface UserData {
   nome: string;
   idade: string;
@@ -17,13 +10,12 @@ interface UserData {
   objetivo: string;
   horaAcorda: string;
   horaDorme: string;
-  qtdRefeicoes: string;
-  alimentos: AlimentosPorRefeicao;
+  refeicoesAtivas: string[]; // Lista dinâmica das refeições escolhidas pelo utilizador
+  alimentos: Record<string, string[]>; // Armazena os alimentos por chave de refeição de forma flexível
   aguaConsumida: number;
   caloriasConsumidas: number;
   refeicoesConcluidas: string[];
   caloriasPorRefeicao: Record<string, number>;
-  // NOVO: Guarda os macros totais e por refeição
   macrosConsumidos: { proteina: number; carbo: number; gordura: number };
   macrosPorRefeicao: Record<string, { proteina: number; carbo: number; gordura: number }>;
   ultimaData: string;
@@ -36,7 +28,6 @@ interface UserStore {
   setDados: (novosDados: Partial<UserData>) => void;
   adicionarAgua: (quantidade: number, metaMax: number) => void;
   zerarAgua: () => void;
-  // NOVO: Recebe os macros ao registar
   registrarRefeicao: (refeicaoKey: string, calorias: number, alimentosConsumidos: string[], macros: { proteina: number; carbo: number; gordura: number }) => void;
   desfazerRefeicao: (refeicaoKey: string) => void;
   zerarDieta: () => void;
@@ -45,18 +36,30 @@ interface UserStore {
 
 const macrosZerados = { proteina: 0, carbo: 0, gordura: 0 };
 
+// Refeições padrão iniciais (caso venha de um reset ou novo utilizador)
+const refeicoesPadrao = ['cafeManha', 'almoco', 'lancheTarde', 'janta'];
+
 export const useUserStore = create<UserStore>()(
   persist(
     (set) => ({
       dados: {
-        nome: '', idade: '', peso: '', altura: '', sexo: '', objetivo: '',
-        horaAcorda: '', horaDorme: '', qtdRefeicoes: '4',
-        alimentos: { cafeManha: [], almoco: [], cafeTarde: [], janta: [] },
-        aguaConsumida: 0, caloriasConsumidas: 0, refeicoesConcluidas: [],
+        nome: '',
+        idade: '',
+        peso: '',
+        altura: '',
+        sexo: '',
+        objetivo: '',
+        horaAcorda: '',
+        horaDorme: '',
+        refeicoesAtivas: [...refeicoesPadrao],
+        alimentos: {},
+        aguaConsumida: 0,
+        caloriasConsumidas: 0,
+        refeicoesConcluidas: [],
         caloriasPorRefeicao: {},
-        macrosConsumidos: { ...macrosZerados }, // Inicializa a 0
+        macrosConsumidos: { ...macrosZerados },
         macrosPorRefeicao: {},
-        ultimaData: '', 
+        ultimaData: '',
       },
       mostrarNavbar: true,
       setMostrarNavbar: (visivel) => set({ mostrarNavbar: visivel }),

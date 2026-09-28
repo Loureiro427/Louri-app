@@ -2,6 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
 
+const CONFIG_REFEICOES: Record<string, { titulo: string; icone: string }> = {
+  cafeManha: { titulo: 'Café da Manhã', icone: '☕' },
+  almoco: { titulo: 'Almoço', icone: '🍽️' },
+  lancheTarde: { titulo: 'Lanche da Tarde', icone: '🍎' },
+  cafeTarde: { titulo: 'Café da Tarde', icone: '🧋' },
+  janta: { titulo: 'Jantar', icone: '🍲' },
+  lancheNoite: { titulo: 'Lanche da Noite', icone: '🌙' },
+};
+
 export function Plano() {
   const navigate = useNavigate();
   const dados = useUserStore((state) => state.dados);
@@ -19,6 +28,7 @@ export function Plano() {
   const metaAguaMl = Math.round((pesoNum * 35) / 1000) * 1000;
   const metaAguaL = (metaAguaMl / 1000).toFixed(1);
 
+  // Cálculo TMB exato por Sexo Biológico (Mifflin-St Jeor)
   let tmb = 10 * pesoNum + 6.25 * alturaNum - 5 * idadeNum;
   tmb = sexo === 'M' ? tmb + 5 : tmb - 161;
   let metaCalorias = Math.round(tmb * 1.3);
@@ -34,17 +44,16 @@ export function Plano() {
   const gCarboMeta = Math.round((metaCalorias * pCarbo) / 4);
   const gGordMeta = Math.round((metaCalorias * pGordura) / 9);
 
-  // --- LÓGICA DE CONSUMO (Preparado para a próxima etapa) ---
-  // Temporariamente a 0 até ligarmos os dados do Home.tsx
-  const consumidoProt = (dados as any).macrosConsumidos?.proteina || 0;
-  const consumidoCarbo = (dados as any).macrosConsumidos?.carbo || 0;
-  const consumidoGord = (dados as any).macrosConsumidos?.gordura || 0;
+  // --- LÓGICA DE CONSUMO ---
+  const consumidoProt = dados.macrosConsumidos?.proteina || 0;
+  const consumidoCarbo = dados.macrosConsumidos?.carbo || 0;
+  const consumidoGord = dados.macrosConsumidos?.gordura || 0;
 
   const progressoProt = Math.min(100, (consumidoProt / gProtMeta) * 100);
   const progressoCarbo = Math.min(100, (consumidoCarbo / gCarboMeta) * 100);
   const progressoGord = Math.min(100, (consumidoGord / gGordMeta) * 100);
 
-  // --- HORÁRIOS ---
+  // --- HORÁRIOS E CRONOGRAMA DINÂMICO ---
   const converterParaMinutos = (horaStr: string) => {
     if (!horaStr) return 0;
     const [h, m] = horaStr.split(':').map(Number);
@@ -63,12 +72,28 @@ export function Plano() {
   const tempoAcordado = dormeMin - acordaMin;
   const horasJejum = Math.floor((24 * 60 - tempoAcordado) / 60);
 
-  const cronograma = [
-    { titulo: 'Café da Manhã', horario: formatarMinutos(acordaMin + 30), icone: '☕' },
-    { titulo: 'Almoço', horario: formatarMinutos(acordaMin + (tempoAcordado * 0.35)), icone: '🍛' },
-    { titulo: 'Café da Tarde', horario: formatarMinutos(acordaMin + (tempoAcordado * 0.65)), icone: '🥪' },
-    { titulo: 'Jantar', horario: formatarMinutos(dormeMin - 120), icone: '🍲' },
-  ];
+  // Lê as refeições ativas guardadas no estado global
+  const ativas = dados.refeicoesAtivas && dados.refeicoesAtivas.length > 0 
+    ? dados.refeicoesAtivas 
+    : ['cafeManha', 'almoco', 'lancheTarde', 'janta'];
+
+  const totalRef = ativas.length;
+  const tempoDisponivel = Math.max(60, tempoAcordado - 150);
+
+  const cronograma = ativas.map((key, index) => {
+    let minutosOffset;
+    if (totalRef === 1) {
+      minutosOffset = acordaMin + 120;
+    } else {
+      minutosOffset = (acordaMin + 30) + (tempoDisponivel * (index / (totalRef - 1)));
+    }
+    const config = CONFIG_REFEICOES[key] || { titulo: key, icone: '🍽️' };
+    return {
+      titulo: config.titulo,
+      icone: config.icone,
+      horario: formatarMinutos(Math.round(minutosOffset))
+    };
+  });
 
   // --- CONTEÚDO DOS MODAIS DE DICAS ---
   const dicasMacros = {
@@ -152,7 +177,7 @@ export function Plano() {
             className="group cursor-pointer hover:bg-zinc-950/80 p-2 -mx-2 rounded-xl transition-colors"
           >
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-zinc-300 font-medium group-hover:text-blue-400 transition-colors">Proteína <span className="text-zinc-500">({pProt * 100}%)</span></span>
+              <span className="text-zinc-300 font-medium group-hover:text-blue-400 transition-colors">Proteína <span className="text-zinc-500">({Math.round(pProt * 100)}%)</span></span>
               <span className="font-bold text-blue-400">{consumidoProt}g <span className="text-zinc-500 font-normal">/ {gProtMeta}g</span></span>
             </div>
             <div className="w-full bg-zinc-950 h-2 rounded-full overflow-hidden border border-zinc-800">
@@ -166,7 +191,7 @@ export function Plano() {
             className="group cursor-pointer hover:bg-zinc-950/80 p-2 -mx-2 rounded-xl transition-colors"
           >
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-zinc-300 font-medium group-hover:text-green-400 transition-colors">Carboidratos <span className="text-zinc-500">({pCarbo * 100}%)</span></span>
+              <span className="text-zinc-300 font-medium group-hover:text-green-400 transition-colors">Carboidratos <span className="text-zinc-500">({Math.round(pCarbo * 100)}%)</span></span>
               <span className="font-bold text-green-400">{consumidoCarbo}g <span className="text-zinc-500 font-normal">/ {gCarboMeta}g</span></span>
             </div>
             <div className="w-full bg-zinc-950 h-2 rounded-full overflow-hidden border border-zinc-800">
@@ -180,7 +205,7 @@ export function Plano() {
             className="group cursor-pointer hover:bg-zinc-950/80 p-2 -mx-2 rounded-xl transition-colors"
           >
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-zinc-300 font-medium group-hover:text-orange-400 transition-colors">Gorduras <span className="text-zinc-500">({pGordura * 100}%)</span></span>
+              <span className="text-zinc-300 font-medium group-hover:text-orange-400 transition-colors">Gorduras <span className="text-zinc-500">({Math.round(pGordura * 100)}%)</span></span>
               <span className="font-bold text-orange-400">{consumidoGord}g <span className="text-zinc-500 font-normal">/ {gGordMeta}g</span></span>
             </div>
             <div className="w-full bg-zinc-950 h-2 rounded-full overflow-hidden border border-zinc-800">
@@ -191,7 +216,7 @@ export function Plano() {
         </div>
       </div>
 
-      {/* --- CRONOGRAMA IDEAL --- */}
+      {/* --- CRONOGRAMA DINÂMICO --- */}
       <div className="shrink-0 flex flex-col gap-3">
         <h3 className="text-lg font-bold text-white">O Teu Dia Ideal</h3>
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-3xl p-2">

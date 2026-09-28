@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { useUserStore } from '../store/useUserStore';
 
-const ALIMENTOS_POR_REFEICAO = {
+// Dicionário completo expandido com as 6 refeições possíveis
+const ALIMENTOS_POR_REFEICAO: Record<string, { id: string; nome: string; emoji: string }[]> = {
   cafeManha: [
     { id: 'pao', nome: 'Pão Francês', emoji: '🥖' },
     { id: 'tapioca', nome: 'Tapioca / Crepioca', emoji: '🌮' },
@@ -32,7 +33,7 @@ const ALIMENTOS_POR_REFEICAO = {
     { id: 'ovo_almoco', nome: 'Ovo Cozido', emoji: '🥚' },
     { id: 'farofa', nome: 'Farofa', emoji: '🌾' },
   ],
-  cafeTarde: [
+  lancheTarde: [
     { id: 'paodequeijo', nome: 'Pão de Queijo', emoji: '🧀' },
     { id: 'fruta_tarde', nome: 'Frutas Variadas', emoji: '🍌' },
     { id: 'vitamina', nome: 'Vitamina', emoji: '🥤' },
@@ -43,6 +44,13 @@ const ALIMENTOS_POR_REFEICAO = {
     { id: 'biscoito', nome: 'Biscoito Integral', emoji: '🍪' },
     { id: 'crepioca', nome: 'Crepioca', emoji: '🍳' },
     { id: 'sanduiche', nome: 'Sanduíche Natural', emoji: '🥪' },
+  ],
+  cafeTarde: [
+    { id: 'cuscuz_tarde', nome: 'Cuscuz', emoji: '🌽' },
+    { id: 'pao_chapa', nome: 'Pão na Chapa', emoji: '🍞' },
+    { id: 'bolo_tarde', nome: 'Bolo Simples', emoji: '🥮' },
+    { id: 'fruta_l', nome: 'Fruta da Hora', emoji: '🍎' },
+    { id: 'cha', nome: 'Chá Gelado / Quente', emoji: '🍵' },
   ],
   janta: [
     { id: 'frango_janta', nome: 'Frango Desfiado', emoji: '🍗' },
@@ -56,6 +64,21 @@ const ALIMENTOS_POR_REFEICAO = {
     { id: 'carne_janta', nome: 'Carne Magra', emoji: '🥩' },
     { id: 'peixe_janta', nome: 'Peixe Grelhado', emoji: '🐟' },
   ],
+  lancheNoite: [
+    { id: 'chapa_noite', nome: 'Chá Relaxante', emoji: '🍵' },
+    { id: 'ceia_fruta', nome: 'Fruta Leve (Banana/Maçã)', emoji: '🍌' },
+    { id: 'iogurte_noite', nome: 'Iogurte Proteico', emoji: '🥛' },
+    { id: 'barra_cereal', nome: 'Barra de Cereal / Castanhas', emoji: '🥜' },
+  ],
+};
+
+const NOMES_REFEICOES: Record<string, { nome: string; emoji: string }> = {
+  cafeManha: { nome: 'Café da Manhã', emoji: '☕' },
+  almoco: { nome: 'Almoço', emoji: '🍽️' },
+  lancheTarde: { nome: 'Lanche da Tarde', emoji: '🍎' },
+  cafeTarde: { nome: 'Café da Tarde', emoji: '🧋' },
+  janta: { nome: 'Jantar', emoji: '🍲' },
+  lancheNoite: { nome: 'Lanche da Noite', emoji: '🌙' },
 };
 
 export function Onboarding() {
@@ -66,15 +89,11 @@ export function Onboarding() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     ...dadosGlobais,
-    alimentos: dadosGlobais.alimentos || {
-      cafeManha: [],
-      almoco: [],
-      cafeTarde: [],
-      janta: [],
-    },
+    refeicoesAtivas: dadosGlobais.refeicoesAtivas || ['cafeManha', 'almoco', 'lancheTarde', 'janta'],
+    alimentos: dadosGlobais.alimentos || {},
   });
 
-  const [refeicaoAtiva, setRefeicaoAtiva] = useState<'cafeManha' | 'almoco' | 'cafeTarde' | 'janta'>('cafeManha');
+  const [refeicaoAtivaModal, setRefeicaoAtivaModal] = useState<string>('cafeManha');
   const [error, setError] = useState('');
   const totalSteps = 5;
 
@@ -83,12 +102,28 @@ export function Onboarding() {
     setError(''); 
   };
 
+  const toggleRefeicaoAtiva = (key: string) => {
+    const ativas = formData.refeicoesAtivas;
+    let novasAtivas;
+    if (ativas.includes(key)) {
+      if (ativas.length <= 1) {
+        setError('Tens de manter pelo menos 1 refeição ativa.');
+        return;
+      }
+      novasAtivas = ativas.filter((r: string) => r !== key);
+    } else {
+      novasAtivas = [...ativas, key];
+    }
+    setFormData({ ...formData, refeicoesAtivas: novasAtivas });
+    setError('');
+  };
+
   const toggleAlimentoRefeicao = (idAlimento: string) => {
-    const listaAtual = formData.alimentos[refeicaoAtiva] || [];
+    const listaAtual = formData.alimentos[refeicaoAtivaModal] || [];
     let novaLista;
 
     if (listaAtual.includes(idAlimento)) {
-      novaLista = listaAtual.filter((item) => item !== idAlimento);
+      novaLista = listaAtual.filter((item: string) => item !== idAlimento);
     } else {
       novaLista = [...listaAtual, idAlimento];
     }
@@ -97,7 +132,7 @@ export function Onboarding() {
       ...formData,
       alimentos: {
         ...formData.alimentos,
-        [refeicaoAtiva]: novaLista,
+        [refeicaoAtivaModal]: novaLista,
       },
     });
     setError('');
@@ -122,8 +157,15 @@ export function Onboarding() {
     if (step === 4 && (!formData.horaAcorda || !formData.horaDorme)) {
       setError('Por favor, preencha os horários.'); return;
     }
+    if (step === 4 && formData.refeicoesAtivas.length === 0) {
+      setError('Selecione pelo menos uma refeição.'); return;
+    }
 
     setError('');
+    // Se avançar para o passo 5, define a primeira refeição ativa como padrão no seletor
+    if (step === 4) {
+      setRefeicaoAtivaModal(formData.refeicoesAtivas[0]);
+    }
     setStep(step + 1);
   };
 
@@ -137,31 +179,26 @@ export function Onboarding() {
   };
 
   const handleFinish = () => {
-    const { cafeManha, almoco, cafeTarde, janta } = formData.alimentos;
-    if (cafeManha.length < 2 || almoco.length < 2 || cafeTarde.length < 2 || janta.length < 2) {
-      setError('Escolha pelo menos 2 alimentos em cada uma das 4 refeições.');
-      return;
+    // Verifica se todas as refeições ativas têm pelo menos 1 ou 2 alimentos
+    for (const refKey of formData.refeicoesAtivas) {
+      const itens = formData.alimentos[refKey] || [];
+      if (itens.length < 1) {
+        setError(`Escolha pelo menos 1 alimento para ${NOMES_REFEICOES[refKey]?.nome}.`);
+        return;
+      }
     }
     setDados(formData);
     navigate('/');
   };
 
-  const nomesRefeicoes = {
-    cafeManha: 'Café da Manhã',
-    almoco: 'Almoço',
-    cafeTarde: 'Café da Tarde',
-    janta: 'Janta',
-  };
-
   return (
-    // min-h-[100dvh] e overscroll-none travam a tela para não ultrapassar os limites
-    <div className="flex flex-col min-h-[100dvh] bg-zinc-900 px-6 py-8 overscroll-none overflow-x-hidden">
+    <div className="flex flex-col min-h-[100dvh] bg-zinc-950 px-6 py-8 overscroll-none overflow-x-hidden text-white">
       
       {/* CABEÇALHO */}
       <header className="flex items-center relative mb-8">
         <button 
           onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-300 z-10 transition-colors hover:bg-zinc-700"
+          className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300 z-10 transition-colors hover:bg-zinc-800"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -173,30 +210,30 @@ export function Onboarding() {
             {Array.from({ length: totalSteps }, (_, i) => i + 1).map((item) => (
               <div 
                 key={item} 
-                className={`h-2 rounded-full transition-all duration-300 ${step === item ? 'w-6 bg-green-500' : 'w-2 bg-zinc-700'}`} 
+                className={`h-2 rounded-full transition-all duration-300 ${step === item ? 'w-6 bg-green-500' : 'w-2 bg-zinc-800'}`} 
               />
             ))}
           </div>
         </div>
       </header>
 
-      {/* ÁREA DE CONTEÚDO */}
+      {/* CONTEÚDO */}
       <div className="flex-1 flex flex-col items-center justify-center text-center">
         
         {step === 1 && (
-          <div className="flex flex-col gap-6 w-full max-w-xs animate-in fade-in slide-in-from-right-4">
-            <h1 className="text-3xl font-bold text-white tracking-tight">Qual o seu nome?</h1>
+          <div className="flex flex-col gap-6 w-full max-w-xs animate-in fade-in">
+            <h1 className="text-3xl font-bold tracking-tight">Qual o seu nome?</h1>
             <p className="text-zinc-400 text-sm -mt-4 mb-4">Como prefere ser chamado</p>
             
             <div className="flex flex-col gap-1.5 text-left w-full">
               <label className="text-zinc-400 text-sm font-medium pl-1">O seu nome</label>
               <input
                 type="text"
-                maxLength={25} // LIMITE DE CARACTERES ADICIONADO AQUI
+                maxLength={25}
                 value={formData.nome}
                 onChange={(e) => handleChange('nome', e.target.value)}
                 placeholder="Ex: Gabriel"
-                className="px-4 py-4 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:border-green-500 focus:outline-none w-full text-lg"
+                className="px-4 py-4 rounded-2xl bg-zinc-900 text-white border border-zinc-800 focus:border-green-500 focus:outline-none w-full text-lg"
               />
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
@@ -205,28 +242,28 @@ export function Onboarding() {
         )}
 
         {step === 2 && (
-          <div className="flex flex-col gap-4 w-full max-w-xs animate-in fade-in slide-in-from-right-4">
-            <h1 className="text-3xl font-bold text-white tracking-tight">Suas Medidas</h1>
-            <p className="text-zinc-400 text-sm -mt-2 mb-2">Dados para os cálculos</p>
+          <div className="flex flex-col gap-4 w-full max-w-xs animate-in fade-in">
+            <h1 className="text-3xl font-bold tracking-tight">Suas Medidas</h1>
+            <p className="text-zinc-400 text-sm -mt-2 mb-2">Dados para cálculo metabólico exato</p>
             
             <div className="flex flex-col gap-1 text-left w-full">
               <label className="text-zinc-400 text-xs font-medium pl-1">Idade (anos)</label>
-              <input type="number" placeholder="Ex: 21" value={formData.idade} onChange={(e) => handleChange('idade', e.target.value)} className="px-3 py-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:border-green-500 text-lg w-full" />
+              <input type="number" placeholder="Ex: 21" value={formData.idade} onChange={(e) => handleChange('idade', e.target.value)} className="px-3 py-3 rounded-2xl bg-zinc-900 text-white border border-zinc-800 focus:border-green-500 text-lg w-full" />
             </div>
 
             <div className="flex flex-col gap-1 text-left w-full">
               <label className="text-zinc-400 text-xs font-medium pl-1">Peso atual (kg)</label>
-              <input type="number" placeholder="Ex: 70" value={formData.peso} onChange={(e) => handleChange('peso', e.target.value)} className="px-3 py-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:border-green-500 text-lg w-full" />
+              <input type="number" placeholder="Ex: 70" value={formData.peso} onChange={(e) => handleChange('peso', e.target.value)} className="px-3 py-3 rounded-2xl bg-zinc-900 text-white border border-zinc-800 focus:border-green-500 text-lg w-full" />
             </div>
 
             <div className="flex flex-col gap-1 text-left w-full">
               <label className="text-zinc-400 text-xs font-medium pl-1">Altura (cm)</label>
-              <input type="number" placeholder="Ex: 175" value={formData.altura} onChange={(e) => handleChange('altura', e.target.value)} className="px-3 py-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:border-green-500 text-lg w-full" />
+              <input type="number" placeholder="Ex: 175" value={formData.altura} onChange={(e) => handleChange('altura', e.target.value)} className="px-3 py-3 rounded-2xl bg-zinc-900 text-white border border-zinc-800 focus:border-green-500 text-lg w-full" />
             </div>
 
             <div className="flex flex-col gap-1 text-left w-full">
-              <label className="text-zinc-400 text-xs font-medium pl-1">Sexo biológico</label>
-              <select value={formData.sexo} onChange={(e) => handleChange('sexo', e.target.value)} className="px-3 py-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:border-green-500 text-lg w-full appearance-none">
+              <label className="text-zinc-400 text-xs font-medium pl-1">Sexo biológico (para TMB)</label>
+              <select value={formData.sexo} onChange={(e) => handleChange('sexo', e.target.value)} className="px-3 py-3 rounded-2xl bg-zinc-900 text-white border border-zinc-800 focus:border-green-500 text-lg w-full appearance-none">
                 <option value="">Selecione</option>
                 <option value="M">Masculino</option>
                 <option value="F">Feminino</option>
@@ -239,13 +276,13 @@ export function Onboarding() {
         )}
 
         {step === 3 && (
-          <div className="flex flex-col gap-6 w-full max-w-xs animate-in fade-in slide-in-from-right-4">
-            <h1 className="text-3xl font-bold text-white tracking-tight">Objetivo</h1>
+          <div className="flex flex-col gap-6 w-full max-w-xs animate-in fade-in">
+            <h1 className="text-3xl font-bold tracking-tight">Objetivo</h1>
             <p className="text-zinc-400 text-sm -mt-4 mb-2">Qual será o seu foco?</p>
             
             <div className="flex flex-col gap-1.5 text-left w-full">
               <label className="text-zinc-400 text-sm font-medium pl-1">O seu foco principal</label>
-              <select value={formData.objetivo} onChange={(e) => handleChange('objetivo', e.target.value)} className="px-4 py-4 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:border-green-500 text-lg w-full appearance-none">
+              <select value={formData.objetivo} onChange={(e) => handleChange('objetivo', e.target.value)} className="px-4 py-4 rounded-2xl bg-zinc-900 text-white border border-zinc-800 focus:border-green-500 text-lg w-full appearance-none">
                 <option value="">Selecione uma opção</option>
                 <option value="perder">Emagrecimento</option>
                 <option value="manter">Saúde e Manutenção</option>
@@ -259,77 +296,104 @@ export function Onboarding() {
         )}
 
         {step === 4 && (
-          <div className="flex flex-col gap-5 w-full max-w-xs animate-in fade-in slide-in-from-right-4">
-            <h1 className="text-3xl font-bold text-white tracking-tight">Rotina</h1>
-            <p className="text-zinc-400 text-sm -mt-3 mb-2">Os seus horários principais</p>
-            
-            <div className="flex flex-col gap-1.5 text-left w-full">
-              <label className="text-zinc-400 text-sm font-medium pl-1">A que horas acorda?</label>
-              <input type="time" value={formData.horaAcorda} onChange={(e) => handleChange('horaAcorda', e.target.value)} className="px-4 py-4 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:border-green-500 text-lg w-full" />
+          <div className="flex flex-col gap-4 w-full max-w-sm animate-in fade-in">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">A sua Rotina</h1>
+              <p className="text-zinc-400 text-xs mt-1">Horários e selecione as refeições que realmente faz</p>
             </div>
 
-            <div className="flex flex-col gap-1.5 text-left w-full">
-              <label className="text-zinc-400 text-sm font-medium pl-1">A que horas dorme?</label>
-              <input type="time" value={formData.horaDorme} onChange={(e) => handleChange('horaDorme', e.target.value)} className="px-4 py-4 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:border-green-500 text-lg w-full" />
+            <div className="flex gap-2 w-full">
+              <div className="flex flex-col gap-1 text-left flex-1">
+                <label className="text-zinc-400 text-xs font-medium pl-1">Acorda</label>
+                <input type="time" value={formData.horaAcorda} onChange={(e) => handleChange('horaAcorda', e.target.value)} className="px-3 py-3 rounded-2xl bg-zinc-900 text-white border border-zinc-800 focus:border-green-500 text-sm w-full" />
+              </div>
+              <div className="flex flex-col gap-1 text-left flex-1">
+                <label className="text-zinc-400 text-xs font-medium pl-1">Dorme</label>
+                <input type="time" value={formData.horaDorme} onChange={(e) => handleChange('horaDorme', e.target.value)} className="px-3 py-3 rounded-2xl bg-zinc-900 text-white border border-zinc-800 focus:border-green-500 text-sm w-full" />
+              </div>
             </div>
 
-            <div className="flex flex-col gap-1.5 text-left w-full">
-              <label className="text-zinc-400 text-sm font-medium pl-1">Refeições por dia</label>
-              <select value={formData.qtdRefeicoes} onChange={(e) => handleChange('qtdRefeicoes', e.target.value)} className="px-4 py-4 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:border-green-500 text-lg w-full appearance-none">
-                <option value="3">3 principais</option>
-                <option value="4">4 refeições</option>
-                <option value="5">5 refeições</option>
-                <option value="6">6 refeições</option>
-              </select>
+            <div className="flex flex-col gap-1.5 text-left w-full mt-2">
+              <label className="text-zinc-400 text-xs font-medium pl-1">Quais refeições faz no dia a dia? (Toque para ativar/desativar)</label>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(NOMES_REFEICOES).map(([key, ref]) => {
+                  const ativa = formData.refeicoesAtivas.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleRefeicaoAtiva(key)}
+                      className={`p-3 rounded-2xl border text-xs font-semibold flex items-center justify-between transition-all ${
+                        ativa 
+                          ? 'bg-green-500/10 border-green-500 text-green-400 shadow-md' 
+                          : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span>{ref.emoji}</span>
+                        <span>{ref.nome}</span>
+                      </span>
+                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${ativa ? 'bg-green-500 text-zinc-950 font-bold' : 'bg-zinc-800 text-zinc-600'}`}>
+                        {ativa ? '✓' : ''}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-            <Button onClick={handleNextStep}>Continuar</Button>
+            {error && <p className="text-red-400 text-xs font-medium">{error}</p>}
+            <div className="mt-2">
+              <Button onClick={handleNextStep}>Continuar</Button>
+            </div>
           </div>
         )}
 
         {step === 5 && (
-          <div className="flex flex-col gap-4 w-full max-w-md animate-in fade-in slide-in-from-right-4">
+          <div className="flex flex-col gap-4 w-full max-w-md animate-in fade-in">
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">Preferências por Refeição</h1>
-              <p className="text-zinc-400 text-xs mt-1">Selecione no mínimo 2 alimentos para cada horário</p>
+              <h1 className="text-2xl font-bold tracking-tight">Preferências Alimentares</h1>
+              <p className="text-zinc-400 text-xs mt-1">Selecione os alimentos habituais para as suas refeições ativas</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 bg-zinc-800 p-1.5 rounded-2xl border border-zinc-700">
-              {(['cafeManha', 'almoco', 'cafeTarde', 'janta'] as const).map((refeicaoKey) => {
+            {/* Abas dinâmicas baseadas estritamente nas refeições ativas escolhidas pelo utilizador */}
+            <div className="flex gap-1.5 overflow-x-auto p-1 custom-scrollbar w-full">
+              {formData.refeicoesAtivas.map((refeicaoKey: string) => {
                 const qtdSelecionada = formData.alimentos[refeicaoKey]?.length || 0;
-                const estaAtiva = refeicaoAtiva === refeicaoKey;
+                const estaAtiva = refeicaoAtivaModal === refeicaoKey;
                 return (
                   <button
                     key={refeicaoKey}
-                    onClick={() => setRefeicaoAtiva(refeicaoKey)}
-                    className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-between ${
+                    onClick={() => setRefeicaoAtivaModal(refeicaoKey)}
+                    className={`py-2 px-3 rounded-2xl text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 ${
                       estaAtiva
-                        ? 'bg-green-500 text-zinc-900 shadow-md'
-                        : 'text-zinc-300 hover:text-white bg-transparent'
+                        ? 'bg-green-500 text-zinc-950 shadow-md font-bold'
+                        : 'text-zinc-400 bg-zinc-900 border border-zinc-800 hover:text-white'
                     }`}
                   >
-                    <span>{nomesRefeicoes[refeicaoKey]}</span>
-                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${estaAtiva ? 'bg-zinc-900 text-green-400' : 'bg-zinc-700 text-zinc-300'}`}>
-                      {qtdSelecionada}/2+
+                    <span>{NOMES_REFEICOES[refeicaoKey]?.emoji}</span>
+                    <span>{NOMES_REFEICOES[refeicaoKey]?.nome}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${estaAtiva ? 'bg-zinc-950 text-green-400' : 'bg-zinc-800 text-zinc-400'}`}>
+                      {qtdSelecionada}
                     </span>
                   </button>
                 );
               })}
             </div>
 
+            {/* Grelha de alimentos da aba ativa */}
             <div className="grid grid-cols-3 gap-2.5 max-h-56 overflow-y-auto p-1 custom-scrollbar">
-              {ALIMENTOS_POR_REFEICAO[refeicaoAtiva].map((alimento) => {
-                const listaRefeicao = formData.alimentos[refeicaoAtiva] || [];
+              {ALIMENTOS_POR_REFEICAO[refeicaoAtivaModal]?.map((alimento) => {
+                const listaRefeicao = formData.alimentos[refeicaoAtivaModal] || [];
                 const estaSelecionado = listaRefeicao.includes(alimento.id);
                 return (
                   <button
                     key={alimento.id}
                     onClick={() => toggleAlimentoRefeicao(alimento.id)}
-                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all duration-200 gap-1 ${
+                    className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border transition-all duration-200 gap-1 ${
                       estaSelecionado
                         ? 'bg-green-500/10 border-green-500 text-green-400 shadow-md'
-                        : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-600'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
                     }`}
                   >
                     <span className="text-xl">{alimento.emoji}</span>
