@@ -1,4 +1,5 @@
 import { useUserStore } from '../store/useUserStore';
+import CalendarHistory from '../components/CalendarHistory';
 
 export function Evolucao() {
   const dados = useUserStore((state) => state.dados);
@@ -22,8 +23,14 @@ export function Evolucao() {
         </div>
       </div>
 
+
       <div className="bg-zinc-900/40 border border-zinc-800 rounded-3xl p-5 flex flex-col gap-3">
         <h3 className="text-sm font-bold text-white">Registo de Hoje</h3>
+        {/* --- CALENDÁRIO DE HISTÓRICO --- */}
+        <div className="mt-2 shrink-0">
+          <h3 className="text-lg font-bold text-white mb-3">Histórico Mensal</h3>
+          <CalendarHistory />
+        </div>
         <div className="flex justify-between items-center py-2 border-b border-zinc-800">
           <span className="text-xs text-zinc-400">Água Consumida</span>
           <span className="text-xs font-bold text-blue-400">{(dados.aguaConsumida || 0) / 1000}L</span>

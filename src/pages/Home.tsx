@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
 
-
 const DICIONARIO_ALIMENTOS = {
   cafeManha: [
     { id: 'pao', nome: 'Pão Francês', emoji: '🥖', kcal: 140 }, { id: 'tapioca', nome: 'Tapioca', emoji: '🌮', kcal: 150 },
@@ -268,28 +267,47 @@ export function Home() {
               const alimentosCompletos = idsEscolhidos.map(id => DICIONARIO_ALIMENTOS[refeicao.key as keyof typeof DICIONARIO_ALIMENTOS].find(item => item.id === id)).filter(Boolean); 
               
               const isFeita = refeicoesFeitas.includes(refeicao.key);
-              const isAgora = minutosAtuais >= refeicao.minutos - 30 && minutosAtuais <= refeicao.minutos + 120;
+              
+              // Define que a refeição só "abre" 1 hora antes do horário programado
+              const isFuturo = minutosAtuais < refeicao.minutos - 60 && !isFeita;
+              const isAgora = minutosAtuais >= refeicao.minutos - 60 && minutosAtuais <= refeicao.minutos + 120 && !isFeita;
 
               return (
-                <div key={refeicao.key} className="flex gap-4 relative">
+                <div key={refeicao.key} className={`flex gap-4 relative transition-all duration-500 ${isFuturo ? 'opacity-40 grayscale' : ''}`}>
+                  {/* Linha da Timeline */}
                   {index !== REFEICOES.length - 1 && (
                     <div className={`absolute left-[27px] top-12 bottom-[-16px] w-0.5 z-0 transition-colors ${isFeita ? 'bg-green-500' : 'bg-zinc-800'}`}></div>
                   )}
 
+                  {/* Ícone Lateral */}
                   <div className="flex flex-col items-center gap-1 z-10">
                     <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shadow-md transition-all duration-300 ${isFeita ? 'bg-green-500 text-zinc-950' : isAgora ? 'bg-orange-500/20 border border-orange-500/50 text-orange-400 animate-pulse' : 'bg-zinc-900 border border-zinc-800 text-zinc-400'}`}>
-                      {isFeita ? <span className="text-2xl">✓</span> : <span className="text-xl">{refeicao.icone}</span>}
+                      {isFeita ? (
+                        <span className="text-2xl">✓</span>
+                      ) : isFuturo ? (
+                        <span className="text-xl opacity-50">🔒</span>
+                      ) : (
+                        <span className="text-xl">{refeicao.icone}</span>
+                      )}
                     </div>
-                    <span className={`text-[10px] font-bold mt-1 ${isAgora && !isFeita ? 'text-orange-400' : 'text-zinc-500'}`}>{refeicao.horario}</span>
+                    <span className={`text-[10px] font-bold mt-1 ${isAgora ? 'text-orange-400' : 'text-zinc-500'}`}>{refeicao.horario}</span>
                   </div>
 
+                  {/* Cartão de Refeição */}
                   <div 
-                    onClick={() => isFeita ? cancelarRefeicaoFeita(refeicao.key) : abrirModalRefeicao(refeicao)}
-                    className={`flex-1 rounded-2xl p-4 flex flex-col gap-3 transition-all cursor-pointer ${isFeita ? 'bg-zinc-900/20 border border-green-500/20 opacity-60' : isAgora ? 'bg-zinc-900/80 border border-orange-500/30' : 'bg-zinc-900/40 border border-zinc-800 hover:bg-zinc-900/60'}`}
+                    onClick={() => {
+                      if (isFuturo) return; // Bloqueia o clique se for futuro
+                      isFeita ? cancelarRefeicaoFeita(refeicao.key) : abrirModalRefeicao(refeicao);
+                    }}
+                    className={`flex-1 rounded-2xl p-4 flex flex-col gap-3 transition-all ${isFuturo ? 'cursor-not-allowed bg-zinc-900/20 border border-zinc-900' : isFeita ? 'bg-zinc-900/20 border border-green-500/20 opacity-60 cursor-pointer' : isAgora ? 'bg-zinc-900/80 border border-orange-500/30 cursor-pointer' : 'bg-zinc-900/40 border border-zinc-800 hover:bg-zinc-900/60 cursor-pointer'}`}
                   >
                     <div className="flex justify-between items-center">
                       <h3 className={`text-sm font-bold ${isFeita ? 'text-green-500 line-through' : 'text-white'}`}>{refeicao.titulo}</h3>
-                      {!isFeita && <span className="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-1 rounded-lg">Registar</span>}
+                      {!isFeita && (
+                        <span className={`text-[10px] px-2 py-1 rounded-lg ${isFuturo ? 'bg-zinc-900 text-zinc-600' : 'bg-zinc-800 text-zinc-300'}`}>
+                          {isFuturo ? 'Em breve' : 'Registar'}
+                        </span>
+                      )}
                     </div>
                     
                     <div className="flex flex-wrap gap-2">
