@@ -10,8 +10,8 @@ interface UserData {
   objetivo: string;
   horaAcorda: string;
   horaDorme: string;
-  refeicoesAtivas: string[]; // Lista dinâmica das refeições escolhidas pelo utilizador
-  alimentos: Record<string, string[]>; // Armazena os alimentos por chave de refeição de forma flexível
+  refeicoesAtivas: string[];
+  alimentos: Record<string, string[]>;
   aguaConsumida: number;
   caloriasConsumidas: number;
   refeicoesConcluidas: string[];
@@ -19,6 +19,8 @@ interface UserData {
   macrosConsumidos: { proteina: number; carbo: number; gordura: number };
   macrosPorRefeicao: Record<string, { proteina: number; carbo: number; gordura: number }>;
   ultimaData: string;
+  streak: number;          // NOVO: Dias seguidos cumpridos
+  ultimoDiaPontuado: string; // NOVO: Data do último dia contabilizado
 }
 
 interface UserStore {
@@ -32,16 +34,15 @@ interface UserStore {
   desfazerRefeicao: (refeicaoKey: string) => void;
   zerarDieta: () => void;
   verificarViradaDeDia: () => void;
+  verificarStreak: () => void;
 }
 
 const macrosZerados = { proteina: 0, carbo: 0, gordura: 0 };
-
-// Refeições padrão iniciais (caso venha de um reset ou novo utilizador)
 const refeicoesPadrao = ['cafeManha', 'almoco', 'lancheTarde', 'janta'];
 
 export const useUserStore = create<UserStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       dados: {
         nome: '',
         idade: '',
@@ -60,39 +61,47 @@ export const useUserStore = create<UserStore>()(
         macrosConsumidos: { ...macrosZerados },
         macrosPorRefeicao: {},
         ultimaData: '',
+        streak: 0,
+        ultimoDiaPontuado: '',
       },
       mostrarNavbar: true,
       setMostrarNavbar: (visivel) => set({ mostrarNavbar: visivel }),
       setDados: (novosDados) => set((state) => ({ dados: { ...state.dados, ...novosDados } })),
       
-      adicionarAgua: (quantidade, metaMax) => set((state) => {
-        const atual = state.dados.aguaConsumida || 0;
-        return { dados: { ...state.dados, aguaConsumida: Math.max(0, Math.min(metaMax, atual + quantidade)) } };
-      }),
+      adicionarAgua: (quantidade, metaMax) => {
+        set((state) => {
+          const atual = state.dados.aguaConsumida || 0;
+          return { dados: { ...state.dados, aguaConsumida: Math.max(0, Math.min(metaMax, atual + quantidade)) } };
+        });
+        get().verificarStreak(); // Verifica se bateu a meta e concluiu o dia
+      },
       
       zerarAgua: () => set((state) => ({ dados: { ...state.dados, aguaConsumida: 0 } })),
       
-      registrarRefeicao: (refeicaoKey, calorias, alimentosConsumidos, macros) => set((state) => {
-        const refeicoesAtuais = state.dados.refeicoesConcluidas || [];
-        const caloriasAtuais = state.dados.caloriasConsumidas || 0;
-        const macrosAtuais = state.dados.macrosConsumidos || { ...macrosZerados };
-        
-        return {
-          dados: {
-            ...state.dados,
-            caloriasConsumidas: caloriasAtuais + calorias,
-            caloriasPorRefeicao: { ...state.dados.caloriasPorRefeicao, [refeicaoKey]: calorias },
-            macrosConsumidos: {
-              proteina: macrosAtuais.proteina + macros.proteina,
-              carbo: macrosAtuais.carbo + macros.carbo,
-              gordura: macrosAtuais.gordura + macros.gordura,
+      registrarRefeicao: (refeicaoKey, calorias, alimentosConsumidos, macros) => {
+        set((state) => {
+          const refeicoesAtuais = state.dados.refeicoesConcluidas || [];
+          const caloriasAtuais = state.dados.caloriasConsumidas || 0;
+          const macrosAtuais = state.dados.macrosConsumidos || { ...macrosZerados };
+          
+          return {
+            dados: {
+              ...state.dados,
+              caloriasConsumidas: caloriasAtuais + calorias,
+              caloriasPorRefeicao: { ...state.dados.caloriasPorRefeicao, [refeicaoKey]: calorias },
+              macrosConsumidos: {
+                proteina: macrosAtuais.proteina + macros.proteina,
+                carbo: macrosAtuais.carbo + macros.carbo,
+                gordura: macrosAtuais.gordura + macros.gordura,
+              },
+              macrosPorRefeicao: { ...state.dados.macrosPorRefeicao, [refeicaoKey]: macros },
+              refeicoesConcluidas: [...refeicoesAtuais, refeicaoKey],
+              alimentos: { ...state.dados.alimentos, [refeicaoKey]: alimentosConsumidos }
             },
-            macrosPorRefeicao: { ...state.dados.macrosPorRefeicao, [refeicaoKey]: macros },
-            refeicoesConcluidas: [...refeicoesAtuais, refeicaoKey],
-            alimentos: { ...state.dados.alimentos, [refeicaoKey]: alimentosConsumidos }
-          },
-        };
-      }),
+          };
+        });
+        get().verificarStreak(); // Verifica se todas as refeições foram feitas
+      },
       
       desfazerRefeicao: (refeicaoKey) => set((state) => {
         const refeicoesAtuais = state.dados.refeicoesConcluidas || [];
@@ -127,6 +136,46 @@ export const useUserStore = create<UserStore>()(
       zerarDieta: () => set((state) => ({
         dados: { ...state.dados, caloriasConsumidas: 0, refeicoesConcluidas: [], caloriasPorRefeicao: {}, macrosConsumidos: { ...macrosZerados }, macrosPorRefeicao: {} }
       })),
+
+      verificarStreak: () => set((state) => {
+        const pesoNum = Number(state.dados.peso) || 70;
+        const metaAguaMl = Math.round((pesoNum * 35) / 1000) * 1000;
+        
+        const ativas = state.dados.refeicoesAtivas && state.dados.refeicoesAtivas.length > 0 
+          ? state.dados.refeicoesAtivas 
+          : refeicoesPadrao;
+        
+        const concluidas = state.dados.refeicoesConcluidas || [];
+        const todasRefeicoesFeitas = ativas.every((r) => concluidas.includes(r));
+        const aguaBatida = (state.dados.aguaConsumida || 0) >= metaAguaMl;
+
+        // Só soma o ponto se concluiu todas as refeições ativas E bateu a meta de água
+        if (!todasRefeicoesFeitas || !aguaBatida) return state;
+
+        const hoje = new Date().toLocaleDateString('pt-BR');
+        if (state.dados.ultimoDiaPontuado === hoje) return state; // Já pontuou hoje
+
+        const ontem = new Date();
+        ontem.setDate(ontem.getDate() - 1);
+        const ontemStr = ontem.toLocaleDateString('pt-BR');
+
+        let novoStreak = 1;
+        if (state.dados.ultimoDiaPontuado === ontemStr) {
+          novoStreak = (state.dados.streak || 0) + 1; // Continua a sequência de ontem
+        } else if (!state.dados.ultimoDiaPontuado) {
+          novoStreak = 1; // Primeiro registo
+        } else {
+          novoStreak = 1; // Quebrou o streak, recomeça
+        }
+
+        return {
+          dados: {
+            ...state.dados,
+            streak: novoStreak,
+            ultimoDiaPontuado: hoje,
+          }
+        };
+      }),
 
       verificarViradaDeDia: () => set((state) => {
         const hoje = new Date().toLocaleDateString('pt-BR');
