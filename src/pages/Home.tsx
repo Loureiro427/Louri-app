@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
+import logoImg from '../assets/logo.png'; // Importa o teu logótipo oficial
 
 const DICIONARIO_ALIMENTOS = {
   cafeManha: [
@@ -93,27 +94,55 @@ export function Home() {
 
   if (!dados.nome) {
     return (
-      <div className="flex flex-col h-[100dvh] bg-zinc-900 px-6 py-12 overflow-hidden overscroll-none">
-        <div className="flex-1 flex flex-col items-center justify-center mt-10 z-10">
-          <div className="relative w-64 h-64 flex items-center justify-center mb-2">
-            <div className="absolute inset-0 animate-[spin_25s_linear_infinite]">
-              <div className="absolute top-4 left-0 text-3xl opacity-80">🔥</div>
-              <div className="absolute top-0 right-4 text-4xl opacity-80">💪</div>
-              <div className="absolute top-1/2 -translate-y-1/2 -left-6 text-4xl opacity-80">🍎</div>
-              <div className="absolute top-1/2 -translate-y-1/2 -right-4 text-3xl opacity-80">🥗</div>
-              <div className="absolute bottom-4 left-4 text-4xl opacity-80">🍊</div>
-              <div className="absolute bottom-0 right-2 text-3xl opacity-80">👟</div>
+      <div className="flex flex-col h-[100dvh] bg-zinc-950 px-6 py-10 justify-between items-center overflow-hidden overscroll-none relative select-none">
+        
+        {/* Elemento decorativo de fundo subtil (Glow subtil) */}
+        <div className="absolute top-1/4 w-72 h-72 bg-green-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        {/* Espaço Superior Vazio para Equilíbrio */}
+        <div className="w-full"></div>
+
+        {/* --- CENTRO: LOGÓTIPO COM ÓRBITA FLUIDA E ESTÁVEL --- */}
+        <div className="relative w-64 h-64 flex items-center justify-center">
+          
+            {/* Órbita em rotação suave */}
+            <div className="absolute inset-0 animate-[spin_30s_linear_infinite]">
+              {/* Cada emoji faz o spin contrário (-spin) para se manter perfeitamente na vertical */}
+              <div className="absolute top-3 left-6 text-2xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">🍎</div>
+              <div className="absolute top-2 right-10 text-3xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">🔥</div>
+              <div className="absolute top-1/2 -translate-y-1/2 -left-3 text-3xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">🍊</div>
+              <div className="absolute top-1/2 -translate-y-1/2 -right-3 text-3xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">💪</div>
+              <div className="absolute bottom-6 left-10 text-3xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">👟</div>
+              <div className="absolute bottom-4 right-12 text-2xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">🥗</div>
             </div>
-            <div className="text-8xl drop-shadow-lg z-10">🍃</div>
-          </div>
-          <h1 className="text-4xl font-bold text-white tracking-tight">Louri</h1>
+
+            {/* LOGÓTIPO CENTRAL FIXO */}
+            <div className="relative z-10 flex flex-col items-center justify-center gap-3">
+              <div className="w-24 h-24 rounded-3xl bg-zinc-900/80 border border-zinc-800/80 p-4 shadow-2xl flex items-center justify-center backdrop-blur-md">
+                <img src={logoImg} alt="Louri Logo" className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(34,197,94,0.3)]" />
+              </div>
+              <h1 className="text-3xl font-black text-white tracking-tight">Louri Fit</h1>
+            </div>
+
         </div>
-        <div className="flex flex-col items-center text-center z-10 gap-6 mt-auto">
-          <div className="w-full flex flex-col gap-4 mt-4">
-            <button onClick={() => navigate('/onboarding')} className="w-full bg-green-500 hover:bg-green-600 text-zinc-900 font-bold py-4 rounded-full text-lg shadow-lg">Sou novo por aqui</button>
-            <button onClick={() => alert('Em breve!')} className="w-full bg-transparent border-2 border-green-500 text-green-500 font-bold py-4 rounded-full text-lg">Já tenho uma conta</button>
-          </div>
+
+        {/* --- BOTÕES DE AÇÃO INFERIORES --- */}
+        <div className="w-full max-w-sm flex flex-col gap-3 z-10 pb-6">
+          <button 
+            onClick={() => navigate('/onboarding')} 
+            className="w-full bg-green-500 hover:bg-green-400 text-zinc-950 font-bold py-4 rounded-2xl text-base shadow-lg shadow-green-500/20 transition-all active:scale-[0.98]"
+          >
+            Começar Agora
+          </button>
+          
+          <button 
+            onClick={() => alert('Em breve!')} 
+            className="w-full bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800/80 text-zinc-300 font-semibold py-4 rounded-2xl text-base transition-all active:scale-[0.98]"
+          >
+            Já tenho uma conta
+          </button>
         </div>
+
       </div>
     );
   }
