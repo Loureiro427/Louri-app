@@ -19,8 +19,9 @@ interface UserData {
   macrosConsumidos: { proteina: number; carbo: number; gordura: number };
   macrosPorRefeicao: Record<string, { proteina: number; carbo: number; gordura: number }>;
   ultimaData: string;
-  streak: number;          // NOVO: Dias seguidos cumpridos
-  ultimoDiaPontuado: string; // NOVO: Data do último dia contabilizado
+  streak: number; 
+  ultimoDiaPontuado: string;
+  temaEscuro: boolean; // NOVO: Guarda se o modo escuro está ativo
 }
 
 interface UserStore {
@@ -63,6 +64,7 @@ export const useUserStore = create<UserStore>()(
         ultimaData: '',
         streak: 0,
         ultimoDiaPontuado: '',
+        temaEscuro: true, // Inicia ativado por padrão (Dark Mode)
       },
       mostrarNavbar: true,
       setMostrarNavbar: (visivel) => set({ mostrarNavbar: visivel }),
@@ -73,7 +75,7 @@ export const useUserStore = create<UserStore>()(
           const atual = state.dados.aguaConsumida || 0;
           return { dados: { ...state.dados, aguaConsumida: Math.max(0, Math.min(metaMax, atual + quantidade)) } };
         });
-        get().verificarStreak(); // Verifica se bateu a meta e concluiu o dia
+        get().verificarStreak();
       },
       
       zerarAgua: () => set((state) => ({ dados: { ...state.dados, aguaConsumida: 0 } })),
@@ -100,7 +102,7 @@ export const useUserStore = create<UserStore>()(
             },
           };
         });
-        get().verificarStreak(); // Verifica se todas as refeições foram feitas
+        get().verificarStreak();
       },
       
       desfazerRefeicao: (refeicaoKey) => set((state) => {
@@ -149,11 +151,10 @@ export const useUserStore = create<UserStore>()(
         const todasRefeicoesFeitas = ativas.every((r) => concluidas.includes(r));
         const aguaBatida = (state.dados.aguaConsumida || 0) >= metaAguaMl;
 
-        // Só soma o ponto se concluiu todas as refeições ativas E bateu a meta de água
         if (!todasRefeicoesFeitas || !aguaBatida) return state;
 
         const hoje = new Date().toLocaleDateString('pt-BR');
-        if (state.dados.ultimoDiaPontuado === hoje) return state; // Já pontuou hoje
+        if (state.dados.ultimoDiaPontuado === hoje) return state;
 
         const ontem = new Date();
         ontem.setDate(ontem.getDate() - 1);
@@ -161,11 +162,11 @@ export const useUserStore = create<UserStore>()(
 
         let novoStreak = 1;
         if (state.dados.ultimoDiaPontuado === ontemStr) {
-          novoStreak = (state.dados.streak || 0) + 1; // Continua a sequência de ontem
+          novoStreak = (state.dados.streak || 0) + 1;
         } else if (!state.dados.ultimoDiaPontuado) {
-          novoStreak = 1; // Primeiro registo
+          novoStreak = 1;
         } else {
-          novoStreak = 1; // Quebrou o streak, recomeça
+          novoStreak = 1;
         }
 
         return {

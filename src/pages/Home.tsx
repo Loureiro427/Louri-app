@@ -90,6 +90,8 @@ export function Home() {
   const zerarDieta = useUserStore((state) => state.zerarDieta);
   const verificarViradaDeDia = useUserStore((state) => state.verificarViradaDeDia);
 
+  const temaEscuro = dados.temaEscuro ?? true;
+
   // Modais
   const [mostrarModalDesfazerAgua, setMostrarModalDesfazerAgua] = useState(false);
   const [mostrarModalDieta, setMostrarModalDieta] = useState(false);
@@ -115,7 +117,9 @@ export function Home() {
 
   if (!dados.nome) {
     return (
-      <div className="flex flex-col h-[100dvh] bg-zinc-950 px-6 py-10 justify-between items-center overflow-hidden overscroll-none relative select-none">
+      <div className={`flex flex-col h-[100dvh] px-6 py-10 justify-between items-center overflow-hidden overscroll-none relative select-none transition-colors duration-300 ${
+        temaEscuro ? 'bg-zinc-950 text-white' : 'bg-zinc-100 text-zinc-900'
+      }`}>
         
         <div className="absolute top-1/4 w-72 h-72 bg-green-500/5 rounded-full blur-3xl pointer-events-none"></div>
         <div className="w-full"></div>
@@ -131,10 +135,12 @@ export function Home() {
             </div>
 
             <div className="relative z-10 flex flex-col items-center justify-center gap-3">
-              <div className="w-24 h-24 rounded-3xl bg-zinc-900/40 border border-zinc-800/80 p-3 shadow-2xl flex items-center justify-center backdrop-blur-md overflow-hidden">
+              <div className={`w-24 h-24 rounded-3xl p-3 shadow-2xl flex items-center justify-center backdrop-blur-md overflow-hidden border ${
+                temaEscuro ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200 shadow-sm'
+              }`}>
                 <img src={logoImg} alt="Louri Logo" className="w-full h-full object-contain filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]" />
               </div>
-              <h1 className="text-3xl font-black text-white tracking-tight">Louri</h1>
+              <h1 className={`text-3xl font-black tracking-tight ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>Louri</h1>
             </div>
         </div>
 
@@ -148,7 +154,9 @@ export function Home() {
           
           <button 
             onClick={() => alert('Em breve!')} 
-            className="w-full bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800/80 text-zinc-300 font-semibold py-4 rounded-2xl text-base transition-all active:scale-[0.98]"
+            className={`w-full font-semibold py-4 rounded-2xl text-base transition-all active:scale-[0.98] border ${
+              temaEscuro ? 'bg-zinc-900/60 hover:bg-zinc-900 border-zinc-800/80 text-zinc-300' : 'bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700 shadow-sm'
+            }`}
           >
             Já tenho uma conta
           </button>
@@ -165,7 +173,6 @@ export function Home() {
   const aguaAtualMl = dados.aguaConsumida || 0;
   const progressoAgua = Math.min(100, Math.round((aguaAtualMl / metaAguaMl) * 100));
   
-  // Cálculo TMB exato por Sexo Biológico (Mifflin-St Jeor)
   let tmb = 10 * pesoNum + 6.25 * (Number(dados.altura) || 170) - 5 * (Number(dados.idade) || 25);
   tmb = dados.sexo === 'M' ? tmb + 5 : tmb - 161;
   let metaCalorias = Math.round(tmb * 1.3);
@@ -190,7 +197,6 @@ export function Home() {
   let dormeMin = converterParaMinutos(dados.horaDorme || '22:00');
   if (dormeMin < acordaMin) dormeMin += 24 * 60; 
 
-  // --- ORDENAÇÃO CRONOLÓGICA E HORÁRIOS INTELIGENTES ---
   const ORDEM_CRONOLOGICA = ['cafeManha', 'almoco', 'lancheTarde', 'cafeTarde', 'janta', 'lancheNoite'];
 
   const ativasBrutas = dados.refeicoesAtivas && dados.refeicoesAtivas.length > 0 
@@ -295,13 +301,15 @@ export function Home() {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] overflow-y-auto bg-zinc-950 px-6 py-8 text-white w-full max-w-md mx-auto relative overscroll-none custom-scrollbar pb-28">
+    <div className={`flex flex-col h-[100dvh] overflow-y-auto px-6 py-8 w-full max-w-md mx-auto relative overscroll-none custom-scrollbar pb-28 transition-colors duration-300 ${
+      temaEscuro ? 'text-white' : 'text-zinc-900'
+    }`}>
       
       {/* Cabeçalho */}
       <header className="flex justify-between items-center mb-6 shrink-0">
         <div>
-          <p className="text-zinc-400 text-xs uppercase tracking-wider">Olá,</p>
-          <h1 className="text-2xl font-bold text-white capitalize">{primeiroNome}</h1>
+          <p className={`text-xs uppercase tracking-wider ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Olá,</p>
+          <h1 className={`text-2xl font-bold capitalize ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{primeiroNome}</h1>
         </div>
       </header>
 
@@ -310,64 +318,86 @@ export function Home() {
         <div className="grid grid-cols-2 gap-3 shrink-0">
           <div 
             onClick={() => setMostrarModalDieta(true)}
-            className="bg-zinc-900/80 border border-zinc-800 rounded-3xl p-4 shadow-lg flex flex-col justify-between gap-3 cursor-pointer hover:bg-zinc-900 transition-colors"
+            className={`border rounded-3xl p-4 shadow-lg flex flex-col justify-between gap-3 cursor-pointer transition-colors ${
+              temaEscuro ? 'bg-zinc-900/80 border-zinc-800 hover:bg-zinc-900' : 'bg-white border-zinc-200 hover:bg-zinc-50 shadow-sm'
+            }`}
           >
             <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-sm">🔥</span>
-              <span className="text-xs text-zinc-400 font-medium">Dieta (Ver)</span>
+              <span className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 text-sm">🔥</span>
+              <span className={`text-xs font-medium ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Dieta (Ver)</span>
             </div>
             <div>
-              <p className="text-xl font-bold text-white">{caloriasConsumidas} <span className="text-xs text-zinc-400 font-normal">/ {metaCalorias}</span></p>
-              <div className="w-full bg-zinc-950 h-1.5 rounded-full overflow-hidden mt-2 border border-zinc-800">
+              <p className={`text-xl font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{caloriasConsumidas} <span className={`text-xs font-normal ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>/ {metaCalorias}</span></p>
+              <div className={`w-full h-1.5 rounded-full overflow-hidden mt-2 border transition-colors ${
+                temaEscuro ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-100 border-zinc-200'
+              }`}>
                 <div className="bg-orange-500 h-full rounded-full transition-all duration-500" style={{ width: `${progressoCalorias}%` }} />
               </div>
             </div>
           </div>
 
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-3xl p-4 shadow-lg flex flex-col justify-between gap-2">
+          <div className={`border rounded-3xl p-4 shadow-lg flex flex-col justify-between gap-2 transition-colors ${
+            temaEscuro ? 'bg-zinc-900/80 border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
+          }`}>
             <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 text-sm">🎯</span>
-              <span className="text-xs text-zinc-400 font-medium">Foco</span>
+              <span className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-500 text-sm">🎯</span>
+              <span className={`text-xs font-medium ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Foco</span>
             </div>
             <div>
-              <p className="text-sm font-bold text-green-400 uppercase leading-tight">
+              <p className="text-sm font-bold text-green-500 uppercase leading-tight">
                 {dados.objetivo === 'perder' ? 'Emagrecer' : dados.objetivo === 'ganhar' ? 'Massa' : 'Manutenção'}
               </p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">{pesoNum}kg atual</p>
+              <p className={`text-[10px] mt-0.5 ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>{pesoNum}kg atual</p>
             </div>
           </div>
         </div>
         
         {/* Hidratação */}
-        <div className={`shrink-0 rounded-3xl p-5 shadow-xl flex flex-col gap-4 border transition-all duration-500 ${aguaAtualMl >= metaAguaMl ? 'bg-gradient-to-br from-zinc-900 to-green-950/40 border-green-500/50' : 'bg-zinc-900/80 border-zinc-800'}`}>
+        <div className={`shrink-0 rounded-3xl p-5 shadow-xl flex flex-col gap-4 border transition-all duration-500 ${
+          aguaAtualMl >= metaAguaMl 
+            ? temaEscuro ? 'bg-gradient-to-br from-zinc-900 to-green-950/40 border-green-500/50' : 'bg-gradient-to-br from-white to-green-50 border-green-500/50 shadow-sm' 
+            : temaEscuro ? 'bg-zinc-900/80 border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
+        }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border transition-all ${aguaAtualMl >= metaAguaMl ? 'bg-green-500/20 border-green-500/40 animate-bounce' : 'bg-blue-500/20 border-blue-500/30'}`}>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border transition-all ${
+                aguaAtualMl >= metaAguaMl ? 'bg-green-500/20 border-green-500/40 animate-bounce' : 'bg-blue-500/20 border-blue-500/30'
+              }`}>
                 {aguaAtualMl >= metaAguaMl ? '🎉' : '💧'}
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white">Hidratação</h2>
+                <h2 className={`text-lg font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>Hidratação</h2>
               </div>
             </div>
             <div className="text-right">
-              <span className={`text-xl font-bold ${aguaAtualMl >= metaAguaMl ? 'text-green-400' : 'text-blue-400'}`}>{(aguaAtualMl / 1000).toFixed(2)}L</span>
-              <span className="text-xs text-zinc-400 block">de {(metaAguaMl / 1000).toFixed(1)}L</span>
+              <span className={`text-xl font-bold ${aguaAtualMl >= metaAguaMl ? 'text-green-500' : 'text-blue-500'}`}>{(aguaAtualMl / 1000).toFixed(2)}L</span>
+              <span className={`text-xs block ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>de {(metaAguaMl / 1000).toFixed(1)}L</span>
             </div>
           </div>
-          <div className="w-full bg-zinc-950 h-3 rounded-full overflow-hidden p-0.5 border border-zinc-800">
+          <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 border transition-colors ${
+            temaEscuro ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-100 border-zinc-200'
+          }`}>
             <div className={`h-full rounded-full transition-all duration-500 ${aguaAtualMl >= metaAguaMl ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: aguaAtualMl >= metaAguaMl ? '100%' : `${progressoAgua}%` }} />
           </div>
           <div className="grid grid-cols-4 gap-2 mt-1">
-            <button onClick={() => adicionarAgua(200, metaAguaMl)} disabled={aguaAtualMl >= metaAguaMl} className="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border bg-zinc-950 border-zinc-800 text-zinc-200">🥛 <span>+200</span></button>
-            <button onClick={() => adicionarAgua(300, metaAguaMl)} disabled={aguaAtualMl >= metaAguaMl} className="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border bg-zinc-950 border-zinc-800 text-zinc-200">🥤 <span>+300</span></button>
-            <button onClick={() => adicionarAgua(500, metaAguaMl)} disabled={aguaAtualMl >= metaAguaMl} className="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border bg-zinc-950 border-zinc-800 text-zinc-200">🍶 <span>+500</span></button>
-            <button onClick={() => setMostrarModalDesfazerAgua(true)} className="bg-zinc-950 border-zinc-800 text-zinc-400 py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5">🔄 <span>Desfazer</span></button>
+            <button onClick={() => adicionarAgua(200, metaAguaMl)} disabled={aguaAtualMl >= metaAguaMl} className={`py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border transition-colors ${
+              temaEscuro ? 'bg-zinc-950 border-zinc-800 text-zinc-200 hover:bg-zinc-900' : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100'
+            }`}>🥛 <span>+200</span></button>
+            <button onClick={() => adicionarAgua(300, metaAguaMl)} disabled={aguaAtualMl >= metaAguaMl} className={`py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border transition-colors ${
+              temaEscuro ? 'bg-zinc-950 border-zinc-800 text-zinc-200 hover:bg-zinc-900' : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100'
+            }`}>🥤 <span>+300</span></button>
+            <button onClick={() => adicionarAgua(500, metaAguaMl)} disabled={aguaAtualMl >= metaAguaMl} className={`py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border transition-colors ${
+              temaEscuro ? 'bg-zinc-950 border-zinc-800 text-zinc-200 hover:bg-zinc-900' : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100'
+            }`}>🍶 <span>+500</span></button>
+            <button onClick={() => setMostrarModalDesfazerAgua(true)} className={`py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border transition-colors ${
+              temaEscuro ? 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-900' : 'bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100'
+            }`}>🔄 <span>Desfazer</span></button>
           </div>
         </div>
 
         {/* Timeline Dinâmica */}
         <div className="mt-2 shrink-0">
-          <h2 className="text-xl font-bold text-white mb-4">Plano de Hoje</h2>
+          <h2 className={`text-xl font-bold mb-4 ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>Plano de Hoje</h2>
           
           <div className="flex flex-col gap-4">
             {REFEICOES.map((refeicao, index) => {
@@ -382,11 +412,17 @@ export function Home() {
               return (
                 <div key={refeicao.key} className={`flex gap-4 relative transition-all duration-500 ${isFuturo ? 'opacity-40 grayscale' : ''}`}>
                   {index !== REFEICOES.length - 1 && (
-                    <div className={`absolute left-[27px] top-12 bottom-[-16px] w-0.5 z-0 transition-colors ${isFeita ? 'bg-green-500' : 'bg-zinc-800'}`}></div>
+                    <div className={`absolute left-[27px] top-12 bottom-[-16px] w-0.5 z-0 transition-colors ${isFeita ? 'bg-green-500' : temaEscuro ? 'bg-zinc-800' : 'bg-zinc-200'}`}></div>
                   )}
 
                   <div className="flex flex-col items-center gap-1 z-10">
-                    <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shadow-md transition-all duration-300 ${isFeita ? 'bg-green-500 text-zinc-950' : isAgora ? 'bg-orange-500/20 border border-orange-500/50 text-orange-400 animate-pulse' : 'bg-zinc-900 border border-zinc-800 text-zinc-400'}`}>
+                    <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shadow-md transition-all duration-300 ${
+                      isFeita 
+                        ? 'bg-green-500 text-zinc-950 font-bold' 
+                        : isAgora 
+                          ? 'bg-orange-500/20 border border-orange-500/50 text-orange-500 animate-pulse' 
+                          : temaEscuro ? 'bg-zinc-900 border border-zinc-800 text-zinc-400' : 'bg-white border border-zinc-200 text-zinc-600 shadow-sm'
+                    }`}>
                       {isFeita ? (
                         <span className="text-2xl">✓</span>
                       ) : isFuturo ? (
@@ -395,7 +431,7 @@ export function Home() {
                         <span className="text-xl">{refeicao.icone}</span>
                       )}
                     </div>
-                    <span className={`text-[10px] font-bold mt-1 ${isAgora ? 'text-orange-400' : 'text-zinc-500'}`}>{refeicao.horario}</span>
+                    <span className={`text-[10px] font-bold mt-1 ${isAgora ? 'text-orange-500' : temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>{refeicao.horario}</span>
                   </div>
 
                   <div 
@@ -403,12 +439,24 @@ export function Home() {
                       if (isFuturo) return;
                       isFeita ? cancelarRefeicaoFeita(refeicao.key) : abrirModalRefeicao(refeicao);
                     }}
-                    className={`flex-1 rounded-2xl p-4 flex flex-col gap-3 transition-all ${isFuturo ? 'cursor-not-allowed bg-zinc-900/20 border border-zinc-900' : isFeita ? 'bg-zinc-900/20 border border-green-500/20 opacity-60 cursor-pointer' : isAgora ? 'bg-zinc-900/80 border border-orange-500/30 cursor-pointer' : 'bg-zinc-900/40 border border-zinc-800 hover:bg-zinc-900/60 cursor-pointer'}`}
+                    className={`flex-1 rounded-2xl p-4 flex flex-col gap-3 transition-all ${
+                      isFuturo 
+                        ? temaEscuro ? 'cursor-not-allowed bg-zinc-900/20 border border-zinc-900' : 'cursor-not-allowed bg-zinc-100/50 border border-zinc-200' 
+                        : isFeita 
+                          ? temaEscuro ? 'bg-zinc-900/20 border border-green-500/20 opacity-60 cursor-pointer' : 'bg-green-50/50 border border-green-500/30 opacity-70 cursor-pointer shadow-sm' 
+                          : isAgora 
+                            ? temaEscuro ? 'bg-zinc-900/80 border border-orange-500/30 cursor-pointer' : 'bg-white border border-orange-500/40 cursor-pointer shadow-sm' 
+                            : temaEscuro ? 'bg-zinc-900/40 border border-zinc-800 hover:bg-zinc-900/60 cursor-pointer' : 'bg-white border border-zinc-200 hover:bg-zinc-50 cursor-pointer shadow-sm'
+                    }`}
                   >
                     <div className="flex justify-between items-center">
-                      <h3 className={`text-sm font-bold ${isFeita ? 'text-green-500 line-through' : 'text-white'}`}>{refeicao.titulo}</h3>
+                      <h3 className={`text-sm font-bold ${isFeita ? 'text-green-500 line-through' : temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{refeicao.titulo}</h3>
                       {!isFeita && (
-                        <span className={`text-[10px] px-2 py-1 rounded-lg ${isFuturo ? 'bg-zinc-900 text-zinc-600' : 'bg-zinc-800 text-zinc-300'}`}>
+                        <span className={`text-[10px] px-2 py-1 rounded-lg ${
+                          isFuturo 
+                            ? temaEscuro ? 'bg-zinc-900 text-zinc-600' : 'bg-zinc-200 text-zinc-400' 
+                            : temaEscuro ? 'bg-zinc-800 text-zinc-300' : 'bg-zinc-100 text-zinc-700 font-medium'
+                        }`}>
                           {isFuturo ? 'Em breve' : 'Registar'}
                         </span>
                       )}
@@ -416,9 +464,11 @@ export function Home() {
                     
                     <div className="flex flex-wrap gap-2">
                       {alimentosCompletos.map((alimento: any) => (
-                        <div key={alimento.id} className="bg-zinc-950/80 border border-zinc-800 px-2 py-1 rounded-md flex items-center gap-1">
+                        <div key={alimento.id} className={`border px-2 py-1 rounded-md flex items-center gap-1 transition-colors ${
+                          temaEscuro ? 'bg-zinc-950/80 border-zinc-800 text-zinc-300' : 'bg-zinc-50 border-zinc-200 text-zinc-700'
+                        }`}>
                           <span className="text-xs">{alimento.emoji}</span>
-                          <span className="text-[10px] text-zinc-300">{alimento.nome}</span>
+                          <span className="text-[10px]">{alimento.nome}</span>
                         </div>
                       ))}
                     </div>
@@ -433,24 +483,30 @@ export function Home() {
 
       {/* MODAL: RESUMO DA DIETA */}
       {mostrarModalDieta && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end justify-center z-50 animate-in slide-in-from-bottom-4 overscroll-none">
-          <div className="bg-zinc-900 border-t border-zinc-800 rounded-t-3xl p-6 w-full max-w-md flex flex-col gap-5 pb-10">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end justify-center z-50 animate-in slide-in-from-bottom-4 overscroll-none">
+          <div className={`border-t rounded-t-3xl p-6 w-full max-w-md flex flex-col gap-5 pb-10 shadow-2xl transition-colors ${
+            temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+          }`}>
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <h3 className="text-xl font-bold flex items-center gap-2">
                 <span>🔥</span> Resumo da Dieta
               </h3>
-              <button onClick={() => setMostrarModalDieta(false)} className="text-zinc-400 text-2xl font-bold">×</button>
+              <button onClick={() => setMostrarModalDieta(false)} className={`text-2xl font-bold ${temaEscuro ? 'text-zinc-400 hover:text-white' : 'text-zinc-500 hover:text-zinc-900'}`}>×</button>
             </div>
             
-            <div className="flex flex-col items-center justify-center p-4 bg-zinc-950/50 rounded-2xl border border-zinc-800">
-              <p className="text-4xl font-black text-white">{caloriasConsumidas} <span className="text-sm text-zinc-400 font-normal">/ {metaCalorias} Kcal</span></p>
-              <div className="w-full bg-zinc-900 h-2 rounded-full overflow-hidden mt-3 border border-zinc-800">
+            <div className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-colors ${
+              temaEscuro ? 'bg-zinc-950/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+            }`}>
+              <p className={`text-4xl font-black ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{caloriasConsumidas} <span className={`text-sm font-normal ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>/ {metaCalorias} Kcal</span></p>
+              <div className={`w-full h-2 rounded-full overflow-hidden mt-3 border transition-colors ${
+                temaEscuro ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-100 border-zinc-200'
+              }`}>
                 <div className="bg-orange-500 h-full rounded-full transition-all duration-500" style={{ width: `${progressoCalorias}%` }} />
               </div>
             </div>
 
             <div>
-              <p className="text-xs text-zinc-400 uppercase tracking-wider font-semibold mb-3">Refeições de Hoje:</p>
+              <p className={`text-xs uppercase tracking-wider font-semibold mb-3 ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Refeições de Hoje:</p>
               <div className="flex flex-col gap-2 max-h-48 overflow-y-auto custom-scrollbar">
                 {refeicoesFeitasInfo.length > 0 ? (
                   refeicoesFeitasInfo.map(r => {
@@ -460,24 +516,28 @@ export function Home() {
                     }, 0);
 
                     return (
-                      <div key={r.key} className="flex justify-between items-center bg-zinc-900 p-3 rounded-xl border border-zinc-800">
+                      <div key={r.key} className={`flex justify-between items-center p-3 rounded-xl border transition-colors ${
+                        temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900 shadow-sm'
+                      }`}>
                         <div className="flex items-center gap-2">
-                          <span className="text-green-500">✓</span>
-                          <span className="text-sm font-medium text-white">{r.titulo}</span>
+                          <span className="text-green-500 font-bold">✓</span>
+                          <span className="text-sm font-medium">{r.titulo}</span>
                         </div>
-                        <span className="text-xs text-orange-400 font-bold">+{cals} kcal</span>
+                        <span className="text-xs text-orange-500 font-bold">+{cals} kcal</span>
                       </div>
                     );
                   })
                 ) : (
-                  <p className="text-sm text-zinc-500 italic text-center py-4">Nenhuma refeição registada hoje.</p>
+                  <p className={`text-sm italic text-center py-4 ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>Nenhuma refeição registada hoje.</p>
                 )}
               </div>
             </div>
 
             <button 
               onClick={() => setMostrarModalDesfazerDieta(true)}
-              className="w-full bg-zinc-900 hover:bg-red-500/10 border border-zinc-800 hover:border-red-500/50 text-red-400 font-bold py-4 rounded-xl text-lg mt-2 transition-colors flex items-center justify-center gap-2"
+              className={`w-full border font-bold py-4 rounded-xl text-lg mt-2 transition-colors flex items-center justify-center gap-2 ${
+                temaEscuro ? 'bg-zinc-900 hover:bg-red-500/10 border-zinc-800 hover:border-red-500/50 text-red-400' : 'bg-zinc-50 hover:bg-red-50 border-zinc-200 hover:border-red-200 text-red-500'
+              }`}
             >
               <span>🔄</span> Zerar Registo Diário
             </button>
@@ -487,25 +547,29 @@ export function Home() {
 
       {/* MODAL: REGISTAR REFEIÇÃO */}
       {refeicaoModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end justify-center z-50 animate-in slide-in-from-bottom-4 overscroll-none">
-          <div className="bg-zinc-900 border-t border-zinc-800 rounded-t-3xl p-6 w-full max-w-md flex flex-col gap-4 pb-10 max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end justify-center z-50 animate-in slide-in-from-bottom-4 overscroll-none">
+          <div className={`border-t rounded-t-3xl p-6 w-full max-w-md flex flex-col gap-4 pb-10 max-h-[85vh] overflow-y-auto shadow-2xl transition-colors ${
+            temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+          }`}>
             
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <h3 className="text-xl font-bold flex items-center gap-2">
                 <span>{refeicaoModal.icone}</span> O que comeu?
               </h3>
-              <button onClick={() => setRefeicaoModal(null)} className="text-zinc-400 text-2xl font-bold">×</button>
+              <button onClick={() => setRefeicaoModal(null)} className={`text-2xl font-bold ${temaEscuro ? 'text-zinc-400 hover:text-white' : 'text-zinc-500 hover:text-zinc-900'}`}>×</button>
             </div>
             
-            <div className="flex items-center gap-4 bg-zinc-950/50 p-4 rounded-2xl border border-zinc-800">
+            <div className={`flex items-center gap-4 p-4 rounded-2xl border transition-colors ${
+              temaEscuro ? 'bg-zinc-950/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+            }`}>
               <span className="text-3xl">🔥</span>
               <div className="flex-1 text-center">
-                <p className="text-4xl font-black text-white">{caloriasTotaisModal} <span className="text-sm text-zinc-400 font-normal">Kcal</span></p>
-                <p className="text-xs text-zinc-500 mt-1">Calculado automaticamente</p>
+                <p className={`text-4xl font-black ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{caloriasTotaisModal} <span className={`text-sm font-normal ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Kcal</span></p>
+                <p className={`text-xs mt-1 ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>Calculado automaticamente</p>
               </div>
             </div>
 
-            <p className="text-xs text-zinc-400 uppercase tracking-wider font-semibold mt-2">Personalize a sua refeição:</p>
+            <p className={`text-xs uppercase tracking-wider font-semibold mt-2 ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Personalize a sua refeição:</p>
 
             <div className="grid grid-cols-3 gap-2">
               {(() => {
@@ -530,18 +594,22 @@ export function Home() {
                       onClick={() => !estaSelecionado && toggleAlimentoModal(alimento.id)}
                       className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 gap-1 ${
                         estaSelecionado
-                          ? 'bg-orange-500/10 border-orange-500 text-orange-400 shadow-md'
-                          : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700 cursor-pointer'
+                          ? 'bg-orange-500/10 border-orange-500 text-orange-500 shadow-md'
+                          : temaEscuro 
+                            ? 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700 cursor-pointer' 
+                            : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:border-zinc-300 cursor-pointer shadow-sm'
                       }`}
                     >
                       {isFavorito && !estaSelecionado && (
-                        <span className="absolute top-1.5 left-2 text-[8px] text-green-400 font-bold">★</span>
+                        <span className="absolute top-1.5 left-2 text-[8px] text-green-500 font-bold">★</span>
                       )}
 
                       {estaSelecionado && (
                         <button 
                           onClick={(e) => { e.stopPropagation(); toggleAlimentoModal(alimento.id); }}
-                          className="absolute -top-2 -right-2 bg-zinc-800 text-zinc-400 rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-500 hover:text-white shadow-lg z-10"
+                          className={`absolute -top-2 -right-2 rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-500 hover:text-white shadow-lg z-10 transition-colors ${
+                            temaEscuro ? 'bg-zinc-800 text-zinc-400' : 'bg-zinc-200 text-zinc-600'
+                          }`}
                         >
                           ×
                         </button>
@@ -552,22 +620,24 @@ export function Home() {
                       
                       {estaSelecionado ? (
                         <div className="flex flex-col items-center w-full mt-1" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center bg-zinc-950 rounded-lg px-2 py-1 border border-orange-500/30 w-full justify-center">
+                          <div className={`flex items-center rounded-lg px-2 py-1 border border-orange-500/40 w-full justify-center ${
+                            temaEscuro ? 'bg-zinc-950 text-white' : 'bg-white text-zinc-900 shadow-inner'
+                          }`}>
                             <input 
                               type="number" 
                               maxLength={4}
                               value={gramas === 0 ? '' : gramas}
                               onChange={(e) => atualizarGramas(alimento.id, e.target.value)}
-                              className="w-10 bg-transparent text-center text-xs text-white outline-none appearance-none font-bold"
+                              className="w-10 bg-transparent text-center text-xs outline-none appearance-none font-bold"
                               placeholder="0"
                               autoFocus
                             />
-                            <span className="text-[9px] text-zinc-500">g</span>
+                            <span className={`text-[9px] ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>g</span>
                           </div>
-                          <span className="text-[9px] text-orange-500/70 mt-1">{kcalCalculada} kcal</span>
+                          <span className="text-[9px] text-orange-500 font-bold mt-1">{kcalCalculada} kcal</span>
                         </div>
                       ) : (
-                        <span className="text-[9px] text-zinc-600 opacity-0 hover:opacity-100 transition-opacity hidden md:block">Toque para adicionar</span>
+                        <span className="text-[9px] text-zinc-400 opacity-0 hover:opacity-100 transition-opacity hidden md:block">Toque para adicionar</span>
                       )}
                     </div>
                   );
@@ -578,7 +648,11 @@ export function Home() {
             <button 
               onClick={confirmarRefeicao}
               disabled={caloriasTotaisModal === 0}
-              className={`w-full font-bold py-4 rounded-xl text-lg mt-4 shadow-lg transition-all ${caloriasTotaisModal > 0 ? 'bg-green-500 hover:bg-green-600 text-zinc-950 shadow-green-500/20' : 'bg-zinc-900 text-zinc-600 cursor-not-allowed'}`}
+              className={`w-full font-bold py-4 rounded-xl text-lg mt-4 shadow-lg transition-all ${
+                caloriasTotaisModal > 0 
+                  ? 'bg-green-500 hover:bg-green-600 text-zinc-950 shadow-green-500/20' 
+                  : temaEscuro ? 'bg-zinc-900 text-zinc-600 cursor-not-allowed' : 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+              }`}
             >
               Confirmar Refeição
             </button>
@@ -589,14 +663,18 @@ export function Home() {
       {/* Modal Desfazer Água */}
       {mostrarModalDesfazerAgua && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center">
+          <div className={`border rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center shadow-2xl transition-colors ${
+            temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+          }`}>
             <div className="text-4xl">⚠️</div>
             <div>
-              <h3 className="text-lg font-bold text-white">Zerar Água?</h3>
+              <h3 className="text-lg font-bold">Zerar Água?</h3>
             </div>
             <div className="flex gap-2 mt-2">
-              <button onClick={() => setMostrarModalDesfazerAgua(false)} className="flex-1 bg-zinc-800 text-zinc-200 py-3 rounded-xl font-semibold text-sm">Cancelar</button>
-              <button onClick={confirmarDesfazerAgua} className="flex-1 bg-red-500 text-zinc-950 font-bold py-3 rounded-xl text-sm">Confirmar</button>
+              <button onClick={() => setMostrarModalDesfazerAgua(false)} className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-colors ${
+                temaEscuro ? 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'
+              }`}>Cancelar</button>
+              <button onClick={confirmarDesfazerAgua} className="flex-1 bg-red-500 hover:bg-red-600 text-zinc-950 font-bold py-3 rounded-xl text-sm transition-colors">Confirmar</button>
             </div>
           </div>
         </div>
@@ -605,14 +683,18 @@ export function Home() {
       {/* Modal Desfazer Dieta */}
       {mostrarModalDesfazerDieta && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center shadow-2xl">
+          <div className={`border rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center shadow-2xl transition-colors ${
+            temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+          }`}>
             <div className="text-4xl">⚠️</div>
             <div>
-              <h3 className="text-lg font-bold text-white">Zerar a Dieta?</h3>
-              <p className="text-xs text-zinc-400 mt-1">Deseja realmente desmarcar todas as refeições e zerar as calorias de hoje?</p>
+              <h3 className="text-lg font-bold">Zerar a Dieta?</h3>
+              <p className={`text-xs mt-1 ${temaEscuro ? 'text-zinc-400' : 'text-zinc-600'}`}>Deseja realmente desmarcar todas as refeições e zerar as calorias de hoje?</p>
             </div>
             <div className="flex gap-2 mt-2">
-              <button onClick={() => setMostrarModalDesfazerDieta(false)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 py-3 rounded-xl font-semibold text-sm transition-colors">Cancelar</button>
+              <button onClick={() => setMostrarModalDesfazerDieta(false)} className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-colors ${
+                temaEscuro ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800'
+              }`}>Cancelar</button>
               <button onClick={confirmarDesfazerDieta} className="flex-1 bg-red-500 hover:bg-red-600 text-zinc-950 font-bold py-3 rounded-xl text-sm transition-colors">Confirmar</button>
             </div>
           </div>
