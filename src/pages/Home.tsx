@@ -472,55 +472,74 @@ export function Home() {
             <p className="text-xs text-zinc-400 uppercase tracking-wider font-semibold mt-2">Personalize a sua refeição:</p>
 
             <div className="grid grid-cols-3 gap-2">
-              {DICIONARIO_ALIMENTOS[refeicaoModal.key as keyof typeof DICIONARIO_ALIMENTOS].map((alimento) => {
-                const gramas = porcoesModal[alimento.id];
-                const estaSelecionado = gramas !== undefined;
-                const kcalCalculada = estaSelecionado ? Math.round((alimento.kcal100g / 100) * gramas) : 0;
+              {(() => {
+                // Pega nos alimentos já associados a esta refeição nas preferências do utilizador
+                const favoritosDaRefeicao = dados.alimentos[refeicaoModal.key as keyof typeof dados.alimentos] || [];
+                const todosAlimentos = DICIONARIO_ALIMENTOS[refeicaoModal.key as keyof typeof DICIONARIO_ALIMENTOS];
 
-                return (
-                  <div
-                    key={alimento.id}
-                    onClick={() => !estaSelecionado && toggleAlimentoModal(alimento.id)}
-                    className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 gap-1 ${
-                      estaSelecionado
-                        ? 'bg-orange-500/10 border-orange-500 text-orange-400 shadow-md'
-                        : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700 cursor-pointer'
-                    }`}
-                  >
-                    {estaSelecionado && (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); toggleAlimentoModal(alimento.id); }}
-                        className="absolute -top-2 -right-2 bg-zinc-800 text-zinc-400 rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-500 hover:text-white shadow-lg z-10"
-                      >
-                        ×
-                      </button>
-                    )}
+                // Ordena: Alimentos favoritos/frequentes aparecem primeiro
+                const alimentosOrdenados = [...todosAlimentos].sort((a, b) => {
+                  const aFav = favoritosDaRefeicao.includes(a.id) ? -1 : 1;
+                  const bFav = favoritosDaRefeicao.includes(b.id) ? -1 : 1;
+                  return aFav - bFav;
+                });
 
-                    <span className="text-2xl">{alimento.emoji}</span>
-                    <span className="text-[10px] font-bold text-center leading-tight truncate w-full">{alimento.nome}</span>
-                    
-                    {estaSelecionado ? (
-                      <div className="flex flex-col items-center w-full mt-1" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center bg-zinc-950 rounded-lg px-2 py-1 border border-orange-500/30 w-full justify-center">
-                          <input 
-                            type="number" 
-                            maxLength={4}
-                            value={gramas === 0 ? '' : gramas}
-                            onChange={(e) => atualizarGramas(alimento.id, e.target.value)}
-                            className="w-10 bg-transparent text-center text-xs text-white outline-none appearance-none font-bold"
-                            placeholder="0"
-                            autoFocus
-                          />
-                          <span className="text-[9px] text-zinc-500">g</span>
+                return alimentosOrdenados.map((alimento) => {
+                  const gramas = porcoesModal[alimento.id];
+                  const estaSelecionado = gramas !== undefined;
+                  const kcalCalculada = estaSelecionado ? Math.round((alimento.kcal100g / 100) * gramas) : 0;
+                  const isFavorito = favoritosDaRefeicao.includes(alimento.id);
+
+                  return (
+                    <div
+                      key={alimento.id}
+                      onClick={() => !estaSelecionado && toggleAlimentoModal(alimento.id)}
+                      className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 gap-1 ${
+                        estaSelecionado
+                          ? 'bg-orange-500/10 border-orange-500 text-orange-400 shadow-md'
+                          : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700 cursor-pointer'
+                      }`}
+                    >
+                      {/* Indicador subtil de que é um alimento habitual do utilizador */}
+                      {isFavorito && !estaSelecionado && (
+                        <span className="absolute top-1.5 left-2 text-[8px] text-green-400 font-bold">★</span>
+                      )}
+
+                      {estaSelecionado && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); toggleAlimentoModal(alimento.id); }}
+                          className="absolute -top-2 -right-2 bg-zinc-800 text-zinc-400 rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-500 hover:text-white shadow-lg z-10"
+                        >
+                          ×
+                        </button>
+                      )}
+
+                      <span className="text-2xl">{alimento.emoji}</span>
+                      <span className="text-[10px] font-bold text-center leading-tight truncate w-full">{alimento.nome}</span>
+                      
+                      {estaSelecionado ? (
+                        <div className="flex flex-col items-center w-full mt-1" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center bg-zinc-950 rounded-lg px-2 py-1 border border-orange-500/30 w-full justify-center">
+                            <input 
+                              type="number" 
+                              maxLength={4}
+                              value={gramas === 0 ? '' : gramas}
+                              onChange={(e) => atualizarGramas(alimento.id, e.target.value)}
+                              className="w-10 bg-transparent text-center text-xs text-white outline-none appearance-none font-bold"
+                              placeholder="0"
+                              autoFocus
+                            />
+                            <span className="text-[9px] text-zinc-500">g</span>
+                          </div>
+                          <span className="text-[9px] text-orange-500/70 mt-1">{kcalCalculada} kcal</span>
                         </div>
-                        <span className="text-[9px] text-orange-500/70 mt-1">{kcalCalculada} kcal</span>
-                      </div>
-                    ) : (
-                      <span className="text-[9px] text-zinc-600 opacity-0 hover:opacity-100 transition-opacity hidden md:block">Toque para adicionar</span>
-                    )}
-                  </div>
-                );
-              })}
+                      ) : (
+                        <span className="text-[9px] text-zinc-600 opacity-0 hover:opacity-100 transition-opacity hidden md:block">Toque para adicionar</span>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
 
             <button 
