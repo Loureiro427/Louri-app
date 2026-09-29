@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom'; // <-- IMPORTAÇÃO ADICIONADA
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
 import { configurarNotificacoesNativas } from '../services/notificationService';
@@ -173,7 +174,7 @@ export function Perfil() {
               onClick={() => {
                 const novoEstado = !notificacoes;
                 setDados({ notificacoes: novoEstado });
-                configurarNotificacoesNativas(); // Atualiza os agendamentos nativos na hora
+                configurarNotificacoesNativas(); 
               }}
               className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${notificacoes ? 'bg-green-500' : 'bg-zinc-700'}`}
             >
@@ -222,7 +223,7 @@ export function Perfil() {
         </div>
       </div>
 
-      {modalSuporte && (
+      {modalSuporte && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none">
           <div className={`border rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center shadow-2xl ${
             temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
@@ -234,10 +235,11 @@ export function Perfil() {
             </p>
             <button onClick={() => setModalSuporte(false)} className="bg-green-500 hover:bg-green-400 text-zinc-950 font-bold py-3 rounded-xl text-xs mt-2 transition-colors">Entendido</button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {modalFeedback && (
+      {modalFeedback && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none">
           <div className={`border rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center shadow-2xl ${
             temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
@@ -290,10 +292,11 @@ export function Perfil() {
             )}
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {mostrarModalSair && (
+      {mostrarModalSair && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none">
           <div className={`border rounded-3xl p-6 w-full max-w-xs flex flex-col gap-5 text-center shadow-2xl ${
             temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
@@ -326,7 +329,8 @@ export function Perfil() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

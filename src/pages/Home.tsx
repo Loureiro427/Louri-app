@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
 import logoImg from '../assets/logo.png'; // Logótipo oficial
@@ -481,8 +482,8 @@ export function Home() {
 
       </div>
 
-      {/* MODAL: RESUMO DA DIETA */}
-      {mostrarModalDieta && (
+      {/* MODAL: RESUMO DA DIETA (AGORA COM CREATEPORTAL) */}
+      {mostrarModalDieta && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end justify-center z-50 animate-in slide-in-from-bottom-4 overscroll-none">
           <div className={`border-t rounded-t-3xl p-6 w-full max-w-md flex flex-col gap-5 pb-10 shadow-2xl transition-colors ${
             temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
@@ -542,11 +543,12 @@ export function Home() {
               <span>🔄</span> Zerar Registo Diário
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* MODAL: REGISTAR REFEIÇÃO */}
-      {refeicaoModal && (
+      {/* MODAL: REGISTAR REFEIÇÃO (AGORA COM CREATEPORTAL) */}
+      {refeicaoModal && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end justify-center z-50 animate-in slide-in-from-bottom-4 overscroll-none">
           <div className={`border-t rounded-t-3xl p-6 w-full max-w-md flex flex-col gap-4 pb-10 max-h-[85vh] overflow-y-auto shadow-2xl transition-colors ${
             temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
@@ -657,12 +659,13 @@ export function Home() {
               Confirmar Refeição
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Modal Desfazer Água */}
-      {mostrarModalDesfazerAgua && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none">
+      {/* Modal Desfazer Água (AGORA COM CREATEPORTAL) */}
+      {mostrarModalDesfazerAgua && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] px-6 animate-in fade-in overscroll-none">
           <div className={`border rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center shadow-2xl transition-colors ${
             temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
           }`}>
@@ -677,12 +680,13 @@ export function Home() {
               <button onClick={confirmarDesfazerAgua} className="flex-1 bg-red-500 hover:bg-red-600 text-zinc-950 font-bold py-3 rounded-xl text-sm transition-colors">Confirmar</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Modal Desfazer Dieta */}
-      {mostrarModalDesfazerDieta && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none">
+      {/* Modal Desfazer Dieta (AGORA COM CREATEPORTAL) */}
+      {mostrarModalDesfazerDieta && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] px-6 animate-in fade-in overscroll-none">
           <div className={`border rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center shadow-2xl transition-colors ${
             temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
           }`}>
@@ -698,7 +702,8 @@ export function Home() {
               <button onClick={confirmarDesfazerDieta} className="flex-1 bg-red-500 hover:bg-red-600 text-zinc-950 font-bold py-3 rounded-xl text-sm transition-colors">Confirmar</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

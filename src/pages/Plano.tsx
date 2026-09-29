@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom'; // <-- IMPORTAÇÃO ADICIONADA
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
 
@@ -302,8 +303,8 @@ export function Plano() {
         </button>
       </div>
 
-      {/* MODAL INTERATIVO DE DICAS DE MACROS */}
-      {macroModal && (
+      {/* MODAL INTERATIVO DE DICAS DE MACROS (AGORA COM CREATEPORTAL) */}
+      {macroModal && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end justify-center z-50 animate-in slide-in-from-bottom-4 overscroll-none">
           <div className={`border-t rounded-t-3xl p-6 w-full max-w-md flex flex-col gap-4 pb-10 shadow-2xl transition-colors ${
             temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
@@ -340,7 +341,8 @@ export function Plano() {
               Entendido
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
