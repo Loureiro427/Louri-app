@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useUserStore } from '../store/useUserStore';
 
 // Tipagem para os dados de um dia
@@ -7,19 +7,39 @@ type DayRecord = {
   calories: number;
 };
 
-// Dados simulados para testarmos o visual (Dias com atividade)
-const mockHistory: Record<string, DayRecord> = {
-  '2026-09-25': { water: 2.5, calories: 1800 },
-  '2026-09-26': { water: 3.0, calories: 2100 },
-  '2026-09-27': { water: 1.5, calories: 1500 },
-};
-
 export default function CalendarHistory() {
-  const dados = useUserStore((state) => state.dados);
+  const dados = useUserStore((state: any) => state.dados);
   const temaEscuro = dados.temaEscuro ?? true;
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  // Descobre qual é a data exata de hoje
+  const hoje = new Date();
+  const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+
+  // Cria o histórico dinâmico combinando o passado salvo + o dia de HOJE
+  const historyData = useMemo(() => {
+    const historicoCombinado: Record<string, DayRecord> = {};
+
+    // 1. Carrega os dias passados (se já houver histórico salvo na store)
+    if (dados.historico) {
+      Object.entries(dados.historico).forEach(([data, valores]: any) => {
+        historicoCombinado[data] = {
+          water: (valores.aguaConsumida || 0) / 1000, // Converte ml para Litros
+          calories: valores.caloriasConsumidas || 0,
+        };
+      });
+    }
+
+    // 2. Injeta SEMPRE o dia de hoje com os valores atuais da Home
+    historicoCombinado[hojeStr] = {
+      water: (dados.aguaConsumida || 0) / 1000,
+      calories: dados.caloriasConsumidas || 0,
+    };
+
+    return historicoCombinado;
+  }, [dados.historico, dados.aguaConsumida, dados.caloriasConsumidas, hojeStr]);
 
   // Lógica para desenhar a grelha do mês
   const year = currentDate.getFullYear();
@@ -36,7 +56,6 @@ export default function CalendarHistory() {
   ];
 
   const handleDayClick = (day: number) => {
-    // Formata o dia clicado para o padrão YYYY-MM-DD
     const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     setSelectedDate(formattedDate);
   };
@@ -46,21 +65,23 @@ export default function CalendarHistory() {
     setSelectedDate(null); // Limpa a seleção ao mudar de mês
   };
 
-  // Vai buscar os dados do dia selecionado (se existirem)
-  const selectedData = selectedDate ? mockHistory[selectedDate] : null;
+  // Vai buscar os dados reais do dia selecionado
+  const selectedData = selectedDate ? historyData[selectedDate] : null;
+  const temRegistoNoDia = selectedData && (selectedData.water > 0 || selectedData.calories > 0);
 
   return (
     <div className={`flex flex-col gap-4 mt-4 transition-colors duration-300 ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>
+      
       {/* Cartão do Calendário */}
-      <div className={`border rounded-2xl p-4 transition-colors ${
-        temaEscuro ? 'bg-[#111111] border-gray-800' : 'bg-white border-zinc-200 shadow-sm'
+      <div className={`border rounded-2xl p-4 transition-colors shadow-lg ${
+        temaEscuro ? 'bg-zinc-900/60 border-zinc-800' : 'bg-white border-zinc-200'
       }`}>
         
         {/* Cabeçalho do Calendário */}
         <div className="flex justify-between items-center mb-4">
           <button 
             onClick={() => changeMonth(-1)} 
-            className={`p-2 transition ${temaEscuro ? 'text-gray-400 hover:text-white' : 'text-zinc-500 hover:text-zinc-900'}`}
+            className={`p-2 rounded-xl transition ${temaEscuro ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'}`}
           >
             &#8592;
           </button>
@@ -69,14 +90,14 @@ export default function CalendarHistory() {
           </h3>
           <button 
             onClick={() => changeMonth(1)} 
-            className={`p-2 transition ${temaEscuro ? 'text-gray-400 hover:text-white' : 'text-zinc-500 hover:text-zinc-900'}`}
+            className={`p-2 rounded-xl transition ${temaEscuro ? 'text-zinc-400 hover:bg-zinc-800 hover:text-white' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'}`}
           >
             &#8594;
           </button>
         </div>
 
         {/* Dias da Semana */}
-        <div className={`grid grid-cols-7 gap-1 text-center text-xs font-medium mb-2 ${temaEscuro ? 'text-gray-500' : 'text-zinc-400'}`}>
+        <div className={`grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase mb-2 ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>
           <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
         </div>
 
@@ -88,20 +109,29 @@ export default function CalendarHistory() {
           
           {days.map((day) => {
             const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const hasData = mockHistory[dateKey];
+            const dayData = historyData[dateKey];
+            
+            const isToday = dateKey === hojeStr;
             const isSelected = selectedDate === dateKey;
+            const hasData = dayData && (dayData.water > 0 || dayData.calories > 0);
 
             return (
               <button
                 key={day}
                 onClick={() => handleDayClick(day)}
-                className={`p-2 rounded-full w-8 h-8 flex items-center justify-center mx-auto text-sm transition-all duration-200
-                  ${isSelected ? 'bg-green-500 text-black font-bold' : temaEscuro ? 'hover:bg-gray-800' : 'hover:bg-zinc-100'}
-                  ${hasData && !isSelected ? 'text-green-400 font-bold border border-green-900' : ''}
-                  ${!hasData && !isSelected ? (temaEscuro ? 'text-gray-300' : 'text-zinc-700') : ''}
+                className={`relative p-2 rounded-full w-9 h-9 flex items-center justify-center mx-auto text-sm transition-all duration-200 
+                  ${isSelected ? 'bg-green-500 text-zinc-950 font-bold shadow-md shadow-green-500/30' : ''}
+                  ${!isSelected && isToday ? (temaEscuro ? 'border border-green-500 text-green-500 font-bold bg-green-500/10' : 'border border-green-500 text-green-600 font-bold bg-green-50') : ''}
+                  ${!isSelected && !isToday && hasData ? (temaEscuro ? 'text-green-400 font-bold bg-zinc-800' : 'text-green-600 font-bold bg-zinc-100') : ''}
+                  ${!isSelected && !isToday && !hasData ? (temaEscuro ? 'text-zinc-500 hover:bg-zinc-800/50' : 'text-zinc-400 hover:bg-zinc-100') : ''}
                 `}
               >
                 {day}
+                
+                {/* Pontinho indicador se tiver registos mas não estiver selecionado nem for hoje */}
+                {!isSelected && !isToday && hasData && (
+                  <span className="absolute bottom-1 w-1 h-1 rounded-full bg-green-500"></span>
+                )}
               </button>
             );
           })}
@@ -110,28 +140,36 @@ export default function CalendarHistory() {
 
       {/* Cartão do Registo do Dia Selecionado */}
       {selectedDate && (
-        <div className={`border rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-300 transition-colors ${
-          temaEscuro ? 'bg-[#111111] border-gray-800' : 'bg-white border-zinc-200 shadow-sm'
+        <div className={`border rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-300 transition-colors shadow-lg ${
+          temaEscuro ? 'bg-zinc-900/60 border-zinc-800' : 'bg-white border-zinc-200'
         }`}>
-          <h4 className={`font-bold mb-3 text-sm ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>
-            Registo de {selectedDate.split('-').reverse().join('/')}
-          </h4>
+          <div className="flex justify-between items-center mb-4">
+            <h4 className={`font-bold text-sm ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>
+              Registo de {selectedDate.split('-').reverse().join('/')}
+            </h4>
+            {selectedDate === hojeStr && (
+              <span className="text-[10px] bg-green-500/20 text-green-500 font-bold px-2 py-1 rounded-md">HOJE</span>
+            )}
+          </div>
           
-          {selectedData ? (
+          {temRegistoNoDia ? (
             <div className="flex flex-col gap-3 text-sm">
-              <div className={`flex justify-between items-center border-b pb-2 ${temaEscuro ? 'border-gray-800' : 'border-zinc-100'}`}>
-                <span className={temaEscuro ? 'text-gray-400' : 'text-zinc-500'}>Água Consumida</span>
-                <span className="font-bold text-[#00a2ff]">{selectedData.water}L</span>
+              <div className={`flex justify-between items-center border-b pb-2 ${temaEscuro ? 'border-zinc-800/50' : 'border-zinc-100'}`}>
+                <span className={`font-medium ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>💧 Água Consumida</span>
+                <span className="font-bold text-blue-500 text-base">{selectedData.water.toFixed(2)}L</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className={temaEscuro ? 'text-gray-400' : 'text-zinc-500'}>Calorias Ingeridas</span>
-                <span className="font-bold text-[#ff8c00]">{selectedData.calories} Kcal</span>
+              <div className="flex justify-between items-center pt-1">
+                <span className={`font-medium ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>🔥 Calorias Ingeridas</span>
+                <span className="font-bold text-orange-500 text-base">{selectedData.calories} Kcal</span>
               </div>
             </div>
           ) : (
-            <p className={`text-sm text-center py-2 ${temaEscuro ? 'text-gray-500' : 'text-zinc-400'}`}>
-              Nenhum registo encontrado para este dia.
-            </p>
+            <div className="flex flex-col items-center justify-center py-4 opacity-50">
+              <span className="text-3xl mb-2">📭</span>
+              <p className={`text-xs font-medium text-center ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                Nenhum registo encontrado para este dia.
+              </p>
+            </div>
           )}
         </div>
       )}
