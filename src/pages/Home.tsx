@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
-import logoImg from '../assets/logo.png'; // Logótipo oficial
+import logoImg from '../assets/logo.png';
 
 const DICIONARIO_ALIMENTOS: Record<string, { id: string; nome: string; emoji: string; kcal100g: number; prot: number; carbo: number; gord: number }[]> = {
   cafeManha: [
@@ -228,7 +228,7 @@ export function Home() {
       minutosOffset = inicio + (span * (index / (totalRef - 1)));
     }
 
-    const config = CONFIG_REFEICOES[key] || { titulo: key, icone: '🍽️' };
+    const config = CONFIG_REFEICOES[key] || { titulo: key, icone: '🍽️️' };
     return {
       key,
       titulo: config.titulo,
@@ -482,7 +482,7 @@ export function Home() {
 
       </div>
 
-      {/* MODAL: RESUMO DA DIETA (AGORA COM CREATEPORTAL) */}
+      {/* MODAL: RESUMO DA DIETA */}
       {mostrarModalDieta && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end justify-center z-50 animate-in slide-in-from-bottom-4 overscroll-none">
           <div className={`border-t rounded-t-3xl p-6 w-full max-w-md flex flex-col gap-5 pb-10 shadow-2xl transition-colors ${
@@ -547,123 +547,147 @@ export function Home() {
         document.body
       )}
 
-      {/* MODAL: REGISTAR REFEIÇÃO (AGORA COM CREATEPORTAL) */}
+      {/* 👇 MODAL: REGISTAR REFEIÇÃO (AJUSTADO PARA A BARRA FIXA NO FUNDO IGUAL À REFEIÇÃO LIVRE) */}
       {refeicaoModal && createPortal(
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end justify-center z-50 animate-in slide-in-from-bottom-4 overscroll-none">
-          <div className={`border-t rounded-t-3xl p-6 w-full max-w-md flex flex-col gap-4 pb-10 max-h-[85vh] overflow-y-auto shadow-2xl transition-colors ${
-            temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+        <div className="fixed inset-0 z-50 animate-in slide-in-from-bottom-4 overscroll-none">
+          {/* Overlay escuro que fecha ao clicar fora */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setRefeicaoModal(null)}></div>
+          
+          <div className={`absolute bottom-0 w-full h-[90vh] rounded-t-3xl flex flex-col overflow-hidden shadow-2xl transition-colors ${
+            temaEscuro ? 'bg-zinc-900 border-t border-zinc-800 text-white' : 'bg-white border-t border-zinc-200 text-zinc-900'
           }`}>
             
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xl font-bold flex items-center gap-2">
-                <span>{refeicaoModal.icone}</span> O que comeu?
-              </h3>
-              <button onClick={() => setRefeicaoModal(null)} className={`text-2xl font-bold ${temaEscuro ? 'text-zinc-400 hover:text-white' : 'text-zinc-500 hover:text-zinc-900'}`}>×</button>
+            {/* CABEÇALHO DO MODAL */}
+            <div className="shrink-0 p-6 pb-2">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  <span>{refeicaoModal.icone}</span> O que comeu?
+                </h3>
+                <button onClick={() => setRefeicaoModal(null)} className={`text-2xl font-bold ${temaEscuro ? 'text-zinc-400 hover:text-white' : 'text-zinc-500 hover:text-zinc-900'}`}>×</button>
+              </div>
+              
+              <div className={`flex items-center gap-4 p-4 rounded-2xl border transition-colors ${
+                temaEscuro ? 'bg-zinc-950/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+              }`}>
+                <span className="text-3xl">🔥</span>
+                <div className="flex-1 text-center">
+                  <p className={`text-4xl font-black ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{caloriasTotaisModal} <span className={`text-sm font-normal ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Kcal</span></p>
+                  <p className={`text-xs mt-1 ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>Calculado automaticamente</p>
+                </div>
+              </div>
+
+              <p className={`text-xs uppercase tracking-wider font-semibold mt-4 ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Personalize a sua refeição:</p>
             </div>
             
-            <div className={`flex items-center gap-4 p-4 rounded-2xl border transition-colors ${
-              temaEscuro ? 'bg-zinc-950/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
-            }`}>
-              <span className="text-3xl">🔥</span>
-              <div className="flex-1 text-center">
-                <p className={`text-4xl font-black ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{caloriasTotaisModal} <span className={`text-sm font-normal ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Kcal</span></p>
-                <p className={`text-xs mt-1 ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>Calculado automaticamente</p>
+            {/* ÁREA DE SCROLL (Grelha de Alimentos) */}
+            <div className="flex-1 overflow-y-auto px-6 pb-32 custom-scrollbar">
+              <div className="grid grid-cols-3 gap-2">
+                {(() => {
+                  const favoritosDaRefeicao = dados.alimentos[refeicaoModal.key as keyof typeof dados.alimentos] || [];
+                  const todosAlimentos = DICIONARIO_ALIMENTOS[refeicaoModal.key as keyof typeof DICIONARIO_ALIMENTOS] || [];
+
+                  const alimentosOrdenados = [...todosAlimentos].sort((a, b) => {
+                    const aFav = favoritosDaRefeicao.includes(a.id) ? -1 : 1;
+                    const bFav = favoritosDaRefeicao.includes(b.id) ? -1 : 1;
+                    return aFav - bFav;
+                  });
+
+                  return alimentosOrdenados.map((alimento) => {
+                    const gramas = porcoesModal[alimento.id];
+                    const estaSelecionado = gramas !== undefined;
+                    const kcalCalculada = estaSelecionado ? Math.round((alimento.kcal100g / 100) * gramas) : 0;
+                    const isFavorito = favoritosDaRefeicao.includes(alimento.id);
+
+                    return (
+                      <div
+                        key={alimento.id}
+                        onClick={() => !estaSelecionado && toggleAlimentoModal(alimento.id)}
+                        className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 gap-1 ${
+                          estaSelecionado
+                            ? 'bg-orange-500/10 border-orange-500 text-orange-500 shadow-md'
+                            : temaEscuro 
+                              ? 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700 cursor-pointer' 
+                              : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:border-zinc-300 cursor-pointer shadow-sm'
+                        }`}
+                      >
+                        {isFavorito && !estaSelecionado && (
+                          <span className="absolute top-1.5 left-2 text-[8px] text-green-500 font-bold">★</span>
+                        )}
+
+                        {estaSelecionado && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); toggleAlimentoModal(alimento.id); }}
+                            className={`absolute -top-2 -right-2 rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-500 hover:text-white shadow-lg z-10 transition-colors ${
+                              temaEscuro ? 'bg-zinc-800 text-zinc-400' : 'bg-zinc-200 text-zinc-600'
+                            }`}
+                          >
+                            ×
+                          </button>
+                        )}
+
+                        <span className="text-2xl">{alimento.emoji}</span>
+                        <span className="text-[10px] font-bold text-center leading-tight truncate w-full">{alimento.nome}</span>
+                        
+                        {estaSelecionado ? (
+                          <div className="flex flex-col items-center w-full mt-1" onClick={(e) => e.stopPropagation()}>
+                            <div className={`flex items-center rounded-lg px-2 py-1 border border-orange-500/40 w-full justify-center ${
+                              temaEscuro ? 'bg-zinc-950 text-white' : 'bg-white text-zinc-900 shadow-inner'
+                            }`}>
+                              <input 
+                                type="number" 
+                                maxLength={4}
+                                value={gramas === 0 ? '' : gramas}
+                                onChange={(e) => atualizarGramas(alimento.id, e.target.value)}
+                                className="w-10 bg-transparent text-center text-xs outline-none appearance-none font-bold"
+                                placeholder="0"
+                                autoFocus
+                              />
+                              <span className={`text-[9px] ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>g</span>
+                            </div>
+                            <span className="text-[9px] text-orange-500 font-bold mt-1">{kcalCalculada} kcal</span>
+                          </div>
+                        ) : (
+                          <span className="text-[9px] text-zinc-400 opacity-0 hover:opacity-100 transition-opacity hidden md:block">Toque para adicionar</span>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
 
-            <p className={`text-xs uppercase tracking-wider font-semibold mt-2 ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Personalize a sua refeição:</p>
-
-            <div className="grid grid-cols-3 gap-2">
-              {(() => {
-                const favoritosDaRefeicao = dados.alimentos[refeicaoModal.key as keyof typeof dados.alimentos] || [];
-                const todosAlimentos = DICIONARIO_ALIMENTOS[refeicaoModal.key as keyof typeof DICIONARIO_ALIMENTOS] || [];
-
-                const alimentosOrdenados = [...todosAlimentos].sort((a, b) => {
-                  const aFav = favoritosDaRefeicao.includes(a.id) ? -1 : 1;
-                  const bFav = favoritosDaRefeicao.includes(b.id) ? -1 : 1;
-                  return aFav - bFav;
-                });
-
-                return alimentosOrdenados.map((alimento) => {
-                  const gramas = porcoesModal[alimento.id];
-                  const estaSelecionado = gramas !== undefined;
-                  const kcalCalculada = estaSelecionado ? Math.round((alimento.kcal100g / 100) * gramas) : 0;
-                  const isFavorito = favoritosDaRefeicao.includes(alimento.id);
-
-                  return (
-                    <div
-                      key={alimento.id}
-                      onClick={() => !estaSelecionado && toggleAlimentoModal(alimento.id)}
-                      className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 gap-1 ${
-                        estaSelecionado
-                          ? 'bg-orange-500/10 border-orange-500 text-orange-500 shadow-md'
-                          : temaEscuro 
-                            ? 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700 cursor-pointer' 
-                            : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:border-zinc-300 cursor-pointer shadow-sm'
-                      }`}
-                    >
-                      {isFavorito && !estaSelecionado && (
-                        <span className="absolute top-1.5 left-2 text-[8px] text-green-500 font-bold">★</span>
-                      )}
-
-                      {estaSelecionado && (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); toggleAlimentoModal(alimento.id); }}
-                          className={`absolute -top-2 -right-2 rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-500 hover:text-white shadow-lg z-10 transition-colors ${
-                            temaEscuro ? 'bg-zinc-800 text-zinc-400' : 'bg-zinc-200 text-zinc-600'
-                          }`}
-                        >
-                          ×
-                        </button>
-                      )}
-
-                      <span className="text-2xl">{alimento.emoji}</span>
-                      <span className="text-[10px] font-bold text-center leading-tight truncate w-full">{alimento.nome}</span>
-                      
-                      {estaSelecionado ? (
-                        <div className="flex flex-col items-center w-full mt-1" onClick={(e) => e.stopPropagation()}>
-                          <div className={`flex items-center rounded-lg px-2 py-1 border border-orange-500/40 w-full justify-center ${
-                            temaEscuro ? 'bg-zinc-950 text-white' : 'bg-white text-zinc-900 shadow-inner'
-                          }`}>
-                            <input 
-                              type="number" 
-                              maxLength={4}
-                              value={gramas === 0 ? '' : gramas}
-                              onChange={(e) => atualizarGramas(alimento.id, e.target.value)}
-                              className="w-10 bg-transparent text-center text-xs outline-none appearance-none font-bold"
-                              placeholder="0"
-                              autoFocus
-                            />
-                            <span className={`text-[9px] ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>g</span>
-                          </div>
-                          <span className="text-[9px] text-orange-500 font-bold mt-1">{kcalCalculada} kcal</span>
-                        </div>
-                      ) : (
-                        <span className="text-[9px] text-zinc-400 opacity-0 hover:opacity-100 transition-opacity hidden md:block">Toque para adicionar</span>
-                      )}
-                    </div>
-                  );
-                });
-              })()}
+            {/* BARRA INFERIOR FIXA */}
+            <div className={`absolute bottom-0 left-0 w-full px-6 py-4 flex justify-between items-center z-50 border-t ${
+              temaEscuro ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+            }`}>
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
+                  Total Livre
+                </span>
+                <span className="text-xl font-bold text-orange-500">
+                  {caloriasTotaisModal} kcal
+                </span>
+              </div>
+              
+              <button 
+                onClick={confirmarRefeicao}
+                disabled={caloriasTotaisModal === 0}
+                className={`px-8 py-3.5 rounded-2xl font-bold shadow-lg transition-all active:scale-95 ${
+                  caloriasTotaisModal > 0 
+                    ? 'bg-green-500 hover:bg-green-400 text-zinc-950 shadow-green-500/20' 
+                    : temaEscuro ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                }`}
+              >
+                Registar
+              </button>
             </div>
 
-            <button 
-              onClick={confirmarRefeicao}
-              disabled={caloriasTotaisModal === 0}
-              className={`w-full font-bold py-4 rounded-xl text-lg mt-4 shadow-lg transition-all ${
-                caloriasTotaisModal > 0 
-                  ? 'bg-green-500 hover:bg-green-600 text-zinc-950 shadow-green-500/20' 
-                  : temaEscuro ? 'bg-zinc-900 text-zinc-600 cursor-not-allowed' : 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
-              }`}
-            >
-              Confirmar Refeição
-            </button>
           </div>
         </div>,
         document.body
       )}
 
-      {/* Modal Desfazer Água (AGORA COM CREATEPORTAL) */}
+      {/* Modal Desfazer Água */}
       {mostrarModalDesfazerAgua && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] px-6 animate-in fade-in overscroll-none">
           <div className={`border rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center shadow-2xl transition-colors ${
@@ -684,7 +708,7 @@ export function Home() {
         document.body
       )}
 
-      {/* Modal Desfazer Dieta (AGORA COM CREATEPORTAL) */}
+      {/* Modal Desfazer Dieta */}
       {mostrarModalDesfazerDieta && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[70] px-6 animate-in fade-in overscroll-none">
           <div className={`border rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 text-center shadow-2xl transition-colors ${
