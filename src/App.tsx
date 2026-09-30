@@ -4,7 +4,7 @@ import { Onboarding } from './pages/Onboarding';
 import { Plano } from './pages/Plano';
 import { Evolucao } from './pages/Evolucao';
 import { Perfil } from './pages/Perfil';
-import { RefeicaoLivre } from './pages/RefeicaoLivre'; // <-- Importa a nova página
+import { RefeicaoLivre } from './pages/RefeicaoLivre';
 import { Layout } from './components/Layout';
 import { SwipeNavigator } from './components/SwipeNavigator';
 
@@ -18,7 +18,7 @@ export function App() {
             <Route path="/plano" element={<Plano />} />
             <Route path="/evolucao" element={<Evolucao />} />
             <Route path="/perfil" element={<Perfil />} />
-            <Route path="/refeicao-livre" element={<RefeicaoLivre />} /> {/* <-- Adiciona a rota aqui */}
+            <Route path="/refeicao-livre" element={<RefeicaoLivre />} />
             <Route path="/onboarding" element={<Onboarding />} />
           </Routes>
         </SwipeNavigator>

@@ -21,10 +21,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [toastMsg, setToastMsg] = useState('');
   const [pesoInput, setPesoInput] = useState('');
 
-  // Ocultamos o menu global no Onboarding E na Refeição Livre
-  if (location.pathname === '/onboarding' || location.pathname === '/refeicao-livre') {
-    return <>{children}</>;
-  }
+  // Lógica corrigida: Verifica se está logado para mostrar o menu, 
+  // mas mantém SEMPRE a estrutura principal da página para não causar a tela cinza.
+  const estaLogado = Boolean(dados.nome && dados.nome.trim() !== '');
+  const mostrarMenu = estaLogado && location.pathname !== '/onboarding' && location.pathname !== '/refeicao-livre';
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -72,7 +72,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -50 }}
             className={`fixed top-12 left-1/2 -translate-x-1/2 z-[70] px-6 py-3 rounded-full shadow-xl font-bold flex items-center gap-2 whitespace-nowrap ${
-              toastMsg.startsWith('⚖️') || toastMsg.startsWith('💧')
+              toastMsg.startsWith('⚖️️') || toastMsg.startsWith('💧')
                 ? 'bg-green-500 text-zinc-950' 
                 : 'bg-red-500 text-white'
             }`}
@@ -152,82 +152,87 @@ export function Layout({ children }: { children: React.ReactNode }) {
         )}
       </AnimatePresence>
 
-      {/* OVERLAY E MENU DE AÇÕES RÁPIDAS (FAB) */}
-      <AnimatePresence>
-        {isFabOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setIsFabOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-            />
-            
-            <motion.div 
-              initial={{ y: 200, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 200, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-              className="fixed bottom-24 left-0 right-0 z-40 px-6 flex flex-col items-center gap-3 max-w-md mx-auto pointer-events-none"
-            >
-              <FabButton texto="Registar Peso" icone="⚖️" onClick={() => acaoRapida('peso')} temaEscuro={temaEscuro} delay={0.1} />
-              <FabButton texto="Refeição Livre" icone="🍔" onClick={() => acaoRapida('refeicao')} temaEscuro={temaEscuro} delay={0.05} />
-              <FabButton texto="Beber Água (+250ml)" icone="💧" onClick={() => acaoRapida('agua')} temaEscuro={temaEscuro} delay={0} />
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* SÓ MOSTRA A BARRA INFERIOR E O BOTÃO FAB SE DEVER (mostrarMenu = true) */}
+      {mostrarMenu && (
+        <>
+          {/* OVERLAY E MENU DE AÇÕES RÁPIDAS (FAB) */}
+          <AnimatePresence>
+            {isFabOpen && (
+              <>
+                <motion.div 
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  onClick={() => setIsFabOpen(false)}
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+                />
+                
+                <motion.div 
+                  initial={{ y: 200, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 200, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                  className="fixed bottom-24 left-0 right-0 z-40 px-6 flex flex-col items-center gap-3 max-w-md mx-auto pointer-events-none"
+                >
+                  <FabButton texto="Registar Peso" icone="⚖️" onClick={() => acaoRapida('peso')} temaEscuro={temaEscuro} delay={0.1} />
+                  <FabButton texto="Refeição Livre" icone="🍔" onClick={() => acaoRapida('refeicao')} temaEscuro={temaEscuro} delay={0.05} />
+                  <FabButton texto="Beber Água (+250ml)" icone="💧" onClick={() => acaoRapida('agua')} temaEscuro={temaEscuro} delay={0} />
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
 
-      {/* BARRA INFERIOR */}
-      <nav className={`fixed bottom-0 w-full z-50 transition-colors duration-300 ${
-        temaEscuro ? 'bg-zinc-950/60' : 'bg-white/60' 
-      }`}
-      style={{
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        border: 'none',
-        boxShadow: 'none'
-      }}>
-        <div className="pb-safe">
-          <div className="flex justify-between items-center h-16 max-w-md mx-auto px-6 relative">
-            
-            <Link to="/" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
-              <HomeIcon active={isActive('/')} temaEscuro={temaEscuro} />
-              {isActive('/') && <ActiveIndicator />}
-            </Link>
+          {/* BARRA INFERIOR */}
+          <nav className={`fixed bottom-0 w-full z-50 transition-colors duration-300 ${
+            temaEscuro ? 'bg-zinc-950/60' : 'bg-white/60' 
+          }`}
+          style={{
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: 'none',
+            boxShadow: 'none'
+          }}>
+            <div className="pb-safe">
+              <div className="flex justify-between items-center h-16 max-w-md mx-auto px-6 relative">
+                
+                <Link to="/" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
+                  <HomeIcon active={isActive('/')} temaEscuro={temaEscuro} />
+                  {isActive('/') && <ActiveIndicator />}
+                </Link>
 
-            <Link to="/plano" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
-              <FoodIcon active={isActive('/plano')} temaEscuro={temaEscuro} />
-              {isActive('/plano') && <ActiveIndicator />}
-            </Link>
+                <Link to="/plano" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
+                  <FoodIcon active={isActive('/plano')} temaEscuro={temaEscuro} />
+                  {isActive('/plano') && <ActiveIndicator />}
+                </Link>
 
-            <div className="relative -top-6 flex justify-center items-center w-16 group cursor-pointer z-50">
-              <motion.button 
-                onClick={() => setIsFabOpen(!isFabOpen)}
-                animate={{ rotate: isFabOpen ? 45 : 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                className={`w-14 h-14 rounded-full flex items-center justify-center text-zinc-950 shadow-lg active:scale-90 transition-all duration-300 ${
-                  isFabOpen ? 'bg-zinc-200 shadow-zinc-500/40' : 'bg-gradient-to-tr from-green-500 to-green-400 shadow-green-500/40 group-hover:shadow-green-500/60 group-hover:-translate-y-1'
-                }`}
-                aria-label="Menu de Ações"
-              >
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-              </motion.button>
+                <div className="relative -top-6 flex justify-center items-center w-16 group cursor-pointer z-50">
+                  <motion.button 
+                    onClick={() => setIsFabOpen(!isFabOpen)}
+                    animate={{ rotate: isFabOpen ? 45 : 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    className={`w-14 h-14 rounded-full flex items-center justify-center text-zinc-950 shadow-lg active:scale-90 transition-all duration-300 ${
+                      isFabOpen ? 'bg-zinc-200 shadow-zinc-500/40' : 'bg-gradient-to-tr from-green-500 to-green-400 shadow-green-500/40 group-hover:shadow-green-500/60 group-hover:-translate-y-1'
+                    }`}
+                    aria-label="Menu de Ações"
+                  >
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                  </motion.button>
+                </div>
+
+                <Link to="/evolucao" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
+                  <ChartIcon active={isActive('/evolucao')} temaEscuro={temaEscuro} />
+                  {isActive('/evolucao') && <ActiveIndicator />}
+                </Link>
+
+                <Link to="/perfil" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
+                  <ProfileIcon active={isActive('/perfil')} temaEscuro={temaEscuro} />
+                  {isActive('/perfil') && <ActiveIndicator />}
+                </Link>
+
+              </div>
             </div>
-
-            <Link to="/evolucao" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
-              <ChartIcon active={isActive('/evolucao')} temaEscuro={temaEscuro} />
-              {isActive('/evolucao') && <ActiveIndicator />}
-            </Link>
-
-            <Link to="/perfil" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
-              <ProfileIcon active={isActive('/perfil')} temaEscuro={temaEscuro} />
-              {isActive('/perfil') && <ActiveIndicator />}
-            </Link>
-
-          </div>
-        </div>
-      </nav>
+          </nav>
+        </>
+      )}
     </div>
   );
 }

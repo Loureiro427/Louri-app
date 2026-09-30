@@ -21,7 +21,7 @@ export function Perfil() {
   const [enviouFeedback, setEnviouFeedback] = useState(false);
 
   const confirmarSaida = () => {
-    setDados({ nome: '' });
+    setDados({ nome: '', aguaConsumida: 0, caloriasConsumidas: 0, refeicoesConcluidas: [] }); // Limpa os dados principais da sessão
     setMostrarModalSair(false);
     navigate('/');
   };
