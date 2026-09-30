@@ -192,12 +192,12 @@ export function Onboarding() {
   };
 
   return (
-    <div className={`flex flex-col min-h-[100dvh] px-6 py-8 overscroll-none overflow-x-hidden transition-colors duration-300 ${
+    <div className={`flex flex-col h-full px-6 py-8 overflow-y-auto overflow-x-hidden transition-colors duration-300 ${
       temaEscuro ? 'bg-zinc-950 text-white' : 'bg-zinc-100 text-zinc-900'
     }`}>
       
       {/* CABEÇALHO */}
-      <header className="flex items-center relative mb-8">
+      <header className="flex items-center relative mb-8 shrink-0">
         <button 
           onClick={handleBack}
           className={`w-10 h-10 rounded-full border flex items-center justify-center z-10 transition-colors ${
@@ -224,7 +224,7 @@ export function Onboarding() {
       </header>
 
       {/* CONTEÚDO */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center">
+      <div className="flex-1 flex flex-col items-center justify-center text-center pb-12">
         
         {step === 1 && (
           <div className="flex flex-col gap-6 w-full max-w-xs animate-in fade-in">

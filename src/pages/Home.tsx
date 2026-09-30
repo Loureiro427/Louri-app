@@ -116,6 +116,14 @@ export function Home() {
     return () => clearInterval(timer);
   }, [dados.nome, verificarViradaDeDia]);
 
+  // Função utilitária para garantir que o input focado nunca fique tapado pelo teclado
+  const handleFocusInput = (e: React.FocusEvent<HTMLInputElement>) => {
+    const target = e.target;
+    setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  };
+
   if (!dados.nome) {
     return (
       <div className={`flex flex-col h-[100dvh] px-6 py-10 justify-between items-center overflow-hidden overscroll-none relative select-none transition-colors duration-300 ${
@@ -280,14 +288,12 @@ export function Home() {
         return acc;
       }, { proteina: 0, carbo: 0, gordura: 0 });
 
-      // Mapeia os IDs dos alimentos para nomes legíveis para guardar no histórico do calendário
       const dicionarioRef = DICIONARIO_ALIMENTOS[refeicaoModal.key] || [];
       const nomesAlimentos = Object.keys(porcoesModal).map(id => {
         const item = dicionarioRef.find(a => a.id === id);
         return item ? item.nome : id;
       });
 
-      // Passa os parâmetros corretos exigidos pelo store atualizado
       registrarRefeicao(
         refeicaoModal.key, 
         refeicaoModal.titulo, 
@@ -368,7 +374,7 @@ export function Home() {
           </div>
         </div>
         
-        {/* Hidratação */}
+        {/* Hidratação (Sem limite de consumo) */}
         <div className={`shrink-0 rounded-3xl p-5 shadow-xl flex flex-col gap-4 border transition-all duration-500 ${
           aguaAtualMl >= metaAguaMl 
             ? temaEscuro ? 'bg-gradient-to-br from-zinc-900 to-green-950/40 border-green-500/50' : 'bg-gradient-to-br from-white to-green-50 border-green-500/50 shadow-sm' 
@@ -393,16 +399,16 @@ export function Home() {
           <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 border transition-colors ${
             temaEscuro ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-100 border-zinc-200'
           }`}>
-            <div className={`h-full rounded-full transition-all duration-500 ${aguaAtualMl >= metaAguaMl ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: aguaAtualMl >= metaAguaMl ? '100%' : `${progressoAgua}%` }} />
+            <div className={`h-full rounded-full transition-all duration-500 ${aguaAtualMl >= metaAguaMl ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${progressoAgua}%` }} />
           </div>
           <div className="grid grid-cols-4 gap-2 mt-1">
-            <button onClick={() => adicionarAgua(200, metaAguaMl)} disabled={aguaAtualMl >= metaAguaMl} className={`py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border transition-colors ${
+            <button onClick={() => adicionarAgua(200, 99999)} className={`py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border transition-colors ${
               temaEscuro ? 'bg-zinc-950 border-zinc-800 text-zinc-200 hover:bg-zinc-900' : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100'
             }`}>🥛 <span>+200</span></button>
-            <button onClick={() => adicionarAgua(300, metaAguaMl)} disabled={aguaAtualMl >= metaAguaMl} className={`py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border transition-colors ${
+            <button onClick={() => adicionarAgua(300, 99999)} className={`py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border transition-colors ${
               temaEscuro ? 'bg-zinc-950 border-zinc-800 text-zinc-200 hover:bg-zinc-900' : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100'
             }`}>🥤 <span>+300</span></button>
-            <button onClick={() => adicionarAgua(500, metaAguaMl)} disabled={aguaAtualMl >= metaAguaMl} className={`py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border transition-colors ${
+            <button onClick={() => adicionarAgua(500, 99999)} className={`py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border transition-colors ${
               temaEscuro ? 'bg-zinc-950 border-zinc-800 text-zinc-200 hover:bg-zinc-900' : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100'
             }`}>🍶 <span>+500</span></button>
             <button onClick={() => setMostrarModalDesfazerAgua(true)} className={`py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-0.5 border transition-colors ${
@@ -650,6 +656,7 @@ export function Home() {
                                 maxLength={4}
                                 value={gramas === 0 ? '' : gramas}
                                 onChange={(e) => atualizarGramas(alimento.id, e.target.value)}
+                                onFocus={handleFocusInput}
                                 className="w-10 bg-transparent text-center text-xs outline-none appearance-none font-bold"
                                 placeholder="0"
                                 autoFocus

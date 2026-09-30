@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+html, body, #root {
+  height: 100%; /* 100% puro, NUNCA svh ou dvh no Android nativo */
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #09090b;
+}
