@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Extraímos a base de dados do teu Home para termos acesso a todos os alimentos
+// Dicionário mantido exatamente como o teu
 const DICIONARIO_ALIMENTOS = {
   cafeManha: [
     { id: 'pao', nome: 'Pão Francês', emoji: '🥖', kcal100g: 280, prot: 9, carbo: 58, gord: 3 }, 
@@ -78,13 +78,10 @@ export function RefeicaoLivre() {
   const registrarRefeicao = useUserStore((state: any) => state.registrarRefeicao);
   const temaEscuro = dados?.temaEscuro ?? true;
 
-  // Junta TODOS os alimentos de todas as categorias numa lista única sem duplicados
   const todosOsAlimentos = useMemo(() => {
     const listaCompleta: any[] = [];
     const idsVistos = new Set();
-    
     Object.values(DICIONARIO_ALIMENTOS).flat().forEach((alimento) => {
-      // Usar o nome como chave para evitar duplicados (ex: "Ovo" existe no almoço e no café)
       const nomeBase = alimento.nome.toLowerCase();
       if (!idsVistos.has(nomeBase)) {
         listaCompleta.push(alimento);
@@ -98,7 +95,6 @@ export function RefeicaoLivre() {
   const [porcoes, setPorcoes] = useState<Record<string, number>>({});
   const [toastMsg, setToastMsg] = useState('');
 
-  // Filtra os alimentos pela pesquisa
   const alimentosFiltrados = todosOsAlimentos.filter(alimento => 
     alimento.nome.toLowerCase().includes(busca.toLowerCase())
   );
@@ -120,7 +116,6 @@ export function RefeicaoLivre() {
     setPorcoes(prev => ({ ...prev, [idAlimento]: Number(gramas) || 0 }));
   };
 
-  // Cálculos em tempo real
   const caloriasTotais = Object.entries(porcoes).reduce((acc, [id, gramas]) => {
     const alimento = todosOsAlimentos.find(a => a.id === id);
     if (!alimento) return acc;
@@ -138,20 +133,26 @@ export function RefeicaoLivre() {
         return acc;
       }, { proteina: 0, carbo: 0, gordura: 0 });
 
-      // O truque: Usamos um ID único baseado na hora para podermos registar múltiplas refeições livres no mesmo dia
       const idRefeicaoUnico = `refeicaoLivre_${Date.now()}`;
       
-      registrarRefeicao(idRefeicaoUnico, caloriasTotais, Object.keys(porcoes), macrosTotais);
+      // ✅ CORREÇÃO: Passar os 6 argumentos corretos para registrarRefeicao
+      registrarRefeicao(
+        idRefeicaoUnico,              // refeicaoKey
+        "Refeição Livre",             // tituloRef
+        "🍔",                         // iconeRef
+        caloriasTotais,               // calorias
+        Object.keys(porcoes),         // alimentosConsumidos
+        macrosTotais                  // macros
+      );
       
       setToastMsg('🍔 Refeição guardada!');
-      setTimeout(() => navigate('/'), 1500); // Volta para a home após 1.5s
+      setTimeout(() => navigate('/'), 1500);
     }
   };
 
   return (
     <div className={`flex flex-col h-[100dvh] overflow-hidden ${temaEscuro ? 'bg-zinc-950 text-white' : 'bg-zinc-50 text-zinc-900'}`}>
       
-      {/* AVISO FLUTUANTE (TOAST) */}
       <AnimatePresence>
         {toastMsg && (
           <motion.div
@@ -163,7 +164,6 @@ export function RefeicaoLivre() {
         )}
       </AnimatePresence>
 
-      {/* HEADER FIXO */}
       <div className={`p-6 pb-4 shadow-sm z-20 flex-shrink-0 ${temaEscuro ? 'bg-zinc-950/80 backdrop-blur-md' : 'bg-white/80 backdrop-blur-md border-b border-zinc-200'}`}>
         <div className="flex items-center justify-between mb-6">
           <button onClick={() => navigate(-1)} className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors ${temaEscuro ? 'bg-zinc-900 border-zinc-800 text-zinc-300' : 'bg-white border-zinc-200 text-zinc-700 shadow-sm'}`}>
@@ -173,7 +173,6 @@ export function RefeicaoLivre() {
           <div className="w-10" />
         </div>
 
-        {/* BARRA DE PESQUISA */}
         <div className={`flex items-center px-4 py-3 rounded-2xl border transition-colors ${temaEscuro ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-100 border-zinc-200'}`}>
           <span className="text-xl mr-2 opacity-50">🔍</span>
           <input 
@@ -189,7 +188,6 @@ export function RefeicaoLivre() {
         </div>
       </div>
 
-      {/* ÁREA ROLÁVEL COM OS ALIMENTOS */}
       <div className="flex-1 overflow-y-auto px-6 py-2 custom-scrollbar">
         {alimentosFiltrados.length === 0 ? (
           <p className="text-center text-zinc-500 mt-10">Nenhum alimento encontrado.</p>
@@ -253,7 +251,6 @@ export function RefeicaoLivre() {
         )}
       </div>
 
-      {/* RODAPÉ FIXO (BOTÃO DE CONFIRMAR) */}
       <AnimatePresence>
         {caloriasTotais > 0 && (
           <motion.div 

@@ -21,8 +21,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [toastMsg, setToastMsg] = useState('');
   const [pesoInput, setPesoInput] = useState('');
 
-  // Lógica corrigida: Verifica se está logado para mostrar o menu, 
-  // mas mantém SEMPRE a estrutura principal da página para não causar a tela cinza.
   const estaLogado = Boolean(dados.nome && dados.nome.trim() !== '');
   const mostrarMenu = estaLogado && location.pathname !== '/onboarding' && location.pathname !== '/refeicao-livre';
 
@@ -40,7 +38,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       adicionarAgua(250, 10000);
       mostrarToast('💧 +250ml de Água registados!');
     } else if (acao === 'peso') {
-      setPesoInput(''); // Limpa o input sempre que abre o modal
+      setPesoInput(''); 
       setModalPesoAberto(true);
     } else if (acao === 'refeicao') {
       navigate('/refeicao-livre');
@@ -53,7 +51,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     if (pesoInput && pesoNum >= 30 && pesoNum <= 300) {
       atualizarPeso(pesoInput);
       setModalPesoAberto(false); 
-      mostrarToast('⚖️ Peso atualizado com sucesso!'); 
+      mostrarToast('⚖ Peso atualizado com sucesso!'); // ✅ Emoji normalizado sem conflito de bytes
     } else if (pesoInput) {
       mostrarToast('⚠️ O peso deve estar entre 30 e 300 kg.');
     }
@@ -72,7 +70,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -50 }}
             className={`fixed top-12 left-1/2 -translate-x-1/2 z-[70] px-6 py-3 rounded-full shadow-xl font-bold flex items-center gap-2 whitespace-nowrap ${
-              toastMsg.startsWith('⚖️️') || toastMsg.startsWith('💧')
+              toastMsg.startsWith('⚖') || toastMsg.startsWith('💧') || toastMsg.includes('sucesso')
                 ? 'bg-green-500 text-zinc-950' 
                 : 'bg-red-500 text-white'
             }`}
@@ -237,9 +235,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-// -----------------------------------------------------
-// Componente de Botão do Menu de Ações
-// -----------------------------------------------------
 function FabButton({ texto, icone, onClick, temaEscuro, delay }: any) {
   return (
     <motion.button
@@ -258,9 +253,6 @@ function FabButton({ texto, icone, onClick, temaEscuro, delay }: any) {
   );
 }
 
-// -----------------------------------------------------
-// Componentes Secundários (Ícones e Indicador Ativo)
-// -----------------------------------------------------
 function ActiveIndicator() {
   return (
     <motion.span 
