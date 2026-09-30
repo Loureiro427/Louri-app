@@ -206,31 +206,25 @@ export function Home() {
 
   const ativas = ORDEM_CRONOLOGICA.filter(key => ativasBrutas.includes(key));
 
- const REFEICOES = ativas.map((key) => {
+  const REFEICOES = ativas.map((key) => {
     let minutosOffset;
 
-    // Cálculo inteligente por tipo de refeição, independentemente de quantas refeições estão ativas
     if (key === 'cafeManha') {
-      minutosOffset = acordaMin + 30; // 30 min depois de acordar
+      minutosOffset = acordaMin + 30;
     } else if (key === 'almoco') {
-      // Tenta ser às 12:30 (750 min), mas garante pelo menos 3h de espaçamento após acordar
       minutosOffset = Math.max(acordaMin + 180, 12.5 * 60);
     } else if (key === 'lancheTarde') {
-      // Tenta ser às 16:00 (960 min)
       minutosOffset = Math.max(acordaMin + 270, 16 * 60);
     } else if (key === 'cafeTarde') {
-      // Tenta ser às 17:30 (1050 min)
       minutosOffset = Math.max(acordaMin + 330, 17.5 * 60);
     } else if (key === 'janta') {
-      // Tenta ser às 20:00 (1200 min), mas garante que é antes de dormir
       minutosOffset = Math.min(dormeMin - 90, Math.max(acordaMin + 420, 20 * 60));
     } else if (key === 'lancheNoite') {
-      minutosOffset = dormeMin - 30; // 30 min antes de dormir
+      minutosOffset = dormeMin - 30;
     } else {
-      minutosOffset = acordaMin + 120; // fallback genérico
+      minutosOffset = acordaMin + 120;
     }
 
-    // Trava de segurança: garante que nenhuma refeição acontece antes de acordar ou depois de dormir
     minutosOffset = Math.max(acordaMin, Math.min(minutosOffset, dormeMin - 30));
 
     const config = CONFIG_REFEICOES[key] || { titulo: key, icone: '🍽️' };
@@ -286,7 +280,23 @@ export function Home() {
         return acc;
       }, { proteina: 0, carbo: 0, gordura: 0 });
 
-      registrarRefeicao(refeicaoModal.key, caloriasTotaisModal, Object.keys(porcoesModal), macrosTotaisModal);
+      // Mapeia os IDs dos alimentos para nomes legíveis para guardar no histórico do calendário
+      const dicionarioRef = DICIONARIO_ALIMENTOS[refeicaoModal.key] || [];
+      const nomesAlimentos = Object.keys(porcoesModal).map(id => {
+        const item = dicionarioRef.find(a => a.id === id);
+        return item ? item.nome : id;
+      });
+
+      // Passa os parâmetros corretos exigidos pelo store atualizado
+      registrarRefeicao(
+        refeicaoModal.key, 
+        refeicaoModal.titulo, 
+        refeicaoModal.icone, 
+        caloriasTotaisModal, 
+        nomesAlimentos, 
+        macrosTotaisModal
+      );
+
       setRefeicaoModal(null);
     }
   };
@@ -552,17 +562,15 @@ export function Home() {
         document.body
       )}
 
-      {/* 👇 MODAL: REGISTAR REFEIÇÃO (AJUSTADO PARA A BARRA FIXA NO FUNDO IGUAL À REFEIÇÃO LIVRE) */}
+      {/* MODAL: REGISTAR REFEIÇÃO */}
       {refeicaoModal && createPortal(
         <div className="fixed inset-0 z-50 animate-in slide-in-from-bottom-4 overscroll-none">
-          {/* Overlay escuro que fecha ao clicar fora */}
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setRefeicaoModal(null)}></div>
           
           <div className={`absolute bottom-0 w-full h-[90vh] rounded-t-3xl flex flex-col overflow-hidden shadow-2xl transition-colors ${
             temaEscuro ? 'bg-zinc-900 border-t border-zinc-800 text-white' : 'bg-white border-t border-zinc-200 text-zinc-900'
           }`}>
             
-            {/* CABEÇALHO DO MODAL */}
             <div className="shrink-0 p-6 pb-2">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold flex items-center gap-2">
@@ -584,7 +592,6 @@ export function Home() {
               <p className={`text-xs uppercase tracking-wider font-semibold mt-4 ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Personalize a sua refeição:</p>
             </div>
             
-            {/* ÁREA DE SCROLL (Grelha de Alimentos) */}
             <div className="flex-1 overflow-y-auto px-6 pb-32 custom-scrollbar">
               <div className="grid grid-cols-3 gap-2">
                 {(() => {
@@ -661,7 +668,6 @@ export function Home() {
               </div>
             </div>
 
-            {/* BARRA INFERIOR FIXA */}
             <div className={`absolute bottom-0 left-0 w-full px-6 py-4 flex justify-between items-center z-50 border-t ${
               temaEscuro ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
             }`}>
