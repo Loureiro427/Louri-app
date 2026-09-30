@@ -662,7 +662,7 @@ export function Home() {
             }`}>
               <div className="flex flex-col">
                 <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
-                  Total Livre
+                  Total
                 </span>
                 <span className="text-xl font-bold text-orange-500">
                   {caloriasTotaisModal} kcal

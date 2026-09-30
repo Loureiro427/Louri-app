@@ -207,12 +207,12 @@ export function Plano() {
           {/* Proteína */}
           <div 
             onClick={() => setMacroModal('proteina')}
-            className={`group cursor-pointer p-2 -mx-2 rounded-xl transition-colors ${
-              temaEscuro ? 'hover:bg-zinc-950/80' : 'hover:bg-zinc-50'
+            className={`cursor-pointer p-2 -mx-2 rounded-xl transition-colors ${
+              temaEscuro ? 'hover:bg-zinc-950/80 active:bg-zinc-950/80' : 'hover:bg-zinc-50 active:bg-zinc-50'
             }`}
           >
             <div className="flex justify-between text-xs mb-1">
-              <span className={`font-medium transition-colors ${temaEscuro ? 'text-zinc-300 group-hover:text-blue-400' : 'text-zinc-700 group-hover:text-blue-600'}`}>
+              <span className={`font-medium ${temaEscuro ? 'text-blue-400' : 'text-blue-600'}`}>
                 Proteína <span className={temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}>({Math.round(pProt * 100)}%)</span>
               </span>
               <span className="font-bold text-blue-500">{consumidoProt}g <span className={`font-normal ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>/ {gProtMeta}g</span></span>
@@ -227,12 +227,12 @@ export function Plano() {
           {/* Carboidratos */}
           <div 
             onClick={() => setMacroModal('carbo')}
-            className={`group cursor-pointer p-2 -mx-2 rounded-xl transition-colors ${
-              temaEscuro ? 'hover:bg-zinc-950/80' : 'hover:bg-zinc-50'
+            className={`cursor-pointer p-2 -mx-2 rounded-xl transition-colors ${
+              temaEscuro ? 'hover:bg-zinc-950/80 active:bg-zinc-950/80' : 'hover:bg-zinc-50 active:bg-zinc-50'
             }`}
           >
             <div className="flex justify-between text-xs mb-1">
-              <span className={`font-medium transition-colors ${temaEscuro ? 'text-zinc-300 group-hover:text-green-400' : 'text-zinc-700 group-hover:text-green-600'}`}>
+              <span className={`font-medium ${temaEscuro ? 'text-green-400' : 'text-green-600'}`}>
                 Carboidratos <span className={temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}>({Math.round(pCarbo * 100)}%)</span>
               </span>
               <span className="font-bold text-green-500">{consumidoCarbo}g <span className={`font-normal ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>/ {gCarboMeta}g</span></span>
@@ -247,12 +247,12 @@ export function Plano() {
           {/* Gorduras */}
           <div 
             onClick={() => setMacroModal('gordura')}
-            className={`group cursor-pointer p-2 -mx-2 rounded-xl transition-colors ${
-              temaEscuro ? 'hover:bg-zinc-950/80' : 'hover:bg-zinc-50'
+            className={`cursor-pointer p-2 -mx-2 rounded-xl transition-colors ${
+              temaEscuro ? 'hover:bg-zinc-950/80 active:bg-zinc-950/80' : 'hover:bg-zinc-50 active:bg-zinc-50'
             }`}
           >
             <div className="flex justify-between text-xs mb-1">
-              <span className={`font-medium transition-colors ${temaEscuro ? 'text-zinc-300 group-hover:text-orange-400' : 'text-zinc-700 group-hover:text-orange-600'}`}>
+              <span className={`font-medium ${temaEscuro ? 'text-orange-400' : 'text-orange-600'}`}>
                 Gorduras <span className={temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}>({Math.round(pGordura * 100)}%)</span>
               </span>
               <span className="font-bold text-orange-500">{consumidoGord}g <span className={`font-normal ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>/ {gGordMeta}g</span></span>
