@@ -206,29 +206,34 @@ export function Home() {
 
   const ativas = ORDEM_CRONOLOGICA.filter(key => ativasBrutas.includes(key));
 
-  const totalRef = ativas.length;
-  const inicio = acordaMin + 30; 
-  const fim = Math.max(inicio + 60, dormeMin - 90); 
-  const span = fim - inicio;
-
-  const REFEICOES = ativas.map((key, index) => {
+ const REFEICOES = ativas.map((key) => {
     let minutosOffset;
 
-    if (totalRef === 1) {
-      if (key === 'cafeManha') {
-        minutosOffset = acordaMin + 30;
-      } else if (key === 'almoco') {
-        minutosOffset = Math.min(dormeMin - 120, Math.max(acordaMin + 120, 12 * 60 + 30));
-      } else if (key === 'janta') {
-        minutosOffset = Math.min(dormeMin - 120, Math.max(acordaMin + 180, 20 * 60));
-      } else {
-        minutosOffset = acordaMin + span / 2;
-      }
+    // Cálculo inteligente por tipo de refeição, independentemente de quantas refeições estão ativas
+    if (key === 'cafeManha') {
+      minutosOffset = acordaMin + 30; // 30 min depois de acordar
+    } else if (key === 'almoco') {
+      // Tenta ser às 12:30 (750 min), mas garante pelo menos 3h de espaçamento após acordar
+      minutosOffset = Math.max(acordaMin + 180, 12.5 * 60);
+    } else if (key === 'lancheTarde') {
+      // Tenta ser às 16:00 (960 min)
+      minutosOffset = Math.max(acordaMin + 270, 16 * 60);
+    } else if (key === 'cafeTarde') {
+      // Tenta ser às 17:30 (1050 min)
+      minutosOffset = Math.max(acordaMin + 330, 17.5 * 60);
+    } else if (key === 'janta') {
+      // Tenta ser às 20:00 (1200 min), mas garante que é antes de dormir
+      minutosOffset = Math.min(dormeMin - 90, Math.max(acordaMin + 420, 20 * 60));
+    } else if (key === 'lancheNoite') {
+      minutosOffset = dormeMin - 30; // 30 min antes de dormir
     } else {
-      minutosOffset = inicio + (span * (index / (totalRef - 1)));
+      minutosOffset = acordaMin + 120; // fallback genérico
     }
 
-    const config = CONFIG_REFEICOES[key] || { titulo: key, icone: '🍽️️' };
+    // Trava de segurança: garante que nenhuma refeição acontece antes de acordar ou depois de dormir
+    minutosOffset = Math.max(acordaMin, Math.min(minutosOffset, dormeMin - 30));
+
+    const config = CONFIG_REFEICOES[key] || { titulo: key, icone: '🍽️' };
     return {
       key,
       titulo: config.titulo,
