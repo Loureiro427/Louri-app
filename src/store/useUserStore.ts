@@ -22,13 +22,16 @@ interface UserData {
   streak: number; 
   ultimoDiaPontuado: string;
   temaEscuro: boolean;
-  notificacoes: boolean; // NOVO: Guarda se as notificações estão ativas
+  notificacoes: boolean;
+  historicoPeso: Record<string, string>; // Guarda o histórico de peso por data
 }
 
 interface UserStore {
   dados: UserData;
   mostrarNavbar: boolean;
+  modalPesoAberto: boolean; // NOVO: Controle global do Modal de Peso
   setMostrarNavbar: (visivel: boolean) => void;
+  setModalPesoAberto: (aberto: boolean) => void; // NOVO: Função para abrir/fechar Modal de Peso
   setDados: (novosDados: Partial<UserData>) => void;
   adicionarAgua: (quantidade: number, metaMax: number) => void;
   zerarAgua: () => void;
@@ -37,6 +40,7 @@ interface UserStore {
   zerarDieta: () => void;
   verificarViradaDeDia: () => void;
   verificarStreak: () => void;
+  atualizarPeso: (novoPeso: string) => void; 
 }
 
 const macrosZerados = { proteina: 0, carbo: 0, gordura: 0 };
@@ -66,12 +70,32 @@ export const useUserStore = create<UserStore>()(
         streak: 0,
         ultimoDiaPontuado: '',
         temaEscuro: true,
-        notificacoes: true, // Inicia ativado por predefinição
+        notificacoes: true,
+        historicoPeso: {}, 
       },
       mostrarNavbar: true,
+      modalPesoAberto: false, // Inicia fechado
       setMostrarNavbar: (visivel) => set({ mostrarNavbar: visivel }),
+      setModalPesoAberto: (aberto) => set({ modalPesoAberto: aberto }),
       setDados: (novosDados) => set((state) => ({ dados: { ...state.dados, ...novosDados } })),
       
+      // LÓGICA DE PESO (Com histórico diário)
+      atualizarPeso: (novoPeso) => set((state) => {
+        const hoje = new Date();
+        const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+
+        return {
+          dados: {
+            ...state.dados,
+            peso: novoPeso,
+            historicoPeso: {
+              ...state.dados.historicoPeso,
+              [hojeStr]: novoPeso
+            }
+          }
+        };
+      }),
+
       adicionarAgua: (quantidade, metaMax) => {
         set((state) => {
           const atual = state.dados.aguaConsumida || 0;

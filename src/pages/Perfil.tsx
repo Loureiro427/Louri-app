@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom'; // <-- IMPORTAÇÃO ADICIONADA
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
 import { configurarNotificacoesNativas } from '../services/notificationService';
@@ -8,6 +8,7 @@ export function Perfil() {
   const navigate = useNavigate();
   const dados = useUserStore((state) => state.dados);
   const setDados = useUserStore((state) => state.setDados);
+  const setModalPesoAberto = useUserStore((state: any) => state.setModalPesoAberto); // <-- NOVA IMPORTAÇÃO
 
   const temaEscuro = dados.temaEscuro ?? true;
   const notificacoes = dados.notificacoes ?? true;
@@ -89,8 +90,9 @@ export function Perfil() {
           
           <div className={`flex justify-between items-center p-4 border-b ${temaEscuro ? 'border-zinc-800/50' : 'border-zinc-100'}`}>
             <span className={`text-sm font-medium ${temaEscuro ? 'text-zinc-300' : 'text-zinc-600'}`}>Peso atual</span>
-            <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/onboarding')}>
-              <span className={`text-sm font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{peso} kg</span>
+            {/* 👇 AQUI: Agora abre o modal global de peso em vez de ir para o onboarding */}
+            <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setModalPesoAberto(true)}>
+              <span className={`text-sm font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'} underline decoration-green-500/50 decoration-2 underline-offset-4`}>{peso} kg</span>
             </div>
           </div>
 

@@ -6,16 +6,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
+  
   const dados = useUserStore((state) => state.dados);
   const adicionarAgua = useUserStore((state) => state.adicionarAgua);
+  const atualizarPeso = useUserStore((state) => state.atualizarPeso);
+  
+  // Controle Global do Modal de Peso
+  const modalPesoAberto = useUserStore((state) => state.modalPesoAberto);
+  const setModalPesoAberto = useUserStore((state) => state.setModalPesoAberto);
   
   const temaEscuro = dados.temaEscuro ?? true;
   
   const [isFabOpen, setIsFabOpen] = useState(false);
-  const [modalAtivo, setModalAtivo] = useState<'peso' | null>(null);
   const [toastMsg, setToastMsg] = useState('');
+  const [pesoInput, setPesoInput] = useState('');
 
-  // 👇 AQUI ESTÁ A MAGIA! Ocultamos o menu global no Onboarding E na Refeição Livre
+  // Ocultamos o menu global no Onboarding E na Refeição Livre
   if (location.pathname === '/onboarding' || location.pathname === '/refeicao-livre') {
     return <>{children}</>;
   }
@@ -34,9 +40,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
       adicionarAgua(250, 10000);
       mostrarToast('💧 +250ml de Água registados!');
     } else if (acao === 'peso') {
-      setModalAtivo('peso');
+      setPesoInput(''); // Limpa o input sempre que abre o modal
+      setModalPesoAberto(true);
     } else if (acao === 'refeicao') {
       navigate('/refeicao-livre');
+    }
+  };
+
+  const guardarPeso = () => {
+    const pesoNum = Number(pesoInput);
+    
+    if (pesoInput && pesoNum >= 30 && pesoNum <= 300) {
+      atualizarPeso(pesoInput);
+      setModalPesoAberto(false); 
+      mostrarToast('⚖️ Peso atualizado com sucesso!'); 
+    } else if (pesoInput) {
+      mostrarToast('⚠️ O peso deve estar entre 30 e 300 kg.');
     }
   };
 
@@ -52,7 +71,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
             initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -50 }}
-            className="fixed top-12 left-1/2 -translate-x-1/2 z-[70] bg-green-500 text-zinc-950 px-6 py-3 rounded-full shadow-xl font-bold flex items-center gap-2 whitespace-nowrap"
+            className={`fixed top-12 left-1/2 -translate-x-1/2 z-[70] px-6 py-3 rounded-full shadow-xl font-bold flex items-center gap-2 whitespace-nowrap ${
+              toastMsg.startsWith('⚖️') || toastMsg.startsWith('💧')
+                ? 'bg-green-500 text-zinc-950' 
+                : 'bg-red-500 text-white'
+            }`}
           >
             {toastMsg}
           </motion.div>
@@ -63,13 +86,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* MODAL PARA REGISTO DE PESO */}
+      {/* MODAL GLOBAL PARA REGISTO DE PESO */}
       <AnimatePresence>
-        {modalAtivo === 'peso' && (
+        {modalPesoAberto && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setModalAtivo(null)}
+              onClick={() => setModalPesoAberto(false)}
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             />
             
@@ -84,20 +107,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
             >
               <h3 className="text-xl font-bold mb-2">Atualizar Peso</h3>
               <p className="text-sm text-zinc-400 mb-6">Regista o teu peso atual em jejum.</p>
-              <input 
-                type="number" 
-                placeholder="Ex: 75.5 kg" 
-                className={`w-full p-4 rounded-xl text-lg font-medium outline-none transition-all mb-6 ${
-                  temaEscuro 
-                    ? 'bg-zinc-950 focus:ring-2 focus:ring-green-500 text-white' 
-                    : 'bg-zinc-100 focus:ring-2 focus:ring-green-500 text-zinc-900'
-                }`} 
-                autoFocus 
-              />
+              
+              <div className="relative mb-6">
+                <input 
+                  type="number" 
+                  placeholder={`Atual: ${dados.peso || '--'} kg`} 
+                  value={pesoInput}
+                  onChange={(e) => setPesoInput(e.target.value)}
+                  className={`w-full p-4 rounded-xl text-lg font-medium outline-none transition-all ${
+                    temaEscuro 
+                      ? 'bg-zinc-950 focus:ring-2 focus:ring-green-500 text-white' 
+                      : 'bg-zinc-100 focus:ring-2 focus:ring-green-500 text-zinc-900'
+                  }`} 
+                  autoFocus 
+                />
+                {pesoInput && (
+                  <span className={`absolute right-4 top-1/2 -translate-y-1/2 font-bold ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>kg</span>
+                )}
+              </div>
 
               <div className="flex gap-3">
                 <button 
-                  onClick={() => setModalAtivo(null)} 
+                  onClick={() => setModalPesoAberto(false)} 
                   className={`flex-1 p-4 rounded-xl font-bold transition-active active:scale-95 ${
                     temaEscuro ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-200 hover:bg-zinc-300 text-zinc-900'
                   }`}
@@ -105,11 +136,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   Cancelar
                 </button>
                 <button 
-                  onClick={() => { 
-                    setModalAtivo(null); 
-                    mostrarToast('⚖️ Peso atualizado com sucesso!'); 
-                  }} 
-                  className="flex-1 p-4 rounded-xl font-bold bg-green-500 text-zinc-950 shadow-lg shadow-green-500/30 transition-active active:scale-95 hover:bg-green-400"
+                  onClick={guardarPeso}
+                  disabled={!pesoInput}
+                  className={`flex-1 p-4 rounded-xl font-bold shadow-lg transition-active active:scale-95 ${
+                    pesoInput 
+                      ? 'bg-green-500 text-zinc-950 shadow-green-500/30 hover:bg-green-400' 
+                      : temaEscuro ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                  }`}
                 >
                   Guardar
                 </button>
