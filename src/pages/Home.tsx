@@ -149,32 +149,27 @@ export function Home() {
               }`}>
                 <img src={logoImg} alt="Louri Logo" className="w-full h-full object-contain filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]" />
               </div>
-              <h1 className={`text-3xl font-black tracking-tight ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>Louri</h1>
+              <h1 className={`text-3xl font-black tracking-tight flex items-center gap-2 ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>
+                Louri <span className="text-xs text-green-500 uppercase tracking-widest bg-green-500/10 px-2 py-1 rounded-lg">Beta</span>
+              </h1>
             </div>
         </div>
 
         <div className="w-full max-w-sm flex flex-col gap-3 z-10 pb-6">
           <button 
             onClick={() => navigate('/onboarding')} 
-            className="w-full bg-green-500 hover:bg-green-400 text-zinc-950 font-bold py-4 rounded-2xl text-base shadow-lg shadow-green-500/20 transition-all active:scale-[0.98]"
-          >
-            Começar Agora
-          </button>
-          
-          <button 
-            onClick={() => alert('Em breve!')} 
-            className={`w-full font-semibold py-4 rounded-2xl text-base transition-all active:scale-[0.98] border ${
-              temaEscuro ? 'bg-zinc-900/60 hover:bg-zinc-900 border-zinc-800/80 text-zinc-300' : 'bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700 shadow-sm'
+            className={`w-full font-bold py-4 rounded-2xl text-lg shadow-xl transition-all active:scale-[0.98] ${
+              temaEscuro ? 'bg-green-500 hover:bg-green-400 text-zinc-950 shadow-green-500/20' : 'bg-green-500 hover:bg-green-600 text-white shadow-green-500/30'
             }`}
           >
-            Já tenho uma conta
+            Começar Agora
           </button>
         </div>
 
       </div>
     );
   }
-
+  
   const primeiroNome = dados.nome ? dados.nome.trim().split(' ')[0] : '';
   const pesoNum = Number(dados.peso) || 70;
   
