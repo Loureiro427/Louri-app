@@ -459,6 +459,230 @@ try {
       reset();
     }
   });
+
+  const features = await server.ssrLoadModule("/src/utils/appFeatures.ts");
+  const reminders = await server.ssrLoadModule("/src/utils/reminders.ts");
+  test("Editar refeição substitui calorias e macros sem duplicar registro nem sequência", () => {
+    reset();
+    store.getState().setDados({ peso: "70", refeicoesAtivas: ["cafeManha"] });
+    store.getState().adicionarAgua(2450, 99999);
+    store
+      .getState()
+      .registrarRefeicao(
+        "cafeManha",
+        "Café",
+        "☕",
+        100,
+        ["Pão"],
+        { proteina: 2, carbo: 20, gordura: 1 },
+        { pao: 50 }
+      );
+    store
+      .getState()
+      .registrarRefeicao(
+        "cafeManha",
+        "Café",
+        "☕",
+        200,
+        ["Pão"],
+        { proteina: 4, carbo: 40, gordura: 2 },
+        { pao: 100 },
+        true
+      );
+    const d = store.getState().dados;
+    assert.equal(d.caloriasConsumidas, 200);
+    assert.deepEqual(d.macrosConsumidos, {
+      proteina: 4,
+      carbo: 40,
+      gordura: 2,
+    });
+    assert.equal(d.refeicoesConcluidas.length, 1);
+    assert.equal(d.streak, 1);
+    assert.equal(
+      d.historico[today()].refeicoesDetalhadas.cafeManha.porcoes.pao,
+      100
+    );
+    store
+      .getState()
+      .registrarRefeicao(
+        "cafeManha",
+        "Café",
+        "☕",
+        150,
+        ["Pão"],
+        { proteina: 3, carbo: 30, gordura: 1 },
+        { pao: 75 },
+        true
+      );
+    assert.equal(store.getState().dados.caloriasConsumidas, 150);
+  });
+  test("Desfazer último copo mantém água legada, ordem e histórico", () => {
+    reset();
+    store.getState().setDados({ aguaConsumida: 300 });
+    store.getState().adicionarAgua(200, 99999);
+    store.getState().adicionarAgua(500, 99999);
+    store.getState().desfazerUltimaAgua();
+    assert.equal(store.getState().dados.aguaConsumida, 500);
+    assert.equal(store.getState().dados.registrosAgua.length, 1);
+    store.getState().desfazerUltimaAgua();
+    assert.equal(store.getState().dados.aguaConsumida, 300);
+    store.getState().desfazerUltimaAgua();
+    assert.equal(store.getState().dados.aguaConsumida, 300);
+    assert.equal(store.getState().dados.historico[today()].aguaConsumida, 300);
+    store.getState().zerarAgua();
+    assert.equal(store.getState().dados.registrosAgua.length, 0);
+  });
+  test("Catálogo personalizado calcula porções e combinações aceitam alimentos de outra refeição", () => {
+    const custom = {
+      id: "custom_test",
+      nome: "Alimento teste",
+      emoji: "🍽️",
+      kcal100g: 200,
+      prot: 10,
+      carbo: 30,
+      gord: 5,
+    };
+    const d = { ...initial, alimentosPersonalizados: [custom] };
+    assert.equal(
+      food.calcularPorcoes({ custom_test: 50 }, features.mealCatalog(d))
+        .calorias,
+      100
+    );
+    assert.deepEqual(
+      features.recipeForCatalog(d, { custom_test: 50, desconhecido: 100 }),
+      { custom_test: 50 }
+    );
+    const dinner = food.DICIONARIO_ALIMENTOS.janta[0];
+    const mapped = features.recipeForCatalog(
+      d,
+      { [dinner.id]: 80 },
+      "cafeManha"
+    );
+    assert.ok(Object.values(mapped).includes(80));
+    assert.equal(
+      food.calcularPorcoes(
+        mapped,
+        features.mealCatalog(d, "cafeManha", Object.keys(mapped))
+      ).calorias,
+      Math.round(dinner.kcal100g * 0.8)
+    );
+    assert.ok(
+      features
+        .mealCatalog(d, "cafeManha", Object.keys(mapped))
+        .some((f) => f.id === Object.keys(mapped)[0])
+    );
+  });
+  test("Compras usa apenas plano ativo, inclui IDs legados e não altera consumo", () => {
+    const d = {
+      ...initial,
+      refeicoesAtivas: ["janta"],
+      alimentos: {
+        janta: [food.DICIONARIO_ALIMENTOS.janta[0].id],
+        cafeManha: ["pao"],
+      },
+      porcoesPlano: { janta: { [food.DICIONARIO_ALIMENTOS.janta[0].id]: 150 } },
+    };
+    const list = features.shoppingItems(d);
+    assert.equal(list.length, 1);
+    assert.equal(list[0].grams, 150);
+    assert.equal(d.caloriasConsumidas, 0);
+  });
+  test("Resumo semanal considera sete dias e preserva zeros sem duplicar hoje", () => {
+    const d = {
+      ...initial,
+      ultimaData: "2026-10-23",
+      aguaConsumida: 300,
+      caloriasConsumidas: 100,
+      refeicoesConcluidas: ["cafeManha"],
+      historico: {
+        "2026-10-22": {
+          aguaConsumida: 200,
+          caloriasConsumidas: 80,
+          refeicoesDetalhadas: { a: {} },
+        },
+        "2026-10-23": {
+          aguaConsumida: 999,
+          caloriasConsumidas: 999,
+          refeicoesDetalhadas: {},
+        },
+      },
+      diasMetasConcluidas: { "2026-10-22": true },
+    };
+    const week = features.weeklySummary(d, "2026-10-23");
+    assert.equal(week.length, 7);
+    assert.equal(
+      week.reduce((n, d) => n + d.water, 0),
+      500
+    );
+    assert.equal(
+      week.reduce((n, d) => n + d.meals, 0),
+      2
+    );
+    assert.equal(week.filter((d) => d.complete).length, 1);
+  });
+  test("Lembretes respeitam refeições escolhidas, intervalo e silêncio através da meia-noite", () => {
+    const d = {
+      ...initial,
+      horaAcorda: "06:00",
+      horaDorme: "23:00",
+      refeicoesAtivas: ["cafeManha", "janta"],
+      horariosRefeicoes: { cafeManha: "08:00", janta: "23:00" },
+      lembretes: {
+        refeicoes: ["janta"],
+        aguaIntervalo: 120,
+        silencioInicio: "22:00",
+        silencioFim: "07:00",
+      },
+    };
+    const slots = reminders.reminderSlots(d);
+    assert.ok(slots.length > 0);
+    assert.ok(slots.every((s) => s.minute >= 420 && s.minute < 1320));
+    assert.ok(slots.every((s) => s.title.includes("água")));
+    const none = reminders.reminderSlots({
+      ...d,
+      lembretes: { ...d.lembretes, refeicoes: [], aguaIntervalo: 0 },
+    });
+    assert.equal(none.length, 0);
+    const meals = reminders.reminderSlots({
+      ...d,
+      lembretes: { ...d.lembretes, refeicoes: ["cafeManha"], aguaIntervalo: 0 },
+    });
+    assert.equal(meals.length, 1);
+    assert.equal(meals[0].minute, 480);
+  });
+
+  test("Catálogo evita opções repetidas e preserva IDs de porções antigas na edição", () => {
+    const catalog = features.mealCatalog(initial, "janta");
+    assert.equal(new Set(catalog.map((f) => f.nome)).size, catalog.length);
+    const alias = food.DICIONARIO_ALIMENTOS.janta.find(
+      (f) => f.nome === "Arroz"
+    );
+    const original = food.todosAlimentos.find((f) => f.nome === "Arroz");
+    const editing = features.mealCatalog(initial, "janta", [original.id]);
+    assert.ok(editing.some((f) => f.id === original.id));
+    assert.equal(
+      food.calcularPorcoes({ [original.id]: 100 }, editing).calorias,
+      original.kcal100g
+    );
+    assert.ok(alias);
+  });
+  test("Refazer configuração preserva alimento personalizado e substituição de outra refeição", () => {
+    const custom = {
+      id: "custom_kept",
+      nome: "Meu alimento",
+      emoji: "🍽️",
+      kcal100g: 200,
+      prot: 10,
+      carbo: 30,
+      gord: 5,
+    };
+    const d = { ...initial, alimentosPersonalizados: [custom] };
+    const normalized = normalizeMealPreferences(
+      { cafeManha: ["custom_kept", "frango"] },
+      features.fullCatalog(d)
+    );
+    assert.deepEqual(normalized.cafeManha, ["custom_kept", "frango"]);
+  });
   console.log(`${passed} verificações passaram.`);
 } finally {
   await server.close();

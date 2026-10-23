@@ -1,9 +1,11 @@
+import type { Alimento } from "../data/alimentos";
 import { DICIONARIO_ALIMENTOS } from "../data/alimentos";
 
 // Older releases stored a meal as a single food, an array, or a selection map.
 // Normalize only the editable draft; the persisted history is left untouched.
 export function normalizeMealPreferences(
-  value: unknown
+  value: unknown,
+  extraFoods: Alimento[] = []
 ): Record<string, string[]> {
   const isRecord = (item: unknown): item is Record<string, unknown> =>
     typeof item === "object" && item !== null && !Array.isArray(item);
@@ -35,7 +37,9 @@ export function normalizeMealPreferences(
     const ids = selected
       .map(
         (entry) =>
-          foods.find((food) => food.id === entry || food.nome === entry)?.id
+          [...foods, ...extraFoods].find(
+            (food) => food.id === entry || food.nome === entry
+          )?.id
       )
       .filter((id): id is string => Boolean(id));
     if (source !== undefined) result[mealKey] = [...new Set(ids)];

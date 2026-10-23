@@ -1,3 +1,4 @@
+import { PlanTools } from "../components/PlanTools";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
@@ -94,6 +95,7 @@ export function Plano() {
           </div>
         </div>
       </section>
+      <PlanTools />
       <section>
         <SectionHeading
           title="Macronutrientes"

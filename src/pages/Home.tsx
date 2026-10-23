@@ -1,10 +1,12 @@
+import { mealCatalog } from "../utils/appFeatures";
+import { dailyGoals } from "../utils/dailyStreak";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
 import { WelcomeScreen } from "../components/WelcomeScreen";
 import { MealComposer } from "../components/MealComposer";
-import { calcularPorcoes, DICIONARIO_ALIMENTOS } from "../data/alimentos";
+import { calcularPorcoes } from "../data/alimentos";
 import {
   CONFIG_REFEICOES,
   getCronograma,
@@ -29,6 +31,8 @@ export function Home() {
   const [time, setTime] = useState(() => new Date());
   const [summary, setSummary] = useState(false);
   const [meal, setMeal] = useState<Meal | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [waterHistory, setWaterHistory] = useState(false);
   const [detail, setDetail] = useState<string | null>(null);
   const [reset, setReset] = useState<"water" | "food" | null>(null);
   useEffect(() => {
@@ -59,7 +63,7 @@ export function Home() {
     .replace(/\./g, "");
   const confirmMeal = (porcoes: Record<string, number>) => {
     if (!meal) return;
-    const foods = DICIONARIO_ALIMENTOS[meal.key] || [];
+    const foods = mealCatalog(dados, meal.key, Object.keys(porcoes));
     const total = calcularPorcoes(porcoes, foods);
     useUserStore.getState().registrarRefeicao(
       meal.key,
@@ -70,10 +74,14 @@ export function Home() {
         (id) => foods.find((food) => food.id === id)?.nome || id
       ),
       total.macros,
-      porcoes
+      porcoes,
+      editing
     );
+    setEditing(false);
     setMeal(null);
   };
+  const next = schedule.find((r) => !done.includes(r.key));
+  const goals = dailyGoals(dados);
   return (
     <div className="app-page custom-scrollbar">
       <PageHeader
@@ -119,6 +127,36 @@ export function Home() {
           </strong>
         </div>
       </button>
+      <button
+        className="app-card app-next-action"
+        onClick={() => {
+          if (next) {
+            setEditing(false);
+            setMeal(next);
+          } else navigate("/evolucao");
+        }}
+      >
+        <Icon name={goals.complete ? "check" : "clock"} size={20} />
+        <span>
+          <small>
+            {goals.complete
+              ? "Tudo certo por hoje"
+              : next
+              ? "Sua próxima refeição"
+              : !goals.waterDone
+              ? "Falta completar a água"
+              : "Seu acompanhamento"}
+          </small>
+          <strong>
+            {next
+              ? next.titulo + " · " + next.horario
+              : goals.complete
+              ? "Dia completo!"
+              : "Ver metas do dia"}
+          </strong>
+        </span>
+        <Icon name="chevron" size={16} />
+      </button>
       <section className="app-card app-water-card">
         <div className="app-water-heading">
           <span className="app-icon-tile app-tone-blue">
@@ -159,8 +197,8 @@ export function Home() {
           ))}
           <button
             className="app-water-reset"
-            aria-label="Zerar água de hoje"
-            onClick={() => setReset("water")}
+            aria-label="Histórico de água"
+            onClick={() => setWaterHistory(true)}
           >
             <Icon name="reset" size={17} />
           </button>
@@ -181,9 +219,13 @@ export function Home() {
             const future = routineClock < ref.minutos - 60 && !isDone;
             const current =
               !future && !isDone && routineClock <= ref.minutos + 120;
-            const foods = (preferences[ref.key] || [])
+            const foods = (
+              Array.isArray(dados.alimentos?.[ref.key])
+                ? dados.alimentos[ref.key]
+                : preferences[ref.key] || []
+            )
               .map((id) =>
-                DICIONARIO_ALIMENTOS[ref.key]?.find((food) => food.id === id)
+                mealCatalog(dados, ref.key).find((food) => food.id === id)
               )
               .filter((food) => Boolean(food));
             return (
@@ -201,7 +243,7 @@ export function Home() {
                 </div>
                 <button
                   className="app-meal-card"
-                  disabled={future}
+                  disabled={false}
                   onClick={() => (isDone ? setDetail(ref.key) : setMeal(ref))}
                   aria-label={
                     isDone
@@ -248,6 +290,49 @@ export function Home() {
           <Icon name="chevron" size={15} />
         </button>
       </section>
+      {waterHistory && (
+        <Sheet
+          title="Água de hoje"
+          description="Desfaça o último copo sem perder os demais registros."
+          onClose={() => setWaterHistory(false)}
+        >
+          <div className="app-sheet-total">
+            <strong>{litersText(water)}</strong>
+            <span>litros registrados</span>
+          </div>
+          {(dados.registrosAgua || [])
+            .slice()
+            .reverse()
+            .map((r, i) => (
+              <div className="app-daily-goal-row" key={i}>
+                <span>{r.hora}</span>
+                <strong>+{r.quantidade} ml</strong>
+              </div>
+            ))}
+          {!dados.registrosAgua?.length && (
+            <p className="app-empty">
+              Não há copos individuais para desfazer. Valores de versões
+              anteriores continuam no total.
+            </p>
+          )}
+          <button
+            className="app-button app-button--secondary app-wide-button"
+            disabled={!dados.registrosAgua?.length}
+            onClick={() => useUserStore.getState().desfazerUltimaAgua()}
+          >
+            Desfazer último copo
+          </button>
+          <button
+            className="app-button app-button--danger app-wide-button"
+            onClick={() => {
+              setWaterHistory(false);
+              setReset("water");
+            }}
+          >
+            Zerar água de hoje
+          </button>
+        </Sheet>
+      )}
       {summary && (
         <Sheet
           title="Alimentação de hoje"
@@ -340,9 +425,23 @@ export function Home() {
             ))}
           </div>
           <p className="app-helper">
-            Para corrigir esta refeição, remova o registro e adicione novamente
-            com as quantidades certas.
+            Edite os alimentos e as quantidades para corrigir este registro.
           </p>
+          <button
+            className="app-button app-button--primary app-wide-button"
+            onClick={() => {
+              const key = detail;
+              const info = CONFIG_REFEICOES[key] || {
+                titulo: selectedDetail?.titulo || "Refeição livre",
+                icone: selectedDetail?.icone || "🍔",
+              };
+              setEditing(true);
+              setMeal({ key, ...info, horario: "", minutos: 0 });
+              setDetail(null);
+            }}
+          >
+            Editar refeição
+          </button>
           <button
             className="app-button app-button--danger"
             onClick={() => {
@@ -406,10 +505,25 @@ export function Home() {
             />
             <div className="app-composer-sheet">
               <MealComposer
-                alimentos={DICIONARIO_ALIMENTOS[meal.key] || []}
+                alimentos={mealCatalog(
+                  dados,
+                  meal.key,
+                  editing ? Object.keys(today[meal.key]?.porcoes || {}) : []
+                )}
+                initialPorcoes={
+                  editing
+                    ? today[meal.key]?.porcoes || {}
+                    : dados.porcoesPlano?.[meal.key] || {}
+                }
+                confirmLabel={
+                  editing ? "Salvar alterações" : "Registrar refeição"
+                }
                 memoriaKey={meal.key}
                 titulo={meal.titulo}
-                onClose={() => setMeal(null)}
+                onClose={() => {
+                  setMeal(null);
+                  setEditing(false);
+                }}
                 onConfirm={confirmMeal}
               />
             </div>

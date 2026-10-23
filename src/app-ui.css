@@ -1990,3 +1990,183 @@
   font-size: 10px;
   white-space: nowrap;
 }
+.app-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.app-tools-grid .app-button {
+  font-size: 11px;
+  padding: 12px 9px;
+}
+.app-feature-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 19px;
+}
+.app-feature-form > label:not(.app-shopping-row) {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--app-muted);
+}
+.app-feature-form input:not([type="checkbox"]),
+.app-feature-form select {
+  width: 100%;
+  min-width: 0;
+  min-height: 45px;
+  background: var(--app-soft);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  padding: 11px 13px;
+  font-size: 16px;
+  outline-color: var(--app-green);
+}
+.app-shopping-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 51px;
+  border-bottom: 1px solid var(--app-line);
+  font-size: 12px;
+}
+.app-shopping-row span {
+  flex: 1;
+  min-width: 0;
+}
+.app-shopping-row small {
+  color: var(--app-muted);
+  font-size: 10px;
+}
+.app-shopping-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--app-green);
+  flex-shrink: 0;
+}
+.app-shopping-row:has(input:checked) span {
+  color: var(--app-muted);
+}
+.app-shopping-row:has(input:checked) span:not(:last-child) {
+  text-decoration: line-through;
+}
+.app-library-button {
+  margin: 0 0 14px;
+  font-size: 10px;
+  text-align: left;
+}
+.app-recipe-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--app-line);
+  padding: 17px 0;
+}
+.app-recipe-row > button:first-child {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+.app-recipe-row strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.app-recipe-row small {
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--app-muted);
+}
+.app-recipe-row > button:last-child {
+  width: 32px;
+  height: 36px;
+  color: var(--app-red);
+  font-size: 22px;
+}
+.app-next-action {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  margin-top: -10px;
+}
+.app-next-action > svg:first-child {
+  color: var(--app-green);
+  flex-shrink: 0;
+}
+.app-next-action > span {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+.app-next-action small {
+  font-size: 10px;
+  color: var(--app-muted);
+}
+.app-next-action strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.app-next-action > svg:last-child {
+  color: var(--app-muted);
+  flex-shrink: 0;
+}
+.app-weekly {
+  padding: 18px;
+}
+.app-week-bars {
+  height: 110px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 13px;
+  padding: 10px 7px 24px;
+  margin: 15px 0 25px;
+}
+.app-week-bars > div {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 0;
+}
+.app-week-bars span {
+  width: 14px;
+  min-height: 2px;
+  border-radius: 5px 5px 2px 2px;
+  background: var(--app-blue);
+}
+.app-week-bars small {
+  position: absolute;
+  bottom: -22px;
+  font-size: 9px;
+  color: var(--app-muted);
+}
+.app-week-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  border-top: 1px solid var(--app-line);
+  padding-top: 17px;
+}
+.app-week-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.app-week-stats strong {
+  font-size: 19px;
+  color: var(--app-green);
+  font-weight: 600;
+}
+.app-week-stats span {
+  font-size: 9px;
+  color: var(--app-muted);
+}

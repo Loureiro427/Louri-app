@@ -1,3 +1,4 @@
+import { configurarNotificacoesNativas } from "../services/notificationService";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
@@ -15,6 +16,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const dados = useUserStore((state) => state.dados);
   const weightOpen = useUserStore((state) => state.modalPesoAberto);
+  const reminderSignature = JSON.stringify([
+    dados.nome,
+    dados.notificacoes,
+    dados.lembretes,
+    dados.horariosRefeicoes,
+    dados.refeicoesAtivas,
+    dados.horaAcorda,
+    dados.horaDorme,
+  ]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void configurarNotificacoesNativas().catch(() => {});
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [reminderSignature]);
   const [fab, setFab] = useState(false);
   const [toast, setToast] = useState("");
   const [weight, setWeight] = useState("");

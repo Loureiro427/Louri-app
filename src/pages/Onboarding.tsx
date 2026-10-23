@@ -1,3 +1,4 @@
+import { fullCatalog } from "../utils/appFeatures";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
@@ -125,7 +126,7 @@ export function Onboarding() {
       ? [...dados.refeicoesAtivas]
       : ["cafeManha", "almoco", "lancheTarde", "janta"],
     horariosRefeicoes: { ...dados.horariosRefeicoes },
-    alimentos: normalizeMealPreferences(dados.alimentos),
+    alimentos: normalizeMealPreferences(dados.alimentos, fullCatalog(dados)),
   }));
   const [step, setStep] = useState(dados.nome ? 1 : 0);
   const [aceitouTermos, setAceitouTermos] = useState(false);
@@ -653,25 +654,37 @@ export function Onboarding() {
                       />
                     </div>
                     <div className="ob-food-grid">
-                      {(DICIONARIO_ALIMENTOS[mealKey] || []).map((food) => (
-                        <button
-                          type="button"
-                          key={food.id}
-                          className={`ob-food ${
-                            mealFoods.includes(food.id) ? "is-selected" : ""
-                          }`}
-                          aria-pressed={mealFoods.includes(food.id)}
-                          onClick={() => toggleFood(food.id)}
-                        >
-                          <span className="ob-food-check" aria-hidden="true">
-                            {mealFoods.includes(food.id) ? <CheckIcon /> : "+"}
-                          </span>
-                          <span className="ob-food-emoji" aria-hidden="true">
-                            {food.emoji}
-                          </span>
-                          <span className="ob-food-name">{food.nome}</span>
-                        </button>
-                      ))}
+                      {fullCatalog(dados)
+                        .filter(
+                          (food) =>
+                            (DICIONARIO_ALIMENTOS[mealKey] || []).some(
+                              (f) => f.id === food.id
+                            ) ||
+                            (draft.alimentos[mealKey] || []).includes(food.id)
+                        )
+                        .map((food) => (
+                          <button
+                            type="button"
+                            key={food.id}
+                            className={`ob-food ${
+                              mealFoods.includes(food.id) ? "is-selected" : ""
+                            }`}
+                            aria-pressed={mealFoods.includes(food.id)}
+                            onClick={() => toggleFood(food.id)}
+                          >
+                            <span className="ob-food-check" aria-hidden="true">
+                              {mealFoods.includes(food.id) ? (
+                                <CheckIcon />
+                              ) : (
+                                "+"
+                              )}
+                            </span>
+                            <span className="ob-food-emoji" aria-hidden="true">
+                              {food.emoji}
+                            </span>
+                            <span className="ob-food-name">{food.nome}</span>
+                          </button>
+                        ))}
                     </div>
                   </div>
                 )}
@@ -736,9 +749,8 @@ export function Onboarding() {
                               {(draft.alimentos[ref.key] || [])
                                 .map(
                                   (id) =>
-                                    DICIONARIO_ALIMENTOS[ref.key]?.find(
-                                      (a) => a.id === id
-                                    )?.nome
+                                    fullCatalog(dados).find((a) => a.id === id)
+                                      ?.nome
                                 )
                                 .filter(Boolean)
                                 .join(" · ")}

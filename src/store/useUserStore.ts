@@ -1,3 +1,4 @@
+import type { Alimento } from "../data/alimentos";
 import { reconcileDailyStreak } from "../utils/dailyStreak";
 import { refeicoesPadrao } from "../utils/nutritionMath";
 import { create } from "zustand";
@@ -19,6 +20,21 @@ interface DayRecord {
 }
 
 export interface UserData {
+  alimentosPersonalizados?: Alimento[];
+  refeicoesSalvas?: {
+    id: string;
+    nome: string;
+    porcoes: Record<string, number>;
+  }[];
+  comprasMarcadas?: string[];
+  porcoesPlano?: Record<string, Record<string, number>>;
+  lembretes?: {
+    refeicoes: string[];
+    aguaIntervalo: number;
+    silencioInicio: string;
+    silencioFim: string;
+  };
+  registrosAgua?: { quantidade: number; hora: string }[];
   favoritos: string[];
   ultimasPorcoes: Record<string, Record<string, number>>;
   nome: string;
@@ -61,6 +77,7 @@ interface UserStore {
   setDados: (novosDados: Partial<UserData>) => void;
   adicionarAgua: (quantidade: number, metaMax: number) => void;
   zerarAgua: () => void;
+  desfazerUltimaAgua: () => void;
   registrarRefeicao: (
     refeicaoKey: string,
     tituloRef: string,
@@ -68,7 +85,8 @@ interface UserStore {
     calorias: number,
     alimentosConsumidos: string[],
     macros: { proteina: number; carbo: number; gordura: number },
-    porcoes?: Record<string, number>
+    porcoes?: Record<string, number>,
+    editar?: boolean
   ) => void;
   desfazerRefeicao: (refeicaoKey: string) => void;
   zerarDieta: () => void;
@@ -176,6 +194,19 @@ export const useUserStore = create<UserStore>()(
             dados: {
               ...state.dados,
               aguaConsumida: novaAgua,
+              registrosAgua:
+                quantidade > 0 && novaAgua > atual
+                  ? [
+                      ...(state.dados.registrosAgua || []),
+                      {
+                        quantidade: novaAgua - atual,
+                        hora: new Date().toLocaleTimeString("pt-BR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }),
+                      },
+                    ]
+                  : state.dados.registrosAgua || [],
               historico: {
                 ...historicoAtual,
                 [hojeStr]: { ...diaAtualRegisto, aguaConsumida: novaAgua },
@@ -186,6 +217,16 @@ export const useUserStore = create<UserStore>()(
         get().verificarStreak();
       },
 
+      desfazerUltimaAgua: () => {
+        get().verificarViradaDeDia();
+        const entries = get().dados.registrosAgua || [];
+        const last = entries.at(-1);
+        if (!last) return;
+        get().adicionarAgua(-last.quantidade, 99999);
+        set((state) => ({
+          dados: { ...state.dados, registrosAgua: entries.slice(0, -1) },
+        }));
+      },
       zerarAgua: () => {
         get().verificarViradaDeDia();
         set((state) => {
@@ -201,6 +242,7 @@ export const useUserStore = create<UserStore>()(
             dados: {
               ...state.dados,
               aguaConsumida: 0,
+              registrosAgua: [],
               historico: {
                 ...historicoAtual,
                 [hojeStr]: { ...diaAtualRegisto, aguaConsumida: 0 },
@@ -218,7 +260,8 @@ export const useUserStore = create<UserStore>()(
         calorias,
         alimentosConsumidos,
         macros,
-        porcoes
+        porcoes,
+        editar = false
       ) => {
         get().verificarViradaDeDia();
         if (
@@ -227,7 +270,10 @@ export const useUserStore = create<UserStore>()(
           Object.values(macros).some((v) => !Number.isFinite(v) || v < 0)
         )
           return;
-        if (get().dados.refeicoesConcluidas.includes(refeicaoKey)) return;
+        if (get().dados.refeicoesConcluidas.includes(refeicaoKey) && !editar)
+          return;
+        if (editar && !get().dados.refeicoesConcluidas.includes(refeicaoKey))
+          return;
         set((state) => {
           const refeicoesAtuais = state.dados.refeicoesConcluidas || [];
           const caloriasAtuais = state.dados.caloriasConsumidas || 0;
@@ -236,8 +282,19 @@ export const useUserStore = create<UserStore>()(
           };
           const hojeStr = getHojeStr();
 
-          const novasCalorias = caloriasAtuais + calorias;
-          const novasRefeicoesConcluidas = [...refeicoesAtuais, refeicaoKey];
+          const previousCalories = editar
+            ? state.dados.caloriasPorRefeicao[refeicaoKey] || 0
+            : 0;
+          const previousMacros = editar
+            ? state.dados.macrosPorRefeicao[refeicaoKey] || macrosZerados
+            : macrosZerados;
+          const novasCalorias = Math.max(
+            0,
+            caloriasAtuais - previousCalories + calorias
+          );
+          const novasRefeicoesConcluidas = [
+            ...new Set([...refeicoesAtuais, refeicaoKey]),
+          ];
 
           const detalheRefeicao: RefeicaoDetalhe = {
             porcoes,
@@ -272,9 +329,20 @@ export const useUserStore = create<UserStore>()(
                 [refeicaoKey]: calorias,
               },
               macrosConsumidos: {
-                proteina: macrosAtuais.proteina + macros.proteina,
-                carbo: macrosAtuais.carbo + macros.carbo,
-                gordura: macrosAtuais.gordura + macros.gordura,
+                proteina: Math.max(
+                  0,
+                  macrosAtuais.proteina -
+                    previousMacros.proteina +
+                    macros.proteina
+                ),
+                carbo: Math.max(
+                  0,
+                  macrosAtuais.carbo - previousMacros.carbo + macros.carbo
+                ),
+                gordura: Math.max(
+                  0,
+                  macrosAtuais.gordura - previousMacros.gordura + macros.gordura
+                ),
               },
               macrosPorRefeicao: {
                 ...state.dados.macrosPorRefeicao,
@@ -427,6 +495,7 @@ export const useUserStore = create<UserStore>()(
                 ...reconciled,
                 ultimaData: hoje,
                 aguaConsumida: 0,
+                registrosAgua: [],
                 caloriasConsumidas: 0,
                 refeicoesConcluidas: [],
                 caloriasPorRefeicao: {},

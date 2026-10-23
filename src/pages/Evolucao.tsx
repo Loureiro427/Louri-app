@@ -1,3 +1,4 @@
+import { WeeklySummary } from "../components/WeeklySummary";
 import { useState } from "react";
 import { useUserStore } from "../store/useUserStore";
 import CalendarHistory from "../components/CalendarHistory";
@@ -163,6 +164,7 @@ export function Evolucao() {
           </strong>
         </div>
       </section>
+      <WeeklySummary />
       <section>
         <SectionHeading title="Histórico de peso" />
         {weights.length > 1 ? (

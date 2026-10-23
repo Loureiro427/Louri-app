@@ -1,51 +1,40 @@
-import { LocalNotifications } from '@capacitor/local-notifications';
-import { useUserStore } from '../store/useUserStore';
-
-export async function configurarNotificacoesNativas() {
-  try {
-    // 1. Pede a permissão nativa do Android logo ao iniciar o app
-    const permStatus = await LocalNotifications.checkPermissions();
-    if (permStatus.display !== 'granted') {
-      await LocalNotifications.requestPermissions();
-    }
-
-    // 2. Verifica se o utilizador ativou as notificações nas definições do app (Perfil)
-    const state = useUserStore.getState();
-    const notificacoesAtivas = state.dados?.notificacoes ?? true;
-
-    // Limpa sempre os agendamentos anteriores para evitar duplicados
-    await LocalNotifications.cancelAll();
-
-    if (!notificacoesAtivas) {
-      return; // Se o utilizador desativou, não agenda nada
-    }
-
-    // 3. Agenda os lembretes nativos a cada 1 hora em segundo plano
-    await LocalNotifications.schedule({
-      notifications: [
-        {
-          title: "💧 Já bebeu água hoje?",
-          body: "Mantenha-se hidratado e atinja a sua meta diária no Louri Fit!",
-          id: 1001,
-          schedule: { 
-            every: 'hour',          // Repete nativamente a cada 1 hora
-            allowWhileIdle: true     // Dispara mesmo com o telemóvel em modo de poupança de bateria
-          },
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
+import { useUserStore } from "../store/useUserStore";
+import { reminderSlots } from "../utils/reminders";
+let queue = Promise.resolve("idle");
+export function configurarNotificacoesNativas(
+  requestPermission = false
+): Promise<string> {
+  queue = queue
+    .catch(() => "error")
+    .then(async () => {
+      if (!Capacitor.isNativePlatform()) return "web";
+      const dados = useUserStore.getState().dados;
+      const pending = await LocalNotifications.getPending();
+      const owned = pending.notifications
+        .filter((n) => n.id >= 1000 && n.id < 2000)
+        .map((n) => ({ id: n.id }));
+      if (owned.length)
+        await LocalNotifications.cancel({ notifications: owned });
+      if (!dados.notificacoes) return "disabled";
+      let permission = await LocalNotifications.checkPermissions();
+      if (permission.display !== "granted" && requestPermission)
+        permission = await LocalNotifications.requestPermissions();
+      if (permission.display !== "granted") return "denied";
+      const notifications = reminderSlots(dados).map((slot, i) => ({
+        id: 1100 + i,
+        title: slot.title,
+        body: slot.body,
+        schedule: {
+          on: { hour: Math.floor(slot.minute / 60), minute: slot.minute % 60 },
+          repeats: true,
+          allowWhileIdle: true,
         },
-        {
-          title: "🔥 Mantenha o seu Streak ativo!",
-          body: "Entre no app, registre suas refeições e não perca a sequência.",
-          id: 1002,
-          schedule: { 
-            every: 'hour',
-            allowWhileIdle: true 
-          },
-        }
-      ]
+      }));
+      if (notifications.length)
+        await LocalNotifications.schedule({ notifications });
+      return "scheduled";
     });
-
-    console.log('Notificações nativas agendadas com sucesso para rodar em segundo plano!');
-  } catch (e) {
-    console.error('Erro ao configurar notificações nativas:', e);
-  }
+  return queue;
 }

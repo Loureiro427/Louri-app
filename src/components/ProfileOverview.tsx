@@ -1,3 +1,4 @@
+import { ReminderSettings } from "./ReminderSettings";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
 import { calculateIMC } from "../utils/nutritionMath";
@@ -111,7 +112,7 @@ export function ProfileOverview({
               useUserStore
                 .getState()
                 .setDados({ notificacoes: !notifications });
-              configurarNotificacoesNativas();
+              void configurarNotificacoesNativas(true).catch(() => {});
             }}
           >
             <span className="app-row-icon">
@@ -128,6 +129,7 @@ export function ProfileOverview({
               <i />
             </span>
           </button>
+          <ReminderSettings />
           <button
             className="app-action-row"
             role="switch"
