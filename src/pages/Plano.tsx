@@ -1,282 +1,197 @@
-import { calculateWaterGoal, calculateCaloricGoal, getCronograma, getRotina } from '../utils/nutritionMath';
-import { useState } from 'react';
-import { createPortal } from 'react-dom'; // <-- IMPORTAÇÃO ADICIONADA
-import { useNavigate } from 'react-router-dom';
-import { useUserStore } from '../store/useUserStore';
-
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useUserStore } from "../store/useUserStore";
+import { getCronograma, getRotina } from "../utils/nutritionMath";
+import { getPlanTargets } from "../utils/planTargets";
+import {
+  Icon,
+  PageHeader,
+  SectionHeading,
+  Sheet,
+  litersText,
+  numberText,
+  toneStyle,
+} from "../components/ui/AppUI";
+const sources = {
+  proteina: [
+    ["🍗", "Frango"],
+    ["🥚", "Ovos"],
+    ["🐟", "Peixe"],
+    ["🥛", "Iogurte"],
+    ["🥩", "Carne"],
+    ["🧀", "Queijo"],
+  ],
+  carbo: [
+    ["🍚", "Arroz"],
+    ["🥣", "Aveia"],
+    ["🍠", "Batata"],
+    ["🍝", "Macarrão"],
+    ["🍌", "Frutas"],
+    ["🌮", "Tapioca"],
+  ],
+  gordura: [
+    ["🥜", "Castanhas"],
+    ["🥑", "Abacate"],
+    ["🫒", "Azeite"],
+    ["🥚", "Gema de ovo"],
+  ],
+};
 export function Plano() {
   const navigate = useNavigate();
   const dados = useUserStore((state) => state.dados);
-
-  const temaEscuro = dados.temaEscuro ?? true;
-
-  // Estado para controlar qual modal de dica de macro está aberto
-  const [macroModal, setMacroModal] = useState<'proteina' | 'carbo' | 'gordura' | null>(null);
-
-  // --- LÓGICA DE CÁLCULO DE METAS ---
-  const pesoNum = Number(dados.peso) || 70;
-  const alturaNum = Number(dados.altura) || 170;
-  const idadeNum = Number(dados.idade) || 25;
-  const sexo = dados.sexo || 'M';
-  const objetivo = dados.objetivo || 'manter';
-
-  const metaAguaMl = calculateWaterGoal(pesoNum);
-  const metaAguaL = (metaAguaMl / 1000).toFixed(2);
-
-  const metaCalorias = calculateCaloricGoal(pesoNum, alturaNum, idadeNum, sexo, objetivo);
-
-  // Macros (Distribuição baseada no objetivo)
-  let pProt = 0.30, pCarbo = 0.45, pGordura = 0.25;
-  if (objetivo === 'perder') { pProt = 0.35; pCarbo = 0.40; pGordura = 0.25; }
-  else if (objetivo === 'ganhar') { pProt = 0.30; pCarbo = 0.50; pGordura = 0.20; }
-
-  const gProtMeta = Math.round((metaCalorias * pProt) / 4);
-  const gCarboMeta = Math.round((metaCalorias * pCarbo) / 4);
-  const gGordMeta = Math.round((metaCalorias * pGordura) / 9);
-
-  // --- LÓGICA DE CONSUMO ---
-  const consumidoProt = dados.macrosConsumidos?.proteina || 0;
-  const consumidoCarbo = dados.macrosConsumidos?.carbo || 0;
-  const consumidoGord = dados.macrosConsumidos?.gordura || 0;
-
-  const progressoProt = Math.min(100, (consumidoProt / gProtMeta) * 100);
-  const progressoCarbo = Math.min(100, (consumidoCarbo / gCarboMeta) * 100);
-  const progressoGord = Math.min(100, (consumidoGord / gGordMeta) * 100);
-
-  const cronograma = getCronograma(dados);
-  const horasJejum = getRotina(dados).horasDescanso.toFixed(1);
-
-  // --- CONTEÚDO DOS MODAIS DE DICAS ---
-  const dicasMacros = {
-    proteina: {
-      titulo: 'Fontes de Proteína', cor: 'text-blue-500', borda: 'border-blue-500',
-      desc: 'Essencial para a recuperação e construção muscular. Mantém a saciedade por mais tempo.',
-      alimentos: [
-        { nome: 'Frango / Peru', emoji: '🍗' }, { nome: 'Ovos', emoji: '🍳' },
-        { nome: 'Peixe / Atum', emoji: '🐟' }, { nome: 'Carne Magra', emoji: '🥩' },
-        { nome: 'Iogurte / Leite', emoji: '🥛' }, { nome: 'Queijo', emoji: '🧀' },
-      ]
-    },
-    carbo: {
-      titulo: 'Fontes de Carboidrato', cor: 'text-green-500', borda: 'border-green-500',
-      desc: 'A tua principal fonte de energia. Prefere carboidratos complexos que dão energia duradoura.',
-      alimentos: [
-        { nome: 'Arroz', emoji: '🍚' }, { nome: 'Aveia', emoji: '🥣' },
-        { nome: 'Batata / Mandioca', emoji: '🍠' }, { nome: 'Macarrão', emoji: '🍝' },
-        { nome: 'Frutas', emoji: '🍌' }, { nome: 'Tapioca', emoji: '🌮' },
-      ]
-    },
-    gordura: {
-      titulo: 'Fontes de Gordura', cor: 'text-orange-500', borda: 'border-orange-500',
-      desc: 'Importante para a produção hormonal e absorção de vitaminas. Consome com moderação.',
-      alimentos: [
-        { nome: 'Castanhas / Nozes', emoji: '🥜' }, { nome: 'Abacate', emoji: '🥑' },
-        { nome: 'Azeite / Óleo', emoji: '🫒' }, { nome: 'Gema de Ovo', emoji: '🍳' },
-        { nome: 'Chocolate Amargo', emoji: '🍫' }, { nome: 'Manteiga', emoji: '🧈' },
-      ]
-    }
-  };
-
+  const targets = getPlanTargets(dados);
+  const schedule = getCronograma(dados);
+  const [macro, setMacro] = useState<"proteina" | "carbo" | "gordura" | null>(
+    null
+  );
   return (
-    <div className={`flex flex-col px-6 py-8 gap-6 pb-28 max-w-md mx-auto w-full overflow-y-auto overscroll-none custom-scrollbar h-[100dvh] transition-colors duration-300 ${
-      temaEscuro ? 'text-white' : 'text-zinc-900'
-    }`}>
-      
-      <header className="shrink-0">
-        <p className={`text-xs uppercase tracking-wider ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Organização</p>
-        <h1 className={`text-2xl font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>O Teu Plano Nutricional</h1>
-      </header>
-
-      {/* --- FOCO ATUAL E METAS DIÁRIAS --- */}
-      <div className={`border rounded-3xl p-5 shadow-lg flex flex-col gap-4 shrink-0 transition-colors ${
-        temaEscuro ? 'bg-zinc-900/60 border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
-      }`}>
-        <div className="flex justify-between items-center">
-          <h2 className="text-sm font-semibold text-green-500 uppercase tracking-wide">Metas Diárias</h2>
-          <span className={`text-xs px-2 py-1 rounded-lg uppercase font-bold tracking-wider ${
-            temaEscuro ? 'bg-zinc-800 text-zinc-300' : 'bg-zinc-100 text-zinc-800'
-          }`}>
-            {objetivo === 'perder' ? 'Emagrecer' : objetivo === 'ganhar' ? 'Massa' : 'Manutenção'}
+    <div className="app-page custom-scrollbar">
+      <PageHeader
+        eyebrow="Feito para a sua rotina"
+        title="Seu plano"
+        action={
+          <button
+            className="app-icon-button"
+            aria-label="Editar plano"
+            onClick={() => navigate("/onboarding")}
+          >
+            <Icon name="edit" size={19} />
+          </button>
+        }
+      />
+      <section className="app-card app-plan-overview">
+        <div className="app-card-topline">
+          <span>
+            <Icon name="target" size={18} /> Seu objetivo
           </span>
+          <span className="app-small-label">Metas diárias</span>
         </div>
-        
-        <div className="grid grid-cols-3 gap-3">
-          <div className={`p-3 rounded-2xl border flex flex-col items-center text-center justify-center gap-1 transition-colors ${
-            temaEscuro ? 'bg-zinc-950/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
-          }`}>
-            <span className="text-xl">🔥</span>
-            <span className={`text-[10px] uppercase font-bold ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>Calorias</span>
-            <span className={`text-sm font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{metaCalorias}</span>
+        <h2>{targets.objective}</h2>
+        <div className="app-target-grid">
+          <div>
+            <Icon name="flame" size={20} />
+            <strong>
+              {numberText(targets.calories)}
+              <small>kcal</small>
+            </strong>
+            <span>Alimentação</span>
           </div>
-          <div className={`p-3 rounded-2xl border flex flex-col items-center text-center justify-center gap-1 transition-colors ${
-            temaEscuro ? 'bg-zinc-950/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
-          }`}>
-            <span className="text-xl">💧</span>
-            <span className={`text-[10px] uppercase font-bold ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>Água</span>
-            <span className={`text-sm font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{metaAguaL}L</span>
+          <div>
+            <Icon name="water" size={20} />
+            <strong>
+              {litersText(targets.water)}
+              <small>L</small>
+            </strong>
+            <span>Hidratação</span>
           </div>
-          <div className={`p-3 rounded-2xl border flex flex-col items-center text-center justify-center gap-1 transition-colors ${
-            temaEscuro ? 'bg-zinc-950/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
-          }`}>
-            <span className="text-xl">🌙</span>
-            <span className={`text-[10px] uppercase font-bold ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>Descanso</span>
-            <span className={`text-sm font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{horasJejum}h</span>
+          <div>
+            <Icon name="moon" size={20} />
+            <strong>
+              {numberText(getRotina(dados).horasDescanso, 1)}
+              <small>h</small>
+            </strong>
+            <span>Descanso</span>
           </div>
         </div>
-      </div>
-
-      {/* --- MACRONUTRIENTES INTERATIVOS --- */}
-      <div className="shrink-0 flex flex-col gap-3">
-        <div className="flex justify-between items-end">
-          <h3 className={`text-lg font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>Macronutrientes</h3>
-          <span className={`text-[10px] ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>Toque para ver dicas</span>
-        </div>
-        
-        <div className={`p-5 rounded-3xl border flex flex-col gap-2 transition-colors ${
-          temaEscuro ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
-        }`}>
-          
-          {/* Proteína */}
-          <div 
-            onClick={() => setMacroModal('proteina')}
-            className={`cursor-pointer p-2 -mx-2 rounded-xl transition-colors ${
-              temaEscuro ? 'hover:bg-zinc-950/80 active:bg-zinc-950/80' : 'hover:bg-zinc-50 active:bg-zinc-50'
-            }`}
-          >
-            <div className="flex justify-between text-xs mb-1">
-              <span className={`font-medium ${temaEscuro ? 'text-blue-400' : 'text-blue-600'}`}>
-                Proteína <span className={temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}>({Math.round(pProt * 100)}%)</span>
-              </span>
-              <span className="font-bold text-blue-500">{consumidoProt}g <span className={`font-normal ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>/ {gProtMeta}g</span></span>
-            </div>
-            <div className={`w-full h-2 rounded-full overflow-hidden border transition-colors ${
-              temaEscuro ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-100 border-zinc-200'
-            }`}>
-              <div className="bg-blue-500 h-full rounded-full transition-all duration-1000" style={{ width: `${progressoProt}%` }}></div>
-            </div>
-          </div>
-
-          {/* Carboidratos */}
-          <div 
-            onClick={() => setMacroModal('carbo')}
-            className={`cursor-pointer p-2 -mx-2 rounded-xl transition-colors ${
-              temaEscuro ? 'hover:bg-zinc-950/80 active:bg-zinc-950/80' : 'hover:bg-zinc-50 active:bg-zinc-50'
-            }`}
-          >
-            <div className="flex justify-between text-xs mb-1">
-              <span className={`font-medium ${temaEscuro ? 'text-green-400' : 'text-green-600'}`}>
-                Carboidratos <span className={temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}>({Math.round(pCarbo * 100)}%)</span>
-              </span>
-              <span className="font-bold text-green-500">{consumidoCarbo}g <span className={`font-normal ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>/ {gCarboMeta}g</span></span>
-            </div>
-            <div className={`w-full h-2 rounded-full overflow-hidden border transition-colors ${
-              temaEscuro ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-100 border-zinc-200'
-            }`}>
-              <div className="bg-green-500 h-full rounded-full transition-all duration-1000" style={{ width: `${progressoCarbo}%` }}></div>
-            </div>
-          </div>
-
-          {/* Gorduras */}
-          <div 
-            onClick={() => setMacroModal('gordura')}
-            className={`cursor-pointer p-2 -mx-2 rounded-xl transition-colors ${
-              temaEscuro ? 'hover:bg-zinc-950/80 active:bg-zinc-950/80' : 'hover:bg-zinc-50 active:bg-zinc-50'
-            }`}
-          >
-            <div className="flex justify-between text-xs mb-1">
-              <span className={`font-medium ${temaEscuro ? 'text-orange-400' : 'text-orange-600'}`}>
-                Gorduras <span className={temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}>({Math.round(pGordura * 100)}%)</span>
-              </span>
-              <span className="font-bold text-orange-500">{consumidoGord}g <span className={`font-normal ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>/ {gGordMeta}g</span></span>
-            </div>
-            <div className={`w-full h-2 rounded-full overflow-hidden border transition-colors ${
-              temaEscuro ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-100 border-zinc-200'
-            }`}>
-              <div className="bg-orange-500 h-full rounded-full transition-all duration-1000" style={{ width: `${progressoGord}%` }}></div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* --- CRONOGRAMA DINÂMICO --- */}
-      <div className="shrink-0 flex flex-col gap-3">
-        <h3 className={`text-lg font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>O Teu Dia Ideal</h3>
-        <div className={`border rounded-3xl p-2 transition-colors ${
-          temaEscuro ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
-        }`}>
-          {cronograma.map((item, index) => (
-            <div key={index} className={`flex items-center justify-between p-3 border-b last:border-0 transition-colors ${
-              temaEscuro ? 'border-zinc-800/50' : 'border-zinc-100'
-            }`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-lg transition-colors ${
-                  temaEscuro ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
-                }`}>
-                  {item.icone}
+      </section>
+      <section>
+        <SectionHeading
+          title="Macronutrientes"
+          action={<span className="app-small-label">Consumo de hoje</span>}
+        />
+        <div className="app-card app-macro-list">
+          {targets.macros.map((item) => {
+            const value = dados.macrosConsumidos?.[item.key] || 0;
+            return (
+              <button
+                key={item.key}
+                className="app-macro-row"
+                style={toneStyle(item.color)}
+                onClick={() => setMacro(item.key)}
+                aria-label={`Ver fontes de ${item.label.toLowerCase()}`}
+              >
+                <div className="app-macro-row-top">
+                  <span>
+                    <i />
+                    {item.label}
+                  </span>
+                  <strong>
+                    {value}
+                    <small> / {item.grams} g</small>
+                    <Icon name="chevron" size={14} />
+                  </strong>
                 </div>
-                <span className={`text-sm font-medium ${temaEscuro ? 'text-zinc-200' : 'text-zinc-800'}`}>{item.titulo}</span>
-              </div>
-              <span className="text-sm font-bold text-green-500">{item.horario}</span>
+                <div className="app-macro-progress">
+                  <span
+                    style={{
+                      width: `${Math.min(100, (value / item.grams) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <span className="app-macro-share">
+                  {item.percentage}% da distribuição diária
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="app-helper">
+          Toque em um nutriente para ver exemplos de alimentos.
+        </p>
+      </section>
+      <section>
+        <SectionHeading
+          title="Seus horários"
+          action={
+            <span className="app-small-label">{schedule.length} refeições</span>
+          }
+        />
+        <div className="app-card app-schedule-list">
+          {schedule.map((ref) => (
+            <div key={ref.key} className="app-schedule-row">
+              <span className="app-schedule-emoji" aria-hidden="true">
+                {ref.icone}
+              </span>
+              <span>{ref.titulo}</span>
+              <time>{ref.horario}</time>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* --- AÇÕES --- */}
-      <div className="flex flex-col gap-4 shrink-0">
-        <button 
-          onClick={() => navigate('/onboarding')}
-          className={`w-full font-bold py-4 rounded-2xl text-sm transition-colors flex justify-center items-center gap-2 border ${
-            temaEscuro ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-white' : 'bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-800 shadow-sm'
-          }`}
+      </section>
+      <button
+        className="app-button app-button--secondary app-wide-button"
+        onClick={() => navigate("/onboarding")}
+      >
+        <Icon name="settings" size={18} /> Ajustar meu plano
+        <Icon name="chevron" size={16} />
+      </button>
+      <p className="app-helper app-centered">
+        Metas estimadas com base no seu perfil.
+      </p>
+      {macro && (
+        <Sheet
+          title={`Fontes de ${targets.macros
+            .find((item) => item.key === macro)
+            ?.label.toLowerCase()}`}
+          description="Alguns exemplos presentes no catálogo do app."
+          onClose={() => setMacro(null)}
         >
-          <span>⚙️</span> Recalcular Plano e Metas
-        </button>
-      </div>
-
-      {/* MODAL INTERATIVO DE DICAS DE MACROS (AGORA COM CREATEPORTAL) */}
-      {macroModal && createPortal(
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end justify-center z-50 animate-in slide-in-from-bottom-4 overscroll-none">
-          <div className={`border-t rounded-t-3xl p-6 w-full max-w-md flex flex-col gap-4 pb-10 shadow-2xl transition-colors ${
-            temaEscuro ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'
-          }`}>
-            
-            <div className="flex justify-between items-center mb-2">
-              <h3 className={`text-xl font-bold flex items-center gap-2 ${dicasMacros[macroModal].cor}`}>
-                {dicasMacros[macroModal].titulo}
-              </h3>
-              <button onClick={() => setMacroModal(null)} className={`text-2xl font-bold ${temaEscuro ? 'text-zinc-400 hover:text-white' : 'text-zinc-500 hover:text-zinc-900'}`}>×</button>
-            </div>
-            
-            <p className={`text-xs leading-relaxed mb-2 ${temaEscuro ? 'text-zinc-400' : 'text-zinc-600'}`}>
-              {dicasMacros[macroModal].desc}
-            </p>
-
-            <div className="grid grid-cols-3 gap-2">
-              {dicasMacros[macroModal].alimentos.map((alimento, i) => (
-                <div key={i} className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-1 ${
-                  temaEscuro ? 'bg-zinc-950/50 border-zinc-800 text-zinc-300' : 'bg-zinc-50 border-zinc-200 text-zinc-700'
-                }`}>
-                  <span className="text-2xl">{alimento.emoji}</span>
-                  <span className="text-[10px] font-bold text-center leading-tight truncate w-full">{alimento.nome}</span>
-                </div>
-              ))}
-            </div>
-
-            <button 
-              onClick={() => setMacroModal(null)}
-              className={`w-full font-bold py-4 rounded-xl text-sm mt-4 transition-colors ${
-                temaEscuro ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800'
-              }`}
-            >
-              Entendido
-            </button>
+          <div className="app-source-grid">
+            {sources[macro].map(([emoji, name]) => (
+              <div key={name}>
+                <span aria-hidden="true">{emoji}</span>
+                <strong>{name}</strong>
+              </div>
+            ))}
           </div>
-        </div>,
-        document.body
+          <button
+            className="app-button app-button--secondary app-wide-button"
+            onClick={() => setMacro(null)}
+          >
+            Entendi
+          </button>
+        </Sheet>
       )}
-
     </div>
   );
 }

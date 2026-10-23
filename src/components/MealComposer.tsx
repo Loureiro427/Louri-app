@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { Alimento } from "../data/alimentos";
 import { calcularPorcoes, todosAlimentos } from "../data/alimentos";
+import { normalizeMealPreferences } from "../utils/mealPreferences";
 import { useUserStore } from "../store/useUserStore";
-
+import { Icon, numberText } from "./ui/AppUI";
 type Props = {
   alimentos: Alimento[];
   memoriaKey: string;
@@ -10,12 +11,11 @@ type Props = {
   onClose: () => void;
   onConfirm: (porcoes: Record<string, number>) => void;
 };
-const normalizar = (valor: string) =>
-  valor
+const normalizar = (value: string) =>
+  value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
-// Atalhos aproximados; a quantidade em gramas permanece visível e editável.
 function medida(item: Alimento): { nome: string; gramas: number } | undefined {
   if (item.id === "pao") return { nome: "1 pão", gramas: 50 };
   if (item.nome.includes("Ovo")) return { nome: "1 unidade", gramas: 50 };
@@ -23,7 +23,6 @@ function medida(item: Alimento): { nome: string; gramas: number } | undefined {
   if (item.nome === "Maçã") return { nome: "1 unidade", gramas: 130 };
   if (item.nome === "Arroz") return { nome: "1 colher de sopa", gramas: 25 };
   if (item.nome === "Aveia") return { nome: "1 colher de sopa", gramas: 15 };
-  return undefined;
 }
 export function MealComposer({
   alimentos,
@@ -32,294 +31,316 @@ export function MealComposer({
   onClose,
   onConfirm,
 }: Props) {
-  const sectionRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const anterior = document.activeElement as HTMLElement | null;
-    sectionRef.current?.focus({ preventScroll: true });
-    return () => {
-      anterior?.focus({ preventScroll: true });
-    };
-  }, []);
+  const section = useRef<HTMLElement>(null);
   const dados = useUserStore((state) => state.dados);
-  const toggleFavorito = useUserStore((state) => state.toggleFavorito);
-  const escuro = dados.temaEscuro ?? true;
   const [busca, setBusca] = useState("");
-  const [soFavoritos, setSoFavoritos] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [porcoes, setPorcoes] = useState<Record<string, number>>({});
-  const [enviando, setEnviando] = useState(false);
-  const enviado = useRef(false);
-  const favoritos = dados.favoritos || [];
-  const anteriores = dados.ultimasPorcoes?.[memoriaKey];
-  const repetiveis = Object.fromEntries(
-    Object.entries(anteriores || {}).filter(
-      ([id, g]) => alimentos.some((a) => a.id === id) && g > 0
+  const [saving, setSaving] = useState(false);
+  const submitted = useRef(false);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    section.current?.focus({ preventScroll: true });
+    return () => previous?.focus({ preventScroll: true });
+  }, []);
+  const favorites = dados.favoritos || [];
+  const preferences =
+    normalizeMealPreferences(dados.alimentos)[memoriaKey] || [];
+  const favoriteId = (item: Alimento) =>
+    todosAlimentos.find((a) => a.nome === item.nome)?.id || item.id;
+  const isFavorite = (item: Alimento) =>
+    favorites.includes(favoriteId(item)) || favorites.includes(item.id);
+  const repeat = Object.fromEntries(
+    Object.entries(dados.ultimasPorcoes?.[memoriaKey] || {}).filter(
+      ([id, g]) =>
+        alimentos.some((a) => a.id === id) && Number.isFinite(g) && g > 0
     )
   );
-  const preferencias = dados.alimentos[memoriaKey] || [];
-  const favoritoId = (item: Alimento) =>
-    todosAlimentos.find((a) => a.nome === item.nome)?.id || item.id;
-  const ehFavorito = (item: Alimento) =>
-    favoritos.includes(favoritoId(item)) || favoritos.includes(item.id);
-  const filtrados = alimentos
+  const filtered = alimentos
     .filter(
-      (a) =>
-        normalizar(a.nome).includes(normalizar(busca)) &&
-        (!soFavoritos || ehFavorito(a))
+      (item) =>
+        normalizar(item.nome).includes(normalizar(busca)) &&
+        (!favoritesOnly || isFavorite(item))
     )
     .sort(
       (a, b) =>
-        Number(ehFavorito(b)) - Number(ehFavorito(a)) ||
-        Number(preferencias.includes(b.id) || preferencias.includes(b.nome)) -
-          Number(preferencias.includes(a.id) || preferencias.includes(a.nome))
+        Number(isFavorite(b)) - Number(isFavorite(a)) ||
+        Number(preferences.includes(b.id)) - Number(preferences.includes(a.id))
     );
   const total = calcularPorcoes(porcoes, alimentos);
-  const surface = escuro
-    ? "bg-zinc-900 border-zinc-800 text-white"
-    : "bg-white border-zinc-200 text-zinc-900";
-  const muted = escuro ? "text-zinc-400" : "text-zinc-600";
-  const confirmar = () => {
-    if (enviado.current || total.calorias <= 0) return;
-    enviado.current = true;
-    setEnviando(true);
-    onConfirm(
-      Object.fromEntries(Object.entries(porcoes).filter(([, g]) => g > 0))
-    );
-  };
+  const count = Object.values(porcoes).filter((g) => g > 0).length;
+  const toggle = (item: Alimento) =>
+    setPorcoes((previous) => {
+      const next = { ...previous };
+      if (next[item.id] !== undefined) delete next[item.id];
+      else next[item.id] = medida(item)?.gramas || 100;
+      return next;
+    });
+  const quantity = (id: string, value: number) =>
+    setPorcoes((previous) => ({
+      ...previous,
+      [id]: Math.min(9999, Math.max(0, Number.isFinite(value) ? value : 0)),
+    }));
   return (
     <section
-      ref={sectionRef}
+      ref={section}
       tabIndex={-1}
+      className={`app-themed app-composer ${
+        dados.temaEscuro ?? true ? "" : "app-light"
+      }`}
+      aria-label={titulo}
       onKeyDown={(e) => {
         if (e.key === "Escape") {
           e.preventDefault();
           onClose();
         }
         if (e.key !== "Tab") return;
-        const controles = Array.from(
-          sectionRef.current?.querySelectorAll<HTMLElement>(
-            "button:not(:disabled), input:not(:disabled)"
+        const items = Array.from(
+          section.current?.querySelectorAll<HTMLElement>(
+            "button:not(:disabled),input:not(:disabled)"
           ) || []
         );
-        const primeiro = controles[0];
-        const ultimo = controles.at(-1);
+        const first = items[0],
+          last = items.at(-1);
         if (
           e.shiftKey &&
-          (document.activeElement === primeiro ||
-            document.activeElement === sectionRef.current)
+          (document.activeElement === first ||
+            document.activeElement === section.current)
         ) {
           e.preventDefault();
-          ultimo?.focus();
-        } else if (!e.shiftKey && document.activeElement === ultimo) {
+          last?.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
           e.preventDefault();
-          primeiro?.focus();
+          first?.focus();
         }
       }}
-      className={`flex flex-col h-full min-h-0 ${surface}`}
-      aria-label={titulo}
     >
-      <header className="px-6 pt-6 pb-3 shrink-0">
-        <div className="flex items-center justify-between gap-3 mb-4">
+      <header className="app-composer-header">
+        <div className="app-composer-title">
           <div>
-            <p className={`text-[10px] uppercase tracking-widest ${muted}`}>
-              Registro de refeição
-            </p>
-            <h2 className="text-xl font-bold">{titulo}</h2>
+            <p className="app-eyebrow">Registro de refeição</p>
+            <h2>{titulo}</h2>
           </div>
           <button
-            onClick={onClose}
+            className="app-icon-button"
             aria-label="Fechar refeição"
-            className={`w-10 h-10 rounded-full border text-2xl ${
-              escuro
-                ? "bg-zinc-800 border-zinc-700"
-                : "bg-zinc-100 border-zinc-200"
-            }`}
+            onClick={onClose}
           >
-            ×
+            <Icon name="close" size={20} />
           </button>
         </div>
-        <label
-          className={`flex items-center gap-2 px-4 py-3 rounded-2xl border ${
-            escuro
-              ? "bg-zinc-950/60 border-zinc-800"
-              : "bg-zinc-50 border-zinc-200"
-          }`}
-        >
-          <span aria-hidden="true">🔍</span>
+        <label className="app-search">
+          <Icon name="search" size={19} />
           <input
             aria-label="Buscar alimento"
+            placeholder="Buscar alimento"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar alimento..."
-            className="bg-transparent outline-none w-full text-sm"
           />
-        </label>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <button
-            aria-pressed={soFavoritos}
-            onClick={() => setSoFavoritos(!soFavoritos)}
-            className={`text-xs font-semibold rounded-full px-3 py-2 border ${
-              soFavoritos
-                ? "bg-green-500/10 border-green-500 text-green-500"
-                : escuro
-                ? "border-zinc-700 text-zinc-300"
-                : "border-zinc-200 text-zinc-600"
-            }`}
-          >
-            ★ Favoritos
-          </button>
-          {Object.keys(repetiveis).length > 0 && (
+          {busca && (
             <button
-              onClick={() => setPorcoes(repetiveis)}
-              className="text-xs font-semibold rounded-full px-3 py-2 border border-green-500/30 text-green-500"
+              type="button"
+              aria-label="Limpar busca"
+              onClick={() => setBusca("")}
             >
-              ↻ Repetir última refeição
+              <Icon name="close" size={16} />
+            </button>
+          )}
+        </label>
+        <div className="app-composer-toolbar">
+          <div className="app-segmented">
+            <button
+              aria-pressed={!favoritesOnly}
+              className={!favoritesOnly ? "is-active" : ""}
+              onClick={() => setFavoritesOnly(false)}
+            >
+              Todos
+            </button>
+            <button
+              aria-pressed={favoritesOnly}
+              className={favoritesOnly ? "is-active" : ""}
+              onClick={() => setFavoritesOnly(true)}
+            >
+              <Icon name="star" size={12} /> Favoritos
+            </button>
+          </div>
+          {Object.keys(repeat).length > 0 && (
+            <button
+              className="app-repeat-button"
+              onClick={() => setPorcoes(repeat)}
+            >
+              <Icon name="reset" size={14} /> Repetir última
             </button>
           )}
         </div>
-        <p className={`text-[10px] mt-3 ${muted}`}>
-          Porções e valores aproximados. Ajuste os gramas quando precisar.
-        </p>
       </header>
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 custom-scrollbar">
-        {filtrados.length === 0 && (
-          <p className={`text-center text-sm py-10 ${muted}`}>
-            {soFavoritos
-              ? "Toque na estrela de um alimento para salvá-lo aqui."
-              : "Nenhum alimento encontrado."}
-          </p>
-        )}
-        <div className="grid grid-cols-3 gap-2">
-          {filtrados.map((item) => {
-            const selecionado = porcoes[item.id] !== undefined;
-            const atalho = medida(item);
+      <div className="app-composer-body custom-scrollbar">
+        <p className="app-composer-helper">
+          Escolha os alimentos e ajuste as quantidades.
+        </p>
+        <div className="app-food-list">
+          {filtered.map((item) => {
+            const selected = porcoes[item.id] !== undefined;
+            const shortcut = medida(item);
             return (
-              <div
+              <article
                 key={item.id}
-                className={`relative rounded-2xl border p-3 pt-8 flex flex-col items-center gap-2 ${
-                  selecionado
-                    ? "border-green-500 bg-green-500/10"
-                    : escuro
-                    ? "border-zinc-800 bg-zinc-950/40"
-                    : "border-zinc-200 bg-zinc-50"
+                className={`app-food-list-item ${
+                  selected ? "is-selected" : ""
                 }`}
               >
-                <button
-                  aria-label={`${ehFavorito(item) ? "Remover" : "Adicionar"} ${
-                    item.nome
-                  } dos favoritos`}
-                  aria-pressed={ehFavorito(item)}
-                  onClick={() => toggleFavorito(favoritoId(item))}
-                  className={`absolute top-0 right-0 w-9 h-9 text-lg ${
-                    ehFavorito(item) ? "text-green-500" : muted
-                  }`}
-                >
-                  {ehFavorito(item) ? "★" : "☆"}
-                </button>
-                <button
-                  onClick={() =>
-                    setPorcoes((prev) => {
-                      const next = { ...prev };
-                      if (selecionado) delete next[item.id];
-                      else next[item.id] = atalho?.gramas || 100;
-                      return next;
-                    })
-                  }
-                  aria-pressed={selecionado}
-                  className="w-full flex flex-col items-center gap-2"
-                >
-                  <span className="text-3xl">{item.emoji}</span>
-                  <span className="text-xs font-semibold text-center leading-tight min-h-8">
-                    {item.nome}
-                  </span>
-                </button>
-                {selecionado ? (
-                  <>
-                    <label
-                      className={`flex items-center justify-center gap-1 rounded-xl border w-full px-2 py-2 ${
-                        escuro
-                          ? "bg-zinc-950 border-zinc-700"
-                          : "bg-white border-zinc-200"
-                      }`}
-                    >
-                      <input
-                        aria-label={`Gramas de ${item.nome}`}
-                        type="number"
-                        inputMode="decimal"
-                        min="0"
-                        max="9999"
-                        step="1"
-                        value={porcoes[item.id] || ""}
-                        onChange={(e) =>
-                          setPorcoes((prev) => ({
-                            ...prev,
-                            [item.id]: Math.min(
-                              9999,
-                              Math.max(0, Number(e.target.value) || 0)
-                            ),
-                          }))
-                        }
-                        onFocus={(e) =>
-                          e.currentTarget.scrollIntoView({
-                            block: "nearest",
-                            behavior: "smooth",
-                          })
-                        }
-                        className="w-full min-w-0 bg-transparent text-center text-sm font-bold outline-none"
-                      />
-                      <span className={`text-[10px] ${muted}`}>g</span>
-                    </label>
-                    {atalho && (
+                <div className="app-food-main">
+                  <button
+                    className="app-food-select"
+                    aria-label={item.nome}
+                    aria-pressed={selected}
+                    onClick={() => toggle(item)}
+                  >
+                    <span className="app-food-list-emoji" aria-hidden="true">
+                      {item.emoji}
+                    </span>
+                    <span className="app-food-list-copy">
+                      <strong>{item.nome}</strong>
+                      <small>
+                        {selected
+                          ? `${Math.round(
+                              (item.kcal100g * porcoes[item.id]) / 100
+                            )} kcal nesta porção`
+                          : `${item.kcal100g} kcal por 100 g`}
+                      </small>
+                    </span>
+                    <span className="app-food-select-state">
+                      {selected ? (
+                        <Icon name="check" size={15} />
+                      ) : (
+                        <Icon name="plus" size={17} />
+                      )}
+                    </span>
+                  </button>
+                  <button
+                    className={`app-favorite-button ${
+                      isFavorite(item) ? "is-favorite" : ""
+                    }`}
+                    aria-label={`${
+                      isFavorite(item) ? "Remover" : "Adicionar"
+                    } ${item.nome} dos favoritos`}
+                    aria-pressed={isFavorite(item)}
+                    onClick={() =>
+                      useUserStore.getState().toggleFavorito(favoriteId(item))
+                    }
+                  >
+                    <Icon name="star" size={18} />
+                  </button>
+                </div>
+                {selected && (
+                  <div className="app-quantity-panel">
+                    <div>
+                      <label htmlFor={`quantity-${item.id}`}>Quantidade</label>
+                      <div className="app-quantity-control">
+                        <button
+                          aria-label={`Diminuir quantidade de ${item.nome}`}
+                          onClick={() =>
+                            quantity(item.id, porcoes[item.id] - 25)
+                          }
+                        >
+                          −
+                        </button>
+                        <div>
+                          <input
+                            id={`quantity-${item.id}`}
+                            aria-label={`Gramas de ${item.nome}`}
+                            type="number"
+                            inputMode="decimal"
+                            min="0"
+                            max="9999"
+                            value={porcoes[item.id] || ""}
+                            onChange={(e) =>
+                              quantity(item.id, Number(e.target.value))
+                            }
+                          />
+                          <span>g</span>
+                        </div>
+                        <button
+                          aria-label={`Aumentar quantidade de ${item.nome}`}
+                          onClick={() =>
+                            quantity(item.id, porcoes[item.id] + 25)
+                          }
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    {shortcut && (
                       <button
-                        onClick={() =>
-                          setPorcoes((prev) => ({
-                            ...prev,
-                            [item.id]: atalho.gramas,
-                          }))
-                        }
-                        className="text-[10px] text-green-500 font-semibold"
+                        className="app-portion-shortcut"
+                        onClick={() => quantity(item.id, shortcut.gramas)}
                       >
-                        ≈ {atalho.nome} ({atalho.gramas}g)
+                        ≈ {shortcut.nome} ({shortcut.gramas} g)
                       </button>
                     )}
-                    <span className="text-[10px] font-bold text-orange-500">
-                      {Math.round((item.kcal100g * porcoes[item.id]) / 100)}{" "}
-                      kcal
-                    </span>
-                  </>
-                ) : (
-                  <span className={`text-[10px] ${muted}`}>
-                    {item.kcal100g} kcal / 100g
-                  </span>
+                  </div>
                 )}
-              </div>
+              </article>
             );
           })}
         </div>
-      </div>
-      <footer
-        className={`shrink-0 px-6 py-4 border-t pb-safe ${
-          escuro ? "border-zinc-800 bg-zinc-900" : "border-zinc-200 bg-white"
-        }`}
-      >
-        <div className={`text-[10px] mb-2 ${muted}`}>
-          Proteína {total.macros.proteina}g · Carboidratos {total.macros.carbo}g
-          · Gorduras {total.macros.gordura}g
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className={`text-[10px] uppercase tracking-wider ${muted}`}>
-              Total
-            </p>
-            <p className="text-xl font-bold text-orange-500">
-              {total.calorias} kcal
+        {!filtered.length && (
+          <div className="app-empty-state">
+            <Icon name={favoritesOnly ? "star" : "search"} size={26} />
+            <h3>
+              {favoritesOnly
+                ? "Seus favoritos ficam aqui"
+                : "Nenhum alimento encontrado"}
+            </h3>
+            <p>
+              {favoritesOnly
+                ? "Toque na estrela ao lado de um alimento para salvar."
+                : "Tente buscar por outro nome."}
             </p>
           </div>
+        )}
+        <p className="app-helper">
+          Porções e valores aproximados. Você pode ajustar os gramas.
+        </p>
+      </div>
+      <footer className="app-composer-footer">
+        <div className="app-composer-macros">
+          <span>
+            Proteína <b>{total.macros.proteina} g</b>
+          </span>
+          <span>
+            Carboidratos <b>{total.macros.carbo} g</b>
+          </span>
+          <span>
+            Gorduras <b>{total.macros.gordura} g</b>
+          </span>
+        </div>
+        <div className="app-composer-confirm">
+          <div>
+            <span>
+              {count} {count === 1 ? "alimento" : "alimentos"}
+            </span>
+            <strong>
+              {numberText(total.calorias)}
+              <small> kcal</small>
+            </strong>
+          </div>
           <button
-            disabled={total.calorias <= 0 || enviando}
-            onClick={confirmar}
-            className="bg-green-500 text-zinc-950 font-bold px-8 py-3.5 rounded-2xl shadow-lg shadow-green-500/20 disabled:opacity-40 disabled:shadow-none active:scale-95"
+            className="app-button app-button--primary"
+            disabled={total.calorias <= 0 || saving}
+            onClick={() => {
+              if (submitted.current || total.calorias <= 0) return;
+              submitted.current = true;
+              setSaving(true);
+              onConfirm(
+                Object.fromEntries(
+                  Object.entries(porcoes).filter(([, g]) => g > 0)
+                )
+              );
+            }}
           >
-            {enviando ? "Registrando..." : "Registrar"}
+            {saving ? "Registrando…" : "Registrar refeição"}
+            <Icon name="check" size={17} />
           </button>
         </div>
       </footer>
