@@ -208,6 +208,48 @@ try {
     assert.equal(store.getState().dados.nome, "Teste legado");
     assert.deepEqual(store.getState().dados.favoritos, []);
   });
+
+  const { normalizeMealPreferences } = await server.ssrLoadModule(
+    "/src/utils/mealPreferences.ts"
+  );
+  test("Cadastro aceita uma preferência antiga como texto sem falhar em values.map", () => {
+    assert.deepEqual(normalizeMealPreferences({ cafeManha: "pao" }), {
+      cafeManha: ["pao"],
+    });
+    assert.deepEqual(normalizeMealPreferences({ cafeManha: "Pão Francês" }), {
+      cafeManha: ["pao"],
+    });
+  });
+  test("Cadastro aceita mapas de seleção e descarta valores inválidos sem apagar a origem", () => {
+    const legado = {
+      cafeManha: { pao: true, ovo: 50, banana: false },
+      almoco: null,
+      janta: 42,
+    };
+    const original = structuredClone(legado);
+    assert.deepEqual(normalizeMealPreferences(legado), {
+      cafeManha: ["pao", "ovo"],
+      almoco: [],
+      janta: [],
+    });
+    assert.deepEqual(legado, original);
+  });
+  test("Preferências atuais mantêm IDs válidos e não repetem alimentos", () => {
+    assert.deepEqual(
+      normalizeMealPreferences({
+        cafeManha: ["pao", "pao", "Ovo", null, "desconhecido"],
+      }),
+      { cafeManha: ["pao", "ovo"] }
+    );
+    assert.deepEqual(normalizeMealPreferences(undefined), {});
+    assert.deepEqual(normalizeMealPreferences(null), {});
+  });
+  test("Lista global legada é distribuída pelos catálogos das refeições", () => {
+    const result = normalizeMealPreferences(["pao", "frango", "iogurte_noite"]);
+    assert.deepEqual(result.cafeManha, ["pao"]);
+    assert.deepEqual(result.almoco, ["frango"]);
+    assert.deepEqual(result.lancheNoite, ["iogurte_noite"]);
+  });
   console.log(`${passed} verificações passaram.`);
 } finally {
   await server.close();

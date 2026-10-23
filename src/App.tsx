@@ -1,3 +1,4 @@
+import { ScreenErrorBoundary } from './components/ScreenErrorBoundary';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Onboarding } from './pages/Onboarding';
@@ -19,7 +20,7 @@ export function App() {
             <Route path="/evolucao" element={<Evolucao />} />
             <Route path="/perfil" element={<Perfil />} />
             <Route path="/refeicao-livre" element={<RefeicaoLivre />} />
-            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/onboarding" element={<ScreenErrorBoundary><Onboarding /></ScreenErrorBoundary>} />
           </Routes>
         </SwipeNavigator>
       </Layout>

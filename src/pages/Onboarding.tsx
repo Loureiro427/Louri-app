@@ -17,6 +17,7 @@ import {
 } from "../components/onboarding/OnboardingControls";
 import logo from "../assets/logo.png";
 import "./Onboarding.css";
+import { normalizeMealPreferences } from "../utils/mealPreferences";
 
 type Draft = {
   nome: string;
@@ -124,19 +125,7 @@ export function Onboarding() {
       ? [...dados.refeicoesAtivas]
       : ["cafeManha", "almoco", "lancheTarde", "janta"],
     horariosRefeicoes: { ...dados.horariosRefeicoes },
-    alimentos: Object.fromEntries(
-      Object.entries(dados.alimentos || {}).map(([key, values]) => [
-        key,
-        values
-          .map(
-            (value) =>
-              DICIONARIO_ALIMENTOS[key]?.find(
-                (a) => a.id === value || a.nome === value
-              )?.id
-          )
-          .filter((id): id is string => Boolean(id)),
-      ])
-    ),
+    alimentos: normalizeMealPreferences(dados.alimentos),
   }));
   const [step, setStep] = useState(dados.nome ? 1 : 0);
   const [aceitouTermos, setAceitouTermos] = useState(false);
