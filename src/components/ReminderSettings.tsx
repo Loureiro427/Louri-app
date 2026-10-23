@@ -1,3 +1,5 @@
+import { NotificationHealth } from "./NotificationHealth";
+import { reminderSlots } from "../utils/reminders";
 import { useState } from "react";
 import { useUserStore } from "../store/useUserStore";
 import { defaultReminders } from "../utils/reminders";
@@ -8,13 +10,16 @@ export function ReminderSettings() {
   const dados = useUserStore((s) => s.dados);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(
-    dados.lembretes || {
-      ...defaultReminders,
-      refeicoes: dados.refeicoesAtivas || [],
-    }
+    dados.lembretes
+      ? { ...defaultReminders, ...dados.lembretes }
+      : {
+          ...defaultReminders,
+          refeicoes: dados.refeicoesAtivas || [],
+        }
   );
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const preview = reminderSlots({ ...dados, lembretes: draft })[0]?.messages[0];
   return (
     <>
       <ActionRow
@@ -23,10 +28,12 @@ export function ReminderSettings() {
         detail="Refeições, água e horário de silêncio"
         onClick={() => {
           setDraft(
-            dados.lembretes || {
-              ...defaultReminders,
-              refeicoes: dados.refeicoesAtivas || [],
-            }
+            dados.lembretes
+              ? { ...defaultReminders, ...dados.lembretes }
+              : {
+                  ...defaultReminders,
+                  refeicoes: dados.refeicoesAtivas || [],
+                }
           );
           setStatus("");
           setOpen(true);
@@ -38,6 +45,7 @@ export function ReminderSettings() {
           description="Escolha o que faz sentido para sua rotina."
           onClose={() => setOpen(false)}
         >
+          <NotificationHealth />
           <form
             className="app-feature-form"
             onSubmit={async (e) => {
@@ -62,6 +70,8 @@ export function ReminderSettings() {
                     ? "Preferências salvas. Os lembretes em segundo plano funcionam na versão Android instalada."
                     : result === "denied"
                     ? "Preferências salvas. Permita notificações nas configurações do aparelho para recebê-las."
+                    : result === "update"
+                    ? "Instale o novo APK Android para ativar o agendador corrigido."
                     : result === "disabled"
                     ? "Preferências salvas. Ative as notificações no Perfil para receber os lembretes."
                     : "Lembretes atualizados."
@@ -75,6 +85,34 @@ export function ReminderSettings() {
               }
             }}
           >
+            <h3 className="app-sheet-section-title">
+              O jeito do Louri lembrar
+            </h3>
+            <label className="app-shopping-row">
+              <input
+                type="checkbox"
+                checked={draft.humor}
+                onChange={() => setDraft({ ...draft, humor: !draft.humor })}
+              />
+              <span>Mensagens bem-humoradas</span>
+            </label>
+            <label className="app-shopping-row">
+              <input
+                type="checkbox"
+                checked={draft.motivacao}
+                onChange={() =>
+                  setDraft({ ...draft, motivacao: !draft.motivacao })
+                }
+              />
+              <span>Um incentivo no fim do dia</span>
+            </label>
+            <div className="app-reminder-preview">
+              <span>Uma das mensagens que você pode receber</span>
+              <strong>{preview?.title || "Nenhum aviso selecionado"}</strong>
+              <p>
+                {preview?.body || "Escolha pelo menos um tipo de lembrete."}
+              </p>
+            </div>
             <h3 className="app-sheet-section-title">Refeições</h3>
             {getCronograma(dados).map((r) => (
               <label key={r.key} className="app-shopping-row">
@@ -143,7 +181,9 @@ export function ReminderSettings() {
             </label>
             <p className="app-helper">
               Refeições no período de silêncio não enviam lembretes. Horários
-              iguais desativam o silêncio.
+              iguais desativam o silêncio. Avisos muito próximos são agrupados:
+              a refeição tem prioridade. O Louri para de lembrar da água ao
+              atingir a meta e de refeições já registradas.
             </p>
             <button
               className="app-button app-button--primary"

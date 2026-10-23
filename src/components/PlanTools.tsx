@@ -1,9 +1,10 @@
+import { ShoppingList } from "./ShoppingList";
 import { useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useState, useEffect } from "react";
 import { useUserStore } from "../store/useUserStore";
 import { getCronograma } from "../utils/nutritionMath";
-import { mealCatalog, shoppingItems } from "../utils/appFeatures";
+import { mealCatalog } from "../utils/appFeatures";
 import { MealComposer } from "./MealComposer";
 import { Icon, Sheet } from "./ui/AppUI";
 export function PlanTools() {
@@ -18,8 +19,6 @@ export function PlanTools() {
     setPanel(null);
   }, [pathname]);
   const schedule = getCronograma(dados);
-  const shopping = shoppingItems(dados);
-  const categories = [...new Set(shopping.map((f) => f.category))];
   return (
     <>
       <div className="app-tools-grid">
@@ -129,55 +128,7 @@ export function PlanTools() {
           </form>
         </Sheet>
       )}
-      {panel === "shopping" && (
-        <Sheet
-          title="Lista de compras"
-          description="Alimentos do plano atual. As quantidades definidas correspondem a um dia; itens sem porção ficam sem estimativa."
-          onClose={() => setPanel(null)}
-        >
-          {categories.length ? (
-            categories.map((category) => (
-              <section key={category}>
-                <h3 className="app-sheet-section-title">{category}</h3>
-                {shopping
-                  .filter((f) => f.category === category)
-                  .map((f) => (
-                    <label key={f.id} className="app-shopping-row">
-                      <input
-                        type="checkbox"
-                        checked={(dados.comprasMarcadas || []).includes(f.id)}
-                        onChange={() => {
-                          const checked = dados.comprasMarcadas || [];
-                          useUserStore.getState().setDados({
-                            comprasMarcadas: checked.includes(f.id)
-                              ? checked.filter((id) => id !== f.id)
-                              : [...checked, f.id],
-                          });
-                        }}
-                      />
-                      <span>
-                        {f.emoji} {f.nome}
-                      </span>
-                      {f.grams > 0 && <small>{f.grams} g</small>}
-                    </label>
-                  ))}
-              </section>
-            ))
-          ) : (
-            <p className="app-empty">
-              Escolha os alimentos do plano para montar sua lista.
-            </p>
-          )}
-          <button
-            className="app-button app-button--secondary app-wide-button"
-            onClick={() =>
-              useUserStore.getState().setDados({ comprasMarcadas: [] })
-            }
-          >
-            Desmarcar itens
-          </button>
-        </Sheet>
-      )}
+      {panel === "shopping" && <ShoppingList onClose={() => setPanel(null)} />}
       {meal &&
         createPortal(
           <div

@@ -1,4 +1,7 @@
-import { configurarNotificacoesNativas } from "../services/notificationService";
+import {
+  configurarNotificacoesNativas,
+  watchReminderTap,
+} from "../services/notificationService";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
@@ -24,6 +27,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     dados.refeicoesAtivas,
     dados.horaAcorda,
     dados.horaDorme,
+    dados.ultimaData,
+    dados.peso,
+    dados.aguaConsumida,
+    dados.refeicoesConcluidas,
   ]);
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -31,6 +38,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
     }, 300);
     return () => clearTimeout(timer);
   }, [reminderSignature]);
+  useEffect(
+    () =>
+      watchReminderTap((target) => {
+        const route = ["/", "/evolucao"].includes(target.route || "")
+          ? target.route!
+          : "/";
+        navigate(route);
+        setTimeout(
+          () =>
+            window.dispatchEvent(
+              new CustomEvent("louri-reminder-open", {
+                detail: {
+                  meal: target.meal,
+                  water: target.kind === "water",
+                },
+              })
+            ),
+          100
+        );
+      }),
+    [navigate]
+  );
   const [fab, setFab] = useState(false);
   const [toast, setToast] = useState("");
   const [weight, setWeight] = useState("");

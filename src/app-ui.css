@@ -2170,3 +2170,275 @@
   font-size: 9px;
   color: var(--app-muted);
 }
+.app-shop-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+.app-shop-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.app-shop-summary strong {
+  font-size: 34px;
+  color: var(--app-green);
+  line-height: 1;
+  font-weight: 650;
+}
+.app-shop-summary span {
+  font-size: 11px;
+  color: var(--app-muted);
+}
+.app-shop-summary > small {
+  font-size: 10px;
+  color: var(--app-muted);
+  text-align: right;
+}
+.app-shop-period {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+.app-shop-period label {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--app-muted);
+}
+.app-shop-period select,
+.app-shop-quantity input,
+.app-shop-quantity select,
+.app-shop-item-controls input,
+.app-shop-item-controls select {
+  background: var(--app-soft);
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+  min-height: 42px;
+  padding: 9px 10px;
+  color: var(--app-text);
+  font-size: 16px;
+  min-width: 0;
+}
+.app-shop-period .app-button {
+  font-size: 11px;
+  min-height: 42px;
+}
+.app-shop-notice {
+  padding: 12px 14px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--app-orange) 9%, var(--app-card));
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--app-orange);
+  margin: 16px 0;
+}
+.app-shop-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0 8px;
+}
+.app-shop-quantity {
+  display: grid;
+  grid-template-columns: 1fr 90px;
+  gap: 12px;
+}
+.app-shop-quantity > label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--app-muted);
+}
+.app-shop-item {
+  border-bottom: 1px solid var(--app-line);
+  padding: 16px 0;
+}
+.app-shop-item-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.app-shop-item-title > input {
+  accent-color: var(--app-green);
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.app-shop-item-title > strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.app-shop-item-title > .app-icon-button {
+  width: 27px;
+  height: 29px;
+  border: 0;
+  background: transparent;
+}
+.app-shop-item.is-resolved .app-shop-item-title strong {
+  color: var(--app-muted);
+}
+.app-shop-item-controls {
+  display: flex;
+  gap: 7px;
+  margin: 10px 0 0 27px;
+  align-items: center;
+}
+.app-shop-item-controls > input {
+  width: 80px;
+  flex: 1;
+}
+.app-shop-item-controls > select {
+  width: 62px;
+}
+.app-shop-pantry {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 42px;
+  padding: 7px;
+  font-size: 9px;
+  color: var(--app-muted);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.app-shop-pantry.is-active {
+  color: var(--app-green);
+  background: var(--app-green-soft);
+}
+.app-shop-undo {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 13px;
+  font-size: 11px;
+  margin-top: 15px;
+}
+.app-shop-undo span {
+  flex: 1;
+  min-width: 0;
+}
+.app-shop-undo button {
+  color: var(--app-green);
+}
+.app-shop-add {
+  background: var(--app-soft);
+  border: 1px solid var(--app-border);
+  border-radius: 17px;
+  padding: 15px;
+}
+.app-notification-health {
+  padding: 17px;
+  background: var(--app-soft);
+  border: 1px solid var(--app-border);
+  border-radius: 18px;
+}
+.app-notification-health .app-section-heading {
+  margin-bottom: 8px;
+}
+.app-notification-health .app-section-heading h2 {
+  font-size: 16px;
+}
+.app-notification-health > p {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--app-muted);
+  margin: 8px 0 15px;
+}
+.app-health-rows {
+  margin: 15px 0;
+}
+.app-health-rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--app-line);
+  font-size: 10px;
+}
+.app-health-rows span {
+  color: var(--app-muted);
+}
+.app-health-rows strong {
+  font-weight: 500;
+  text-align: right;
+}
+.app-notification-health .app-button {
+  font-size: 10px;
+}
+.app-notification-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 13px;
+  margin-top: 17px;
+}
+.app-notification-links button {
+  font-size: 10px;
+  color: var(--app-green);
+  text-align: left;
+}
+.app-health-message {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--app-border);
+  color: var(--app-text) !important;
+}
+.app-reminder-preview {
+  padding: 17px;
+  border: 1px solid var(--app-border);
+  border-radius: 17px;
+  background: var(--app-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.app-reminder-preview > span {
+  font-size: 9px;
+  color: var(--app-muted);
+}
+.app-reminder-preview strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.app-reminder-preview p {
+  font-size: 11px;
+  color: var(--app-muted);
+  line-height: 1.7;
+  margin: 0;
+}
+@media (max-width: 350px) {
+  .app-shop-item-controls {
+    margin-left: 0;
+    gap: 4px;
+  }
+  .app-shop-item-controls > input {
+    width: 65px;
+  }
+  .app-shop-pantry {
+    font-size: 8px;
+    padding: 5px;
+  }
+  .app-shop-toolbar .app-segmented button {
+    font-size: 9px;
+    padding: 8px;
+  }
+  .app-shop-period {
+    gap: 8px;
+  }
+  .app-shop-summary > small {
+    max-width: 105px;
+    line-height: 1.7;
+  }
+}

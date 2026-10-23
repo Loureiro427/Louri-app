@@ -39,6 +39,26 @@ export function Home() {
     const timer = setInterval(() => setTime(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
+  useEffect(() => {
+    const open = (event: Event) => {
+      const target = (event as CustomEvent<{ meal?: string; water?: boolean }>)
+        .detail;
+      const current = useUserStore.getState().dados;
+      if (!current.nome) return;
+      if (target.meal) {
+        const ref = getCronograma(current).find((r) => r.key === target.meal);
+        if (ref) {
+          if (current.refeicoesConcluidas.includes(ref.key)) setDetail(ref.key);
+          else {
+            setEditing(false);
+            setMeal(ref);
+          }
+        }
+      } else if (target.water) setWaterHistory(true);
+    };
+    window.addEventListener("louri-reminder-open", open);
+    return () => window.removeEventListener("louri-reminder-open", open);
+  }, []);
   if (!dados.nome) return <WelcomeScreen dark={dados.temaEscuro ?? true} />;
   const targets = getPlanTargets(dados);
   const schedule = getCronograma(dados);
@@ -299,6 +319,16 @@ export function Home() {
           <div className="app-sheet-total">
             <strong>{litersText(water)}</strong>
             <span>litros registrados</span>
+          </div>
+          <div className="app-water-actions">
+            {[200, 300, 500].map((ml) => (
+              <button
+                key={ml}
+                onClick={() => useUserStore.getState().adicionarAgua(ml, 99999)}
+              >
+                +{ml} ml
+              </button>
+            ))}
           </div>
           {(dados.registrosAgua || [])
             .slice()

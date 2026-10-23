@@ -629,6 +629,7 @@ try {
       horariosRefeicoes: { cafeManha: "08:00", janta: "23:00" },
       lembretes: {
         refeicoes: ["janta"],
+        motivacao: false,
         aguaIntervalo: 120,
         silencioInicio: "22:00",
         silencioFim: "07:00",
@@ -682,6 +683,123 @@ try {
       features.fullCatalog(d)
     );
     assert.deepEqual(normalized.cafeManha, ["custom_kept", "frango"]);
+  });
+
+  const shopping = await server.ssrLoadModule("/src/utils/shoppingList.ts");
+  test("Lista de compras multiplica porções pelo período sem inventar quantidades ausentes", () => {
+    const data = {
+      ...initial,
+      refeicoesAtivas: ["cafeManha"],
+      alimentos: { cafeManha: ["pao", "banana"] },
+      porcoesPlano: { cafeManha: { pao: 50 } },
+    };
+    const items = shopping.buildShoppingList(data, 7);
+    assert.equal(items.find((i) => i.nome === "Pão Francês").quantidade, "350");
+    assert.equal(items.find((i) => i.nome === "Banana").quantidade, "");
+    const bulk = shopping.buildShoppingList(data, 30);
+    assert.equal(bulk.find((i) => i.nome === "Pão Francês").quantidade, "1.5");
+    assert.equal(bulk.find((i) => i.nome === "Pão Francês").unidade, "kg");
+  });
+  test("Atualizar compras mantém quantidades editadas, despensa, comprados e itens manuais", () => {
+    const data = {
+      ...initial,
+      refeicoesAtivas: ["cafeManha"],
+      alimentos: { cafeManha: ["pao"] },
+      porcoesPlano: { cafeManha: { pao: 50 } },
+    };
+    const items = shopping.buildShoppingList(data, 7);
+    items[0] = {
+      ...items[0],
+      quantidade: "2",
+      unidade: "un",
+      quantidadeEditada: true,
+      emCasa: true,
+    };
+    const manual = {
+      ...items[0],
+      id: "manual:1",
+      nome: "Detergente",
+      emCasa: false,
+      comprado: true,
+      manual: true,
+    };
+    const updated = shopping.buildShoppingList(data, 14, [...items, manual]);
+    assert.equal(updated.find((i) => i.id === items[0].id).quantidade, "2");
+    assert.equal(updated.find((i) => i.id === items[0].id).unidade, "un");
+    assert.equal(updated.find((i) => i.id === "manual:1").comprado, true);
+    assert.deepEqual(shopping.shoppingProgress(updated), {
+      bought: 1,
+      pantry: 1,
+      pending: 0,
+      missing: 0,
+    });
+    assert.equal(new Set(updated.map((i) => i.id)).size, updated.length);
+  });
+  test("Notificações variam mensagens, permitem desligar humor e evitam alarmes colados", () => {
+    const data = {
+      ...initial,
+      nome: "Teste",
+      horaAcorda: "07:00",
+      horaDorme: "23:00",
+      refeicoesAtivas: ["cafeManha", "janta"],
+      horariosRefeicoes: { cafeManha: "07:00", janta: "20:30" },
+    };
+    const slots = reminders.reminderSlots(data);
+    assert.ok(slots.every((s) => s.messages.length >= 3));
+    for (let i = 0; i < slots.length; i++)
+      for (let j = i + 1; j < slots.length; j++)
+        assert.ok(
+          Math.min(
+            Math.abs(slots[i].minute - slots[j].minute),
+            1440 - Math.abs(slots[i].minute - slots[j].minute)
+          ) >= 10
+        );
+    assert.equal(slots.filter((s) => s.minute === 420).length, 1);
+    assert.equal(slots.find((s) => s.minute === 420).kind, "meal");
+    const plain = reminders.reminderSlots({
+      ...data,
+      lembretes: {
+        ...reminders.defaultReminders,
+        refeicoes: ["cafeManha"],
+        humor: false,
+        motivacao: false,
+      },
+    });
+    assert.ok(
+      plain.every(
+        (s) => s.messages.length === 1 && s.messages[0].body === s.body
+      )
+    );
+  });
+  test("Plano nativo usa metas atuais sem carregar consumo de ontem para os avisos de hoje", () => {
+    const current = {
+      ...initial,
+      nome: "Teste",
+      ultimaData: today(),
+      peso: "70",
+      aguaConsumida: 2450,
+      refeicoesAtivas: ["cafeManha"],
+      refeicoesConcluidas: ["cafeManha"],
+    };
+    const plan = reminders.nativeReminderPlan(current);
+    assert.equal(plan.waterDone, true);
+    assert.equal(plan.complete, true);
+    assert.deepEqual(plan.doneMeals, ["cafeManha"]);
+    const stale = reminders.nativeReminderPlan({
+      ...current,
+      ultimaData: "2020-01-01",
+    });
+    assert.equal(stale.waterDone, false);
+    assert.equal(stale.complete, false);
+    assert.deepEqual(stale.doneMeals, []);
+    assert.equal(
+      reminders.nativeReminderPlan({ ...current, notificacoes: false }).enabled,
+      false
+    );
+    assert.equal(
+      reminders.nativeReminderPlan({ ...current, nome: "" }).enabled,
+      false
+    );
   });
   console.log(`${passed} verificações passaram.`);
 } finally {

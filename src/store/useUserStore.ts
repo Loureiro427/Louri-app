@@ -1,3 +1,4 @@
+import type { ShoppingListData } from "../utils/shoppingList";
 import type { Alimento } from "../data/alimentos";
 import { reconcileDailyStreak } from "../utils/dailyStreak";
 import { refeicoesPadrao } from "../utils/nutritionMath";
@@ -20,6 +21,7 @@ interface DayRecord {
 }
 
 export interface UserData {
+  listaCompras?: ShoppingListData;
   alimentosPersonalizados?: Alimento[];
   refeicoesSalvas?: {
     id: string;
@@ -33,6 +35,8 @@ export interface UserData {
     aguaIntervalo: number;
     silencioInicio: string;
     silencioFim: string;
+    humor?: boolean;
+    motivacao?: boolean;
   };
   registrosAgua?: { quantidade: number; hora: string }[];
   favoritos: string[];
