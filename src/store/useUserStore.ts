@@ -1,6 +1,10 @@
 import type { ShoppingListData } from "../utils/shoppingList";
 import type { Alimento } from "../data/alimentos";
 import { reconcileDailyStreak } from "../utils/dailyStreak";
+import {
+  replaceHistoricalMeal,
+  validPastOrToday,
+} from "../utils/dailyExperience";
 import { refeicoesPadrao } from "../utils/nutritionMath";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -14,7 +18,7 @@ export interface RefeicaoDetalhe {
   macros: { proteina: number; carbo: number; gordura: number };
 }
 
-interface DayRecord {
+export interface DayRecord {
   aguaConsumida: number;
   caloriasConsumidas: number;
   refeicoesDetalhadas: Record<string, RefeicaoDetalhe>;
@@ -97,6 +101,11 @@ interface UserStore {
   verificarViradaDeDia: () => void;
   verificarStreak: () => void;
   atualizarPeso: (novoPeso: string) => void;
+  salvarPesoNaData: (date: string, peso: string) => boolean;
+  corrigirDia: (
+    date: string,
+    change: { agua?: number; key?: string; refeicao?: RefeicaoDetalhe }
+  ) => boolean;
 }
 
 const macrosZerados = { proteina: 0, carbo: 0, gordura: 0 };
@@ -144,6 +153,82 @@ export const useUserStore = create<UserStore>()(
       modalPesoAberto: false,
       setMostrarNavbar: (visivel) => set({ mostrarNavbar: visivel }),
       setModalPesoAberto: (aberto) => set({ modalPesoAberto: aberto }),
+      salvarPesoNaData: (date, peso) => {
+        const value = Number(peso.replace(",", "."));
+        if (
+          !validPastOrToday(date) ||
+          !Number.isFinite(value) ||
+          value <= 0 ||
+          value > 500
+        )
+          return false;
+        get().verificarViradaDeDia();
+        set((state) => {
+          const historicoPeso = {
+            ...state.dados.historicoPeso,
+            [date]: String(value),
+          };
+          const latest = Object.keys(state.dados.historicoPeso || {})
+            .filter(
+              (d) =>
+                validPastOrToday(d) &&
+                Number.isFinite(Number(historicoPeso[d])) &&
+                Number(historicoPeso[d]) > 0
+            )
+            .sort()
+            .at(-1)!;
+          return {
+            dados: reconcileDailyStreak({
+              ...state.dados,
+              historicoPeso,
+              peso:
+                date === getHojeStr() || (latest && date >= latest)
+                  ? String(value)
+                  : state.dados.peso,
+            }),
+          };
+        });
+        return true;
+      },
+      corrigirDia: (date, change) => {
+        if (!validPastOrToday(date) || date === getHojeStr()) return false;
+        if (
+          change.agua !== undefined &&
+          (!Number.isFinite(change.agua) ||
+            change.agua < 0 ||
+            change.agua > 99999)
+        )
+          return false;
+        const meal = change.refeicao;
+        if (
+          meal &&
+          (!change.key ||
+            !Number.isFinite(meal.calorias) ||
+            meal.calorias <= 0 ||
+            Object.values(meal.macros).some(
+              (v) => !Number.isFinite(v) || v < 0
+            ))
+        )
+          return false;
+        get().verificarViradaDeDia();
+        set((state) => {
+          let day = state.dados.historico[date] || {
+            aguaConsumida: 0,
+            caloriasConsumidas: 0,
+            refeicoesDetalhadas: {},
+          };
+          if (change.agua !== undefined)
+            day = { ...day, aguaConsumida: change.agua };
+          if (change.key) day = replaceHistoricalMeal(day, change.key, meal);
+          return {
+            dados: {
+              ...state.dados,
+              historico: { ...state.dados.historico, [date]: day },
+            },
+          };
+        });
+        return true;
+      },
       toggleFavorito: (id) =>
         set((state) => ({
           dados: {

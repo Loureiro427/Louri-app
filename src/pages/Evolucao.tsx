@@ -1,3 +1,4 @@
+import { WeightHistory } from "../components/WeightHistory";
 import { WeeklySummary } from "../components/WeeklySummary";
 import { useState } from "react";
 import { useUserStore } from "../store/useUserStore";
@@ -21,31 +22,6 @@ export function Evolucao() {
   for (let i = 1; i < 7; i++) week.unshift(previousDay(week[0]));
   const milestone =
     [7, 14, 30, 90].find((value) => value > streak) || streak + 10;
-  const weights = Object.entries(dados.historicoPeso || {})
-    .filter(
-      ([date, value]) =>
-        /^\d{4}-\d{2}-\d{2}$/.test(date) &&
-        Number.isFinite(Number(value)) &&
-        Number(value) > 0
-    )
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-14)
-    .map(([date, value]) => ({ date, value: Number(value) }));
-  const min = weights.length
-    ? Math.min(...weights.map((item) => item.value))
-    : 0;
-  const max = weights.length
-    ? Math.max(...weights.map((item) => item.value))
-    : 0;
-  const span = Math.max(1, max - min);
-  const points = weights
-    .map(
-      (item, i) =>
-        `${12 + (i / Math.max(1, weights.length - 1)) * 276},${
-          94 - ((item.value - min) / span) * 70
-        }`
-    )
-    .join(" ");
   const openWeight = () => useUserStore.getState().setModalPesoAberto(true);
   return (
     <div className="app-page custom-scrollbar">
@@ -99,8 +75,8 @@ export function Evolucao() {
             {goals.complete
               ? "Dia completo!"
               : streak > 0
-              ? "Mantenha sua sequência"
-              : "Sua sequência começa hoje"}
+              ? "Mais um dia no seu ritmo"
+              : "Um cuidado de cada vez"}
           </h2>
           <Icon name={goals.complete ? "check" : "flame"} size={20} />
         </div>
@@ -108,8 +84,8 @@ export function Evolucao() {
           {goals.complete
             ? "Mais um dia de cuidado registrado."
             : streak > 0
-            ? "Complete as duas metas para manter sua sequência."
-            : "Complete as duas metas para somar seu primeiro dia."}
+            ? "Seu progresso de hoje fica aqui. Continue quando fizer sentido."
+            : "Água e refeições ajudam a acompanhar sua rotina. Cada registro conta."}
         </p>
         <div className="app-streak-week" aria-label="Últimos sete dias">
           {week.map((key) => {
@@ -167,70 +143,7 @@ export function Evolucao() {
       <WeeklySummary />
       <section>
         <SectionHeading title="Histórico de peso" />
-        {weights.length > 1 ? (
-          <div className="app-card app-weight-chart">
-            <div className="app-weight-chart-summary">
-              <span>Últimos {weights.length} registros</span>
-              <strong>
-                {numberText(weights.at(-1)!.value - weights[0].value, 1)}
-                <small> kg no período</small>
-              </strong>
-            </div>
-            <div className="app-chart-axis">
-              <span>{numberText(max, 1)} kg</span>
-              <span>{numberText(min, 1)} kg</span>
-            </div>
-            <svg
-              viewBox="0 0 300 110"
-              role="img"
-              aria-label={`Peso entre ${numberText(min, 1)} e ${numberText(
-                max,
-                1
-              )} quilos nos últimos ${weights.length} registros`}
-            >
-              <path d="M12 24H288M12 94H288" className="app-chart-grid" />
-              <polyline points={points} className="app-chart-line" />
-              {weights.map((item, i) => (
-                <circle
-                  key={item.date}
-                  cx={12 + (i / Math.max(1, weights.length - 1)) * 276}
-                  cy={94 - ((item.value - min) / span) * 70}
-                  r="3"
-                />
-              ))}
-            </svg>
-            <div className="app-chart-dates">
-              <span>
-                {weights[0].date.split("-").reverse().slice(0, 2).join("/")}
-              </span>
-              <span>
-                {weights
-                  .at(-1)!
-                  .date.split("-")
-                  .reverse()
-                  .slice(0, 2)
-                  .join("/")}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="app-card app-weight-empty">
-            <span className="app-icon-tile">
-              <Icon name="chart" size={23} />
-            </span>
-            <div>
-              <h3>Cada registro conta</h3>
-              <p>
-                {weights.length
-                  ? "Seu primeiro peso já está salvo. Com o próximo registro, você verá sua evolução."
-                  : "Registre seu peso para começar a acompanhar sua evolução."}
-              </p>
-            </div>
-            <button className="app-text-button" onClick={openWeight}>
-              Registrar peso <Icon name="plus" size={15} />
-            </button>
-          </div>
-        )}
+        <WeightHistory />
       </section>
       <section>
         <SectionHeading title="Hoje" />

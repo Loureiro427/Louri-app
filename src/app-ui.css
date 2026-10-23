@@ -1,3 +1,180 @@
+.app-day-reflection {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 18px;
+  text-align: left;
+}
+.app-day-reflection > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.app-day-reflection strong,
+.app-day-reflection small {
+  display: block;
+}
+.app-day-reflection strong {
+  font-size: 14px;
+}
+.app-day-reflection small {
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 1.65;
+  margin-top: 5px;
+}
+.app-feedback {
+  position: fixed;
+  z-index: 150;
+  bottom: calc(100px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 430px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-raised);
+  padding: 14px;
+  box-shadow: 0 8px 28px #0004;
+  font-size: 12px;
+}
+.app-feedback > span {
+  flex: 1;
+  min-width: 0;
+}
+.app-feedback > svg,
+.app-feedback button {
+  color: var(--app-green);
+  flex-shrink: 0;
+}
+.app-feedback button {
+  background: transparent;
+  border: 0;
+  min-height: 32px;
+}
+.app-inline-notice {
+  padding: 12px 14px;
+  background: var(--app-green-soft);
+  color: var(--app-text);
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.app-swap-panel {
+  background: var(--app-soft);
+  border: 1px solid var(--app-border);
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.app-swap-panel h3 {
+  font-size: 15px;
+}
+.app-swap-panel p {
+  color: var(--app-muted);
+  font-size: 12px;
+  line-height: 1.65;
+  margin: 10px 0;
+}
+.app-swap-panel .app-search {
+  margin: 14px 0;
+}
+.app-swap-options {
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.app-swap-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-bottom: 1px solid var(--app-line);
+  background: transparent;
+  color: var(--app-text);
+  padding: 13px 4px;
+  text-align: left;
+}
+.app-swap-option > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.app-swap-option strong,
+.app-swap-option small {
+  display: block;
+}
+.app-swap-option strong {
+  font-size: 13px;
+}
+.app-swap-option small {
+  color: var(--app-muted);
+  font-size: 11px;
+  margin-top: 4px;
+}
+.app-swap-trigger {
+  margin: 0 0 10px;
+  min-height: 30px;
+}
+.app-period-control {
+  display: flex;
+  padding: 4px;
+  gap: 4px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.app-period-control button {
+  flex: 1;
+  min-height: 36px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--app-muted);
+  font-size: 12px;
+}
+.app-period-control .is-active {
+  background: var(--app-green-soft);
+  color: var(--app-green);
+  font-weight: 600;
+}
+.app-weight-select {
+  display: grid;
+  gap: 8px;
+  color: var(--app-muted);
+  font-size: 11px;
+  margin: 18px 0;
+}
+.app-weight-select select {
+  max-width: 100%;
+  min-width: 0;
+  padding: 12px;
+  background: var(--app-soft);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.app-history-water {
+  margin: 18px 0 0;
+}
+.app-history-actions {
+  margin: 10px 0 0 29px;
+}
+.app-history-meal .app-inline-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 12px;
+  margin-top: 12px;
+  background: var(--app-soft);
+  border-radius: 12px;
+}
+.app-history-meal .app-inline-confirm p {
+  flex-basis: 100%;
+  margin: 0;
+}
 .louri-app,
 .app-themed {
   --app-bg: #0b0f11;

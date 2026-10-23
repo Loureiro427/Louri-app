@@ -1,5 +1,6 @@
 import { mealCatalog } from "../utils/appFeatures";
 import { dailyGoals } from "../utils/dailyStreak";
+import { nextDailyAction } from "../utils/dailyExperience";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +36,29 @@ export function Home() {
   const [waterHistory, setWaterHistory] = useState(false);
   const [detail, setDetail] = useState<string | null>(null);
   const [reset, setReset] = useState<"water" | "food" | null>(null);
+  const [feedback, setFeedback] = useState<{
+    text: string;
+    undo?: () => void;
+  } | null>(null);
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = setTimeout(() => setFeedback(null), 7000);
+    return () => clearTimeout(timer);
+  }, [feedback]);
+  const addWater = (ml: number) => {
+    useUserStore.getState().adicionarAgua(ml, 99999);
+    const last = useUserStore.getState().dados.registrosAgua?.at(-1);
+    setFeedback({
+      text: `${ml} ml de água registrados.`,
+      undo: () => {
+        if (
+          last &&
+          useUserStore.getState().dados.registrosAgua?.at(-1) === last
+        )
+          useUserStore.getState().desfazerUltimaAgua();
+      },
+    });
+  };
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 30000);
     return () => clearInterval(timer);
@@ -83,6 +107,23 @@ export function Home() {
     .replace(/\./g, "");
   const confirmMeal = (porcoes: Record<string, number>) => {
     if (!meal) return;
+    useUserStore.getState().verificarViradaDeDia();
+    if (
+      editing &&
+      !useUserStore.getState().dados.refeicoesConcluidas.includes(meal.key)
+    ) {
+      setMeal(null);
+      setEditing(false);
+      setFeedback({
+        text: "O dia virou. Você pode corrigir essa refeição pelo histórico na Evolução.",
+      });
+      return;
+    }
+    const mealKey = meal.key;
+    const before = useUserStore.getState().dados;
+    const recordDate = before.ultimaData;
+    const previous =
+      before.historico?.[recordDate]?.refeicoesDetalhadas?.[mealKey];
     const foods = mealCatalog(dados, meal.key, Object.keys(porcoes));
     const total = calcularPorcoes(porcoes, foods);
     useUserStore.getState().registrarRefeicao(
@@ -99,8 +140,38 @@ export function Home() {
     );
     setEditing(false);
     setMeal(null);
+    const saved =
+      useUserStore.getState().dados.historico?.[recordDate]
+        ?.refeicoesDetalhadas?.[mealKey];
+    setFeedback({
+      text: editing
+        ? "Refeição atualizada. Seu dia continua organizado."
+        : "Refeição registrada. Um cuidado a menos para lembrar.",
+      undo: () => {
+        const state = useUserStore.getState();
+        if (
+          state.dados.ultimaData !== recordDate ||
+          state.dados.historico?.[recordDate]?.refeicoesDetalhadas?.[
+            mealKey
+          ] !== saved
+        )
+          return;
+        if (previous)
+          state.registrarRefeicao(
+            mealKey,
+            previous.titulo,
+            previous.icone,
+            previous.calorias,
+            previous.alimentos,
+            previous.macros,
+            previous.porcoes,
+            true
+          );
+        else state.desfazerRefeicao(mealKey);
+      },
+    });
   };
-  const next = schedule.find((r) => !done.includes(r.key));
+  const { meal: next, upcoming, earlier } = nextDailyAction(dados, time);
   const goals = dailyGoals(dados);
   return (
     <div className="app-page custom-scrollbar">
@@ -143,7 +214,7 @@ export function Home() {
           <strong>
             {calories < targets.calories
               ? `${numberText(targets.calories - calories)} kcal restantes`
-              : "Meta diária atingida"}
+              : "Total registrado hoje"}
           </strong>
         </div>
       </button>
@@ -153,7 +224,8 @@ export function Home() {
           if (next) {
             setEditing(false);
             setMeal(next);
-          } else navigate("/evolucao");
+          } else if (!goals.waterDone) setWaterHistory(true);
+          else setSummary(true);
         }}
       >
         <Icon name={goals.complete ? "check" : "clock"} size={20} />
@@ -162,9 +234,11 @@ export function Home() {
             {goals.complete
               ? "Tudo certo por hoje"
               : next
-              ? "Sua próxima refeição"
+              ? upcoming
+                ? "Mais tarde, no seu ritmo"
+                : "Já fez esta refeição?"
               : !goals.waterDone
-              ? "Falta completar a água"
+              ? "Uma pausa para se cuidar"
               : "Seu acompanhamento"}
           </small>
           <strong>
@@ -172,11 +246,17 @@ export function Home() {
               ? next.titulo + " · " + next.horario
               : goals.complete
               ? "Dia completo!"
-              : "Ver metas do dia"}
+              : "Registrar um copo de água"}
           </strong>
         </span>
         <Icon name="chevron" size={16} />
       </button>
+      {earlier && (
+        <p className="app-helper">
+          Ficou algum registro para trás? Você pode voltar às refeições abaixo
+          quando quiser.
+        </p>
+      )}
       <section className="app-card app-water-card">
         <div className="app-water-heading">
           <span className="app-icon-tile app-tone-blue">
@@ -208,7 +288,7 @@ export function Home() {
             <button
               key={ml}
               aria-label={`Adicionar ${ml} ml de água`}
-              onClick={() => useUserStore.getState().adicionarAgua(ml, 99999)}
+              onClick={() => addWater(ml)}
             >
               <Icon name="plus" size={14} />
               {ml}
@@ -224,6 +304,31 @@ export function Home() {
           </button>
         </div>
       </section>
+      <button
+        className="app-card app-day-reflection"
+        onClick={() => setSummary(true)}
+      >
+        <span className="app-icon-tile">
+          <Icon name="sun" size={21} />
+        </span>
+        <span>
+          <strong>Seu dia, até aqui</strong>
+          <small>
+            {entries.length
+              ? `${entries.length} ${
+                  entries.length === 1
+                    ? "refeição registrada"
+                    : "refeições registradas"
+                } · ${litersText(water)} L de água`
+              : water > 0
+              ? `${litersText(
+                  water
+                )} L de água registrados. Cada cuidado conta.`
+              : "Comece por um copo ou pela sua primeira refeição."}
+          </small>
+        </span>
+        <Icon name="chevron" size={16} />
+      </button>
       <section className="app-meal-section">
         <SectionHeading
           title="Refeições do dia"
@@ -322,10 +427,7 @@ export function Home() {
           </div>
           <div className="app-water-actions">
             {[200, 300, 500].map((ml) => (
-              <button
-                key={ml}
-                onClick={() => useUserStore.getState().adicionarAgua(ml, 99999)}
-              >
+              <button key={ml} onClick={() => addWater(ml)}>
                 +{ml} ml
               </button>
             ))}
@@ -377,6 +479,15 @@ export function Home() {
             <strong>{numberText(calories)}</strong>
             <span>de {numberText(targets.calories)} kcal</span>
           </div>
+          <p className="app-body-copy">
+            {entries.length || water > 0
+              ? `Você registrou ${entries.length} ${
+                  entries.length === 1 ? "refeição" : "refeições"
+                } e ${litersText(
+                  water
+                )} L de água hoje. O que ficou sem registrar pode ser ajustado com calma.`
+              : "Seu dia ainda está começando por aqui. Registre o que fizer sentido na sua rotina; não precisa preencher tudo de uma vez."}
+          </p>
           <Progress
             value={calories}
             max={targets.calories}
@@ -507,9 +618,8 @@ export function Home() {
             <button
               className="app-button app-button--danger"
               onClick={() => {
-                reset === "water"
-                  ? useUserStore.getState().zerarAgua()
-                  : useUserStore.getState().zerarDieta();
+                if (reset === "water") useUserStore.getState().zerarAgua();
+                else useUserStore.getState().zerarDieta();
                 setReset(null);
               }}
             >
@@ -560,6 +670,28 @@ export function Home() {
           </div>,
           document.body
         )}
+      {feedback && (
+        <div className="app-feedback" role="status">
+          <Icon name="check" size={17} />
+          <span>{feedback.text}</span>
+          {feedback.undo && (
+            <button
+              onClick={() => {
+                feedback.undo?.();
+                setFeedback(null);
+              }}
+            >
+              Desfazer
+            </button>
+          )}
+          <button
+            aria-label="Fechar confirmação"
+            onClick={() => setFeedback(null)}
+          >
+            <Icon name="close" size={15} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

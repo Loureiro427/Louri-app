@@ -4,7 +4,8 @@ import type { RefeicaoDetalhe } from "../store/useUserStore";
 import { CONFIG_REFEICOES } from "../utils/nutritionMath";
 import { DICIONARIO_ALIMENTOS } from "../data/alimentos";
 import { normalizeMealPreferences } from "../utils/mealPreferences";
-import { Icon, Sheet, litersText, numberText } from "./ui/AppUI";
+import { Icon } from "./ui/AppUI";
+import { DayHistoryDetail } from "./DayHistoryDetail";
 const dateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
     2,
@@ -66,7 +67,6 @@ export default function CalendarHistory() {
     );
   };
   const record = selected ? history[selected] : undefined;
-  const entries = Object.entries(record?.refeicoesDetalhadas || {});
   return (
     <div className="app-card app-calendar">
       <div className="app-calendar-header">
@@ -132,74 +132,12 @@ export default function CalendarHistory() {
         <span>Toque para ver</span>
       </div>
       {selected && (
-        <Sheet
-          title={`Registro de ${selected.split("-").reverse().join("/")}`}
-          description={
-            selected === today ? "Seu acompanhamento de hoje" : undefined
-          }
+        <DayHistoryDetail
+          key={selected}
+          date={selected}
+          record={record}
           onClose={() => setSelected(null)}
-        >
-          {hasRecord(selected) ? (
-            <>
-              <div className="app-day-summary">
-                <div className="app-tone-blue">
-                  <Icon name="water" size={19} />
-                  <strong>
-                    {litersText(record?.aguaConsumida || 0)}
-                    <small> L</small>
-                  </strong>
-                  <span>Água consumida</span>
-                </div>
-                <div className="app-tone-orange">
-                  <Icon name="flame" size={19} />
-                  <strong>
-                    {numberText(record?.caloriasConsumidas || 0)}
-                    <small> kcal</small>
-                  </strong>
-                  <span>Alimentação</span>
-                </div>
-              </div>
-              <h3 className="app-sheet-section-title">Refeições registradas</h3>
-              <div className="app-record-list">
-                {entries.length ? (
-                  entries.map(([key, ref]) => (
-                    <div className="app-history-meal" key={key}>
-                      <div>
-                        <span aria-hidden="true">{ref.icone}</span>
-                        <strong>{ref.titulo}</strong>
-                        <b>{numberText(ref.calorias)} kcal</b>
-                      </div>
-                      <p>
-                        {Array.isArray(ref.alimentos)
-                          ? ref.alimentos.join(" · ")
-                          : ""}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="app-empty">
-                    Nenhuma refeição registrada neste dia.
-                  </p>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="app-empty-state">
-              <Icon name="clock" size={28} />
-              <h3>Um dia sem registros</h3>
-              <p>
-                Quando houver registros de água ou alimentação, eles aparecerão
-                aqui.
-              </p>
-            </div>
-          )}
-          <button
-            className="app-button app-button--secondary app-wide-button"
-            onClick={() => setSelected(null)}
-          >
-            Fechar
-          </button>
-        </Sheet>
+        />
       )}
     </div>
   );

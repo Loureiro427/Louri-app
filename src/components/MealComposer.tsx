@@ -7,6 +7,10 @@ import { calcularPorcoes, todosAlimentos } from "../data/alimentos";
 import { normalizeMealPreferences } from "../utils/mealPreferences";
 import { useUserStore } from "../store/useUserStore";
 import { Icon, numberText } from "./ui/AppUI";
+import {
+  replacementCandidates,
+  replacementPortion,
+} from "../utils/dailyExperience";
 type Props = {
   alimentos: Alimento[];
   initialPorcoes?: Record<string, number>;
@@ -42,6 +46,9 @@ export function MealComposer({
   const dados = useUserStore((state) => state.dados);
   const [library, setLibrary] = useState(false);
   const [busca, setBusca] = useState("");
+  const [swap, setSwap] = useState<Alimento | null>(null);
+  const [swapSearch, setSwapSearch] = useState("");
+  const [notice, setNotice] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [porcoes, setPorcoes] =
     useState<Record<string, number>>(initialPorcoes);
@@ -88,6 +95,11 @@ export function MealComposer({
         Number(preferences.includes(b.id)) - Number(preferences.includes(a.id))
     );
   const total = calcularPorcoes(porcoes, alimentos);
+  const alternatives = swap
+    ? replacementCandidates(swap, porcoes[swap.id], alimentos)
+        .filter((f) => normalizar(f.nome).includes(normalizar(swapSearch)))
+        .slice(0, swapSearch ? 50 : 8)
+    : [];
   const count = Object.values(porcoes).filter((g) => g > 0).length;
   const toggle = (item: Alimento) =>
     setPorcoes((previous) => {
@@ -204,6 +216,79 @@ export function MealComposer({
           </div>
         </header>
         <div className="app-composer-body custom-scrollbar">
+          {notice && (
+            <p className="app-inline-notice" role="status">
+              {notice}
+            </p>
+          )}
+          {swap && (
+            <section
+              className="app-swap-panel"
+              aria-label={`Trocar ${swap.nome}`}
+            >
+              <div className="app-section-heading">
+                <h3>Trocar {swap.nome}</h3>
+                <button
+                  className="app-icon-button"
+                  aria-label="Cancelar troca"
+                  onClick={() => setSwap(null)}
+                >
+                  <Icon name="close" size={18} />
+                </button>
+              </div>
+              <p>
+                Escolha o que você tem. A porção sugerida mantém calorias
+                próximas; proteínas, carboidratos e gorduras podem mudar.
+              </p>
+              <label className="app-search">
+                <Icon name="search" size={18} />
+                <input
+                  autoFocus
+                  aria-label="Buscar substituto"
+                  placeholder="O que você tem hoje?"
+                  value={swapSearch}
+                  onChange={(e) => setSwapSearch(e.target.value)}
+                />
+              </label>
+              <div className="app-swap-options">
+                {alternatives.map((f) => {
+                  const amount = replacementPortion(swap, porcoes[swap.id], f)!;
+                  return (
+                    <button
+                      key={f.id}
+                      className="app-swap-option"
+                      onClick={() => {
+                        setPorcoes((previous) => {
+                          const next = { ...previous };
+                          delete next[swap.id];
+                          next[f.id] = (next[f.id] || 0) + amount;
+                          return next;
+                        });
+                        setNotice(
+                          `${swap.nome} trocado por ${f.nome}. Confira a quantidade antes de salvar.`
+                        );
+                        setSwap(null);
+                      }}
+                    >
+                      <span aria-hidden="true">{f.emoji}</span>
+                      <span>
+                        <strong>{f.nome}</strong>
+                        <small>
+                          {numberText(amount)} g ·{" "}
+                          {numberText((f.kcal100g * amount) / 100)} kcal
+                        </small>
+                      </span>
+                      <Icon name="chevron" size={16} />
+                    </button>
+                  );
+                })}
+              </div>
+              {!alternatives.length && (
+                <p>Nenhuma opção por esse nome. Tente outro alimento.</p>
+              )}
+              {!swapSearch && <p>Busque por nome para ver outras opções.</p>}
+            </section>
+          )}
           <p className="app-composer-helper">
             Escolha os alimentos e ajuste as quantidades.
           </p>
@@ -263,6 +348,18 @@ export function MealComposer({
                   </div>
                   {selected && (
                     <div className="app-quantity-panel">
+                      <button
+                        className="app-text-button app-swap-trigger"
+                        onClick={() => {
+                          setSwap(item);
+                          setSwapSearch("");
+                          section.current
+                            ?.querySelector(".app-composer-body")
+                            ?.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      >
+                        <Icon name="reset" size={14} /> Trocar alimento
+                      </button>
                       <div>
                         <label htmlFor={`quantity-${item.id}`}>
                           Quantidade

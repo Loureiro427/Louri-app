@@ -851,6 +851,208 @@ try {
       "waiting"
     );
   });
+
+  const experience = await server.ssrLoadModule(
+    "/src/utils/dailyExperience.ts"
+  );
+  test("Próxima ação acompanha o horário sem prender o usuário ao café esquecido", () => {
+    const data = {
+      ...initial,
+      horaAcorda: "06:00",
+      horaDorme: "23:00",
+      refeicoesAtivas: ["cafeManha", "almoco", "janta"],
+      refeicoesConcluidas: [],
+    };
+    const result = experience.nextDailyAction(
+      data,
+      new Date(2026, 9, 23, 20, 0)
+    );
+    assert.equal(result.meal.key, "janta");
+    assert.equal(result.earlier, true);
+    const early = experience.nextDailyAction(data, new Date(2026, 9, 23, 6, 0));
+    assert.equal(early.meal.key, "cafeManha");
+    assert.equal(early.upcoming, true);
+    assert.equal(
+      experience.nextDailyAction({
+        ...data,
+        refeicoesConcluidas: data.refeicoesAtivas,
+      }).meal,
+      undefined
+    );
+  });
+  test("Troca aproxima calorias sem reutilizar os macros do alimento anterior", () => {
+    const a = { kcal100g: 200 },
+      b = { kcal100g: 100 };
+    assert.equal(experience.replacementPortion(a, 150, b), 300);
+    assert.equal(experience.replacementPortion(a, 150, { kcal100g: 0 }), null);
+    assert.equal(experience.replacementPortion(a, NaN, b), null);
+    assert.equal(experience.replacementPortion(a, 9999, { kcal100g: 1 }), null);
+  });
+  test("Datas inválidas e futuras não entram nas correções", () => {
+    const now = new Date(2026, 9, 23, 12);
+    assert.equal(experience.validPastOrToday("2026-02-30", now), false);
+    assert.equal(experience.validPastOrToday("2026-10-24", now), false);
+    assert.equal(experience.validPastOrToday("2026-10-23", now), true);
+  });
+  test("Editar ontem preserva consumo, macros e sequência de hoje, sem duplicar calorias", () => {
+    reset();
+    store.getState().setDados({
+      ultimaData: today(),
+      aguaConsumida: 600,
+      caloriasConsumidas: 420,
+      macrosConsumidos: { proteina: 20, carbo: 30, gordura: 10 },
+      diasMetasConcluidas: { "2020-01-01": true },
+      historico: {
+        "2020-01-01": {
+          aguaConsumida: 100,
+          caloriasConsumidas: 500,
+          refeicoesDetalhadas: {
+            almoco: {
+              titulo: "Almoço",
+              icone: "🍽️",
+              calorias: 300,
+              alimentos: ["Arroz"],
+              macros: { proteina: 1, carbo: 2, gordura: 3 },
+            },
+          },
+        },
+      },
+    });
+    const before = structuredClone(store.getState().dados);
+    const meal = {
+      titulo: "Almoço",
+      icone: "🍽️",
+      calorias: 200,
+      alimentos: ["Arroz"],
+      macros: { proteina: 1, carbo: 2, gordura: 3 },
+    };
+    assert.equal(
+      store
+        .getState()
+        .corrigirDia("2020-01-01", { key: "almoco", refeicao: meal }),
+      true
+    );
+    store
+      .getState()
+      .corrigirDia("2020-01-01", { key: "almoco", refeicao: meal });
+    const after = store.getState().dados;
+    assert.equal(after.historico["2020-01-01"].caloriasConsumidas, 400);
+    assert.equal(after.caloriasConsumidas, before.caloriasConsumidas);
+    assert.equal(after.aguaConsumida, before.aguaConsumida);
+    assert.deepEqual(after.macrosConsumidos, before.macrosConsumidos);
+    assert.deepEqual(after.diasMetasConcluidas, before.diasMetasConcluidas);
+    store.getState().corrigirDia("2020-01-01", { key: "almoco" });
+    assert.equal(
+      store.getState().dados.historico["2020-01-01"].caloriasConsumidas,
+      200
+    );
+  });
+  test("Correção de água passada rejeita valores inválidos e não reescreve hoje", () => {
+    reset();
+    store.getState().setDados({ ultimaData: today(), aguaConsumida: 500 });
+    assert.equal(
+      store.getState().corrigirDia("2020-01-02", { agua: 1250 }),
+      true
+    );
+    assert.equal(
+      store.getState().corrigirDia("2020-01-02", { agua: -1 }),
+      false
+    );
+    assert.equal(store.getState().corrigirDia(today(), { agua: 900 }), false);
+    assert.equal(
+      store.getState().corrigirDia("2099-01-01", { agua: 900 }),
+      false
+    );
+    assert.equal(store.getState().dados.aguaConsumida, 500);
+    assert.equal(
+      store.getState().dados.historico["2020-01-02"].aguaConsumida,
+      1250
+    );
+  });
+  test("Peso antigo pode ser corrigido sem substituir o peso mais recente", () => {
+    reset();
+    store
+      .getState()
+      .setDados({ peso: "80", historicoPeso: { [today()]: "80" } });
+    assert.equal(store.getState().salvarPesoNaData("2020-01-01", "90,5"), true);
+    assert.equal(store.getState().dados.peso, "80");
+    assert.equal(store.getState().dados.historicoPeso["2020-01-01"], "90.5");
+    assert.equal(store.getState().salvarPesoNaData(today(), "79.5"), true);
+    assert.equal(store.getState().dados.peso, "79.5");
+    assert.equal(store.getState().salvarPesoNaData("2099-01-01", "70"), false);
+  });
+  test("Gráfico filtra o período por datas reais e ignora pesos futuros ou inválidos", () => {
+    const weights = {
+      "2026-09-23": "82",
+      "2026-09-24": "81",
+      "2026-10-23": "80",
+      "2026-10-24": "79",
+      "2026-02-30": "78",
+      "2026-10-20": "abc",
+    };
+    assert.deepEqual(
+      experience
+        .weightSeries(weights, 30, new Date(2026, 9, 23))
+        .map((w) => w.value),
+      [81, 80]
+    );
+    assert.equal(
+      experience.weightSeries(weights, null, new Date(2026, 9, 23)).length,
+      3
+    );
+  });
+
+  test("Substituições priorizam composição semelhante e evitam porções impraticáveis", () => {
+    const chicken = {
+      id: "chicken",
+      nome: "Frango",
+      kcal100g: 165,
+      prot: 31,
+      carbo: 0,
+      gord: 3,
+    };
+    const fish = {
+      id: "fish",
+      nome: "Peixe",
+      kcal100g: 105,
+      prot: 23,
+      carbo: 0,
+      gord: 1,
+    };
+    const rice = {
+      id: "rice",
+      nome: "Arroz",
+      kcal100g: 130,
+      prot: 2,
+      carbo: 28,
+      gord: 1,
+    };
+    const coffee = {
+      id: "coffee",
+      nome: "Café",
+      kcal100g: 2,
+      prot: 0,
+      carbo: 0,
+      gord: 0,
+    };
+    const choices = experience.replacementCandidates(chicken, 100, [
+      rice,
+      coffee,
+      chicken,
+      fish,
+    ]);
+    assert.equal(choices[0].id, "fish");
+    assert.equal(
+      choices.some((f) => f.id === "coffee" || f.id === "chicken"),
+      false
+    );
+  });
+  test("Primeiro peso retroativo não apaga o peso atual sem data histórica", () => {
+    reset();
+    store.getState().setDados({ peso: "80", historicoPeso: {} });
+    store.getState().salvarPesoNaData("2020-01-01", "90");
+    assert.equal(store.getState().dados.peso, "80");
+  });
   console.log(`${passed} verificações passaram.`);
 } finally {
   await server.close();
