@@ -58,11 +58,34 @@ export function getRotina(dados: { horaAcorda: string; horaDorme: string }) {
     horasDescanso: (1440 - (dormeMin - acordaMin)) / 60,
   };
 }
-export function getCronograma(dados: {
+export type RotinaRefeicoes = {
   horaAcorda: string;
   horaDorme: string;
   refeicoesAtivas: string[];
-}) {
+  horariosRefeicoes?: Record<string, string>;
+};
+
+export function horarioValido(hora: string): boolean {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(hora);
+}
+
+// Cada refeição tem seu próprio horário. Remover o almoço nunca antecipa o jantar.
+export function getHorarioSugerido(key: string, horaAcorda: string): string {
+  const acorda = horarioValido(horaAcorda)
+    ? converterParaMinutos(horaAcorda)
+    : 7 * 60;
+  const horarios: Record<string, string> = {
+    cafeManha: formatarMinutos(acorda + 30),
+    almoco: "12:30",
+    lancheTarde: "15:30",
+    cafeTarde: "17:00",
+    janta: "19:30",
+    lancheNoite: "21:30",
+  };
+  return horarios[key] || "12:30";
+}
+
+export function getCronograma(dados: RotinaRefeicoes) {
   const { acordaMin, dormeMin } = getRotina(dados);
   const ativas = Object.keys(CONFIG_REFEICOES).filter((key) =>
     (dados.refeicoesAtivas?.length
@@ -70,18 +93,17 @@ export function getCronograma(dados: {
       : refeicoesPadrao
     ).includes(key)
   );
-  const inicio = Math.min(acordaMin + 30, dormeMin);
-  const fim = Math.max(inicio, dormeMin - 90);
-  return ativas.map((key, i) => {
-    const minutos = Math.round(
-      inicio +
-        (ativas.length > 1 ? ((fim - inicio) * i) / (ativas.length - 1) : 0)
-    );
-    return {
-      key,
-      ...CONFIG_REFEICOES[key],
-      minutos,
-      horario: formatarMinutos(minutos),
-    };
-  });
+  return ativas
+    .map((key) => {
+      const personalizado = dados.horariosRefeicoes?.[key] || "";
+      const horario = horarioValido(personalizado)
+        ? personalizado
+        : getHorarioSugerido(key, dados.horaAcorda);
+      let minutos = converterParaMinutos(horario);
+      // Horários após meia-noite pertencem ao fim da rotina que atravessa o dia.
+      if (dormeMin >= 1440 && minutos < acordaMin && minutos <= dormeMin - 1440)
+        minutos += 1440;
+      return { key, ...CONFIG_REFEICOES[key], minutos, horario };
+    })
+    .sort((a, b) => a.minutos - b.minutos);
 }

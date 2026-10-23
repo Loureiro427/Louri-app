@@ -49,13 +49,58 @@ try {
     };
     const agenda = math.getCronograma(data);
     assert.equal(agenda[0].horario, "07:01");
-    assert.equal(agenda.at(-1).horario, "23:04");
+    assert.equal(agenda.at(-1).horario, "19:30");
     assert.ok(
       agenda.every((r, i) => i === 0 || r.minutos >= agenda[i - 1].minutos)
     );
     assert.equal(
       math.getCronograma({ ...data, refeicoesAtivas: ["almoco"] }).length,
       1
+    );
+  });
+  test("Jantar e ceia mantêm seus horários mesmo sem almoço", () => {
+    const dados = {
+      horaAcorda: "06:00",
+      horaDorme: "22:00",
+      refeicoesAtivas: ["cafeManha", "janta", "lancheNoite"],
+    };
+    const agenda = math.getCronograma(dados);
+    assert.deepEqual(
+      agenda.map((r) => r.horario),
+      ["06:30", "19:30", "21:30"]
+    );
+    assert.equal(
+      math.getCronograma({ ...dados, refeicoesAtivas: ["janta"] })[0].horario,
+      "19:30"
+    );
+    const keys = Object.keys(math.CONFIG_REFEICOES);
+    for (let mask = 1; mask < 2 ** keys.length; mask++) {
+      const ativas = keys.filter((_, i) => mask & (1 << i));
+      const plano = math.getCronograma({ ...dados, refeicoesAtivas: ativas });
+      if (ativas.includes("janta"))
+        assert.equal(plano.find((r) => r.key === "janta").horario, "19:30");
+      if (ativas.includes("almoco"))
+        assert.equal(plano.find((r) => r.key === "almoco").horario, "12:30");
+    }
+  });
+  test("Horários personalizados são preservados e ordenados após meia-noite", () => {
+    const dados = {
+      horaAcorda: "06:00",
+      horaDorme: "01:00",
+      refeicoesAtivas: ["janta", "lancheNoite"],
+      horariosRefeicoes: { janta: "20:00", lancheNoite: "00:30" },
+    };
+    const plano = math.getCronograma(dados);
+    assert.deepEqual(
+      plano.map((r) => r.horario),
+      ["20:00", "00:30"]
+    );
+    assert.equal(plano[1].minutos, 1470);
+    assert.equal(
+      math
+        .getCronograma({ ...dados, horariosRefeicoes: { janta: "99:99" } })
+        .find((r) => r.key === "janta").horario,
+      "19:30"
     );
   });
   test("Porções contam calorias e macros proporcionais", () => {
@@ -107,20 +152,18 @@ try {
   });
   test("Virada de dia antes de registrar água preserva o histórico anterior", () => {
     reset();
-    store
-      .getState()
-      .setDados({
-        ultimaData: "2020-01-01",
-        aguaConsumida: 1000,
-        caloriasConsumidas: 500,
-        historico: {
-          "2020-01-01": {
-            aguaConsumida: 1000,
-            caloriasConsumidas: 500,
-            refeicoesDetalhadas: {},
-          },
+    store.getState().setDados({
+      ultimaData: "2020-01-01",
+      aguaConsumida: 1000,
+      caloriasConsumidas: 500,
+      historico: {
+        "2020-01-01": {
+          aguaConsumida: 1000,
+          caloriasConsumidas: 500,
+          refeicoesDetalhadas: {},
         },
-      });
+      },
+    });
     store.getState().adicionarAgua(250, 99999);
     assert.equal(store.getState().dados.aguaConsumida, 250);
     assert.equal(store.getState().dados.caloriasConsumidas, 0);

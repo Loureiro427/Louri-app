@@ -29,6 +29,7 @@ export interface UserData {
   horaAcorda: string;
   horaDorme: string;
   refeicoesAtivas: string[];
+  horariosRefeicoes?: Record<string, string>;
   alimentos: Record<string, string[]>;
   aguaConsumida: number;
   caloriasConsumidas: number;
