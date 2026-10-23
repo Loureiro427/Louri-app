@@ -3,12 +3,10 @@ import { calcularPorcoes, DICIONARIO_ALIMENTOS } from '../data/alimentos';
 import { calculateWaterGoal, calculateCaloricGoal, getCronograma, getRotina } from '../utils/nutritionMath';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
-import logoImg from '../assets/logo.png';
+import { WelcomeScreen } from '../components/WelcomeScreen';
 
 export function Home() {
-  const navigate = useNavigate();
   const dados = useUserStore((state) => state.dados);
   const adicionarAgua = useUserStore((state) => state.adicionarAgua);
   const zerarAgua = useUserStore((state) => state.zerarAgua);
@@ -41,52 +39,8 @@ export function Home() {
     return () => clearInterval(timer);
   }, [dados.nome, verificarViradaDeDia]);
 
-  if (!dados.nome) {
-    return (
-      <div className={`flex flex-col h-[100dvh] px-6 py-10 justify-between items-center overflow-hidden overscroll-none relative select-none transition-colors duration-300 ${
-        temaEscuro ? 'bg-zinc-950 text-white' : 'bg-zinc-100 text-zinc-900'
-      }`}>
-        
-        <div className="absolute top-1/4 w-72 h-72 bg-green-500/5 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="w-full"></div>
+  if (!dados.nome) return <WelcomeScreen dark={temaEscuro} />;
 
-        <div className="relative w-64 h-64 flex items-center justify-center">
-            <div className="absolute inset-0 animate-[spin_30s_linear_infinite]">
-              <div className="absolute top-3 left-6 text-2xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">🍎</div>
-              <div className="absolute top-2 right-10 text-3xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">🔥</div>
-              <div className="absolute top-1/2 -translate-y-1/2 -left-3 text-3xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">🍊</div>
-              <div className="absolute top-1/2 -translate-y-1/2 -right-3 text-3xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">💪</div>
-              <div className="absolute bottom-6 left-10 text-3xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">👟</div>
-              <div className="absolute bottom-4 right-12 text-2xl animate-[spin_30s_linear_infinite_reverse] drop-shadow-md">🥗</div>
-            </div>
-
-            <div className="relative z-10 flex flex-col items-center justify-center gap-3">
-              <div className={`w-24 h-24 rounded-3xl p-3 shadow-2xl flex items-center justify-center backdrop-blur-md overflow-hidden border ${
-                temaEscuro ? 'bg-zinc-900/40 border-zinc-800/80' : 'bg-white border-zinc-200 shadow-sm'
-              }`}>
-                <img src={logoImg} alt="Louri Logo" className="w-full h-full object-contain filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]" />
-              </div>
-              <h1 className={`text-3xl font-black tracking-tight flex items-center gap-2 ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>
-                Louri <span className="text-xs text-green-500 uppercase tracking-widest bg-green-500/10 px-2 py-1 rounded-lg">Beta</span>
-              </h1>
-            </div>
-        </div>
-
-        <div className="w-full max-w-sm flex flex-col gap-3 z-10 pb-6">
-          <button 
-            onClick={() => navigate('/onboarding')} 
-            className={`w-full font-bold py-4 rounded-2xl text-lg shadow-xl transition-all active:scale-[0.98] ${
-              temaEscuro ? 'bg-green-500 hover:bg-green-400 text-zinc-950 shadow-green-500/20' : 'bg-green-500 hover:bg-green-600 text-white shadow-green-500/30'
-            }`}
-          >
-            Começar Agora
-          </button>
-        </div>
-
-      </div>
-    );
-  }
-  
   const primeiroNome = dados.nome ? dados.nome.trim().split(' ')[0] : '';
   const pesoNum = Number(dados.peso) || 70;
   

@@ -16,3 +16,40 @@ button:focus-visible, a:focus-visible { outline: 2px solid #22c55e; outline-offs
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+/* Screen changes never create a horizontal scrolling surface. */
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+  overscroll-behavior-x: none;
+}
+.app-page-viewport {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior-x: none;
+}
+.app-page-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-x: none;
+  animation: louri-page-appear .18s ease-out both;
+}
+.app-page-panel[hidden] { display: none; }
+.custom-scrollbar, .ob-content {
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  min-width: 0;
+}
+@keyframes louri-page-appear { from { opacity: .7; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .app-page-panel { animation: none; } }

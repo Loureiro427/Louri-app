@@ -88,7 +88,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         )}
       </AnimatePresence>
 
-      <main className="flex-1 flex flex-col relative w-full h-full"> 
+      <main className="flex-1 min-h-0 min-w-0 flex flex-col relative w-full overflow-hidden">
         {children}
       </main>
 
