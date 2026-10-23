@@ -1,4 +1,3 @@
-import { NotificationHealth } from "./NotificationHealth";
 import { reminderSlots } from "../utils/reminders";
 import { useState } from "react";
 import { useUserStore } from "../store/useUserStore";
@@ -45,7 +44,6 @@ export function ReminderSettings() {
           description="Escolha o que faz sentido para sua rotina."
           onClose={() => setOpen(false)}
         >
-          <NotificationHealth />
           <form
             className="app-feature-form"
             onSubmit={async (e) => {

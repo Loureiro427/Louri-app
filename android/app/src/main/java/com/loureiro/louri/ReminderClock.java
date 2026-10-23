@@ -5,6 +5,10 @@ import java.util.Calendar;
 /** Local calendar arithmetic keeps daily reminders aligned across DST changes. */
 public final class ReminderClock {
     private ReminderClock() {}
+    /** Resume/background transitions must not move a still-valid occurrence to tomorrow. */
+    public static boolean preserveOccurrence(long expected, long now) {
+        return expected > 0 && now - expected < 90 * 60 * 1000L && expected - now <= 26 * 60 * 60 * 1000L;
+    }
     public static int variant(int day, String slotId, int count) {
         return count > 0 ? Math.floorMod(day + slotId.hashCode(), count) : 0;
     }

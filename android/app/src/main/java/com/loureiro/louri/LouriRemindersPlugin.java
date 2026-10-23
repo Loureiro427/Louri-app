@@ -20,6 +20,10 @@ public class LouriRemindersPlugin extends Plugin {
         Intent settings=new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,getContext().getPackageName());
         getActivity().startActivity(settings);call.resolve();
     }
+    @PluginMethod public void openAppSettings(PluginCall call) {
+        Intent settings=new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:"+getContext().getPackageName()));
+        getActivity().startActivity(settings);call.resolve();
+    }
     @PluginMethod public void consumeTap(PluginCall call) {
         Intent intent=getActivity().getIntent();JSObject target=new JSObject();
         if(intent!=null&&intent.hasExtra("louriRoute")) {

@@ -3,6 +3,14 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import java.util.*;
 public class ReminderClockTest {
+    @Test public void leavingAppPreservesAnAlarmWaitingForAndroidDelivery() {
+        long scheduled=100000000L;
+        assertTrue(ReminderClock.preserveOccurrence(scheduled,scheduled-1000));
+        assertTrue(ReminderClock.preserveOccurrence(scheduled,scheduled+60000));
+        assertFalse(ReminderClock.preserveOccurrence(scheduled,scheduled+90*60*1000L));
+        assertFalse(ReminderClock.preserveOccurrence(0,scheduled));
+        assertFalse(ReminderClock.preserveOccurrence(scheduled+27*60*60*1000L,scheduled));
+    }
     private Calendar date(String zone,int year,int month,int day,int hour,int minute) {
         Calendar c=Calendar.getInstance(TimeZone.getTimeZone(zone));c.clear();c.set(year,month-1,day,hour,minute,0);return c;
     }

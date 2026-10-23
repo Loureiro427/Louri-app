@@ -10,8 +10,8 @@ As mensagens variam entre horários e dias. Refeições registradas e a meta de 
 
 ## Testar no aparelho
 
-1. Compile com `npm run build`, `npx cap sync android` e `gradlew.bat :app:assembleDebug` dentro de `android/`, usando Java 21 ou superior compatível com o Gradle do projeto.
-2. Instale o APK atualizado, mantendo a assinatura da instalação anterior para preservar os dados.
+1. Gerar, instalar ou executar APKs exige autorização explícita do usuário, conforme `AGENTS.md`. Não empacote para realizar apenas uma análise ou teste de código.
+2. Quando uma atualização for autorizada, mantenha a assinatura da instalação anterior para preservar os dados.
 3. Abra **Perfil → Personalizar lembretes** e salve as preferências. Permita notificações quando solicitado.
 4. Confira no diagnóstico a permissão e o horário do próximo lembrete.
 5. Use **Enviar teste agora**. O aviso deve aparecer na área de notificações; isso testa a permissão e o canal.
@@ -21,6 +21,10 @@ As mensagens variam entre horários e dias. Refeições registradas e a meta de 
 9. Confira um lembrete após reiniciar o celular e no dia seguinte. Isso valida o reagendamento fora do processo do app.
 
 Se o teste imediato funcionar e o agendado não, confira **Melhorar pontualidade** e as restrições de bateria do aplicativo nas configurações do aparelho. A opção “Forçar parada” do Android interrompe alarmes até o app ser aberto novamente. O app não desativa proteções do aparelho por conta própria.
+
+Se o teste agendado chegar vários minutos depois, houve entrega em segundo plano com atraso. Isso não identifica sozinho a causa: confira **Pontualidade** antes de atribuir o atraso ao fabricante. Alarmes aproximados podem ser adiados pelo Android. Em aparelhos Xiaomi, confira também economia de bateria e inicialização automática; os nomes variam entre MIUI e HyperOS.
+
+O diagnóstico registra separadamente o horário solicitado, a entrada no receiver e a publicação do aviso, incluindo o atraso observado. A sincronização ao entrar ou sair do app preserva uma ocorrência ainda válida que aguarda entrega, em vez de transferi-la para o dia seguinte. As restrições específicas da Xiaomi não são totalmente verificáveis pelo diagnóstico padrão do Android.
 
 O diagnóstico e o envio nativo são exclusivos do APK Android. O navegador permite configurar horários e pré-visualizar as mensagens, mas não executa esse agendador.
 

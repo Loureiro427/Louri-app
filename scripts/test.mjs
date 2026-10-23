@@ -801,6 +801,56 @@ try {
       false
     );
   });
+
+  const diagnostics = await server.ssrLoadModule(
+    "/src/utils/notificationDiagnostics.ts"
+  );
+  test("Teste imediato não confirma agendamento e teste futuro continua aguardando", () => {
+    assert.equal(
+      diagnostics.notificationTestResult({ lastShown: 999 }, 1000).state,
+      "none"
+    );
+    assert.equal(
+      diagnostics.notificationTestResult(
+        { testAt: 2000, testReceivedAt: 0 },
+        1000
+      ).state,
+      "waiting"
+    );
+  });
+  test("Diagnóstico separa atraso do Android, restrição de exibição e entrega real", () => {
+    assert.equal(
+      diagnostics.notificationTestResult({ testAt: 2000, exact: false }, 3000)
+        .state,
+      "approximate"
+    );
+    assert.equal(
+      diagnostics.notificationTestResult({ testAt: 2000, exact: true }, 3000)
+        .state,
+      "overdue"
+    );
+    assert.equal(
+      diagnostics.notificationTestResult(
+        { testAt: 2000, testReceivedAt: 3000, testShown: false },
+        3000
+      ).state,
+      "blocked"
+    );
+    assert.equal(
+      diagnostics.notificationTestResult(
+        { testAt: 2000, testReceivedAt: 3000, testShown: true },
+        3000
+      ).state,
+      "received"
+    );
+    assert.equal(
+      diagnostics.notificationTestResult(
+        { testAt: 20000, testReceivedAt: 3000, testShown: true },
+        10000
+      ).state,
+      "waiting"
+    );
+  });
   console.log(`${passed} verificações passaram.`);
 } finally {
   await server.close();

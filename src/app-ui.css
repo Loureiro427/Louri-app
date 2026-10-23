@@ -2442,3 +2442,37 @@
     line-height: 1.7;
   }
 }
+.app-notification-device-help {
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 17px;
+}
+.app-notification-device-help summary {
+  font-size: 12px;
+  color: var(--app-green);
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.app-notification-device-help p,
+.app-notification-device-help li {
+  font-size: 11px;
+  color: var(--app-muted);
+  line-height: 1.8;
+}
+.app-notification-device-help p {
+  margin: 12px 0;
+}
+.app-notification-device-help ol {
+  list-style: decimal;
+  padding-left: 18px;
+  margin: 12px 0;
+}
+.app-notification-device-help li + li {
+  margin-top: 10px;
+}
+.app-notification-device-help strong {
+  font-weight: 550;
+  color: var(--app-text);
+}

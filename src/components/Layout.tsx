@@ -33,10 +33,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     dados.refeicoesConcluidas,
   ]);
   useEffect(() => {
-    const timer = setTimeout(() => {
-      void configurarNotificacoesNativas().catch(() => {});
-    }, 300);
-    return () => clearTimeout(timer);
+    void configurarNotificacoesNativas().catch(() => {});
   }, [reminderSignature]);
   useEffect(
     () =>

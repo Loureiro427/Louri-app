@@ -7,4 +7,9 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(LouriRemindersPlugin.class);
         super.onCreate(savedInstanceState);
     }
+    @Override public void onStop() {
+        super.onStop();
+        try { ReminderEngine.reschedule(getApplicationContext()); }
+        catch (RuntimeException error) { android.util.Log.e("LouriReminders", "Could not confirm background alarm", error); }
+    }
 }

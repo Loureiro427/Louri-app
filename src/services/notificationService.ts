@@ -9,6 +9,16 @@ export type ReminderStatus = {
   batteryUnrestricted: boolean;
   nextAt: number;
   lastShown: number;
+  manufacturer?: string;
+  brand?: string;
+  model?: string;
+  backgroundRestricted?: boolean;
+  lastArmedAt?: number;
+  lastReceiverAt?: number;
+  lastOutcome?: string;
+  testAt?: number;
+  testReceivedAt?: number;
+  testShown?: boolean;
 };
 type Tap = { route?: string; meal?: string; kind?: string };
 const Native = registerPlugin<{
@@ -18,6 +28,7 @@ const Native = registerPlugin<{
   status(): Promise<ReminderStatus>;
   test(options: { delayed: boolean }): Promise<void>;
   openSettings(): Promise<void>;
+  openAppSettings(): Promise<void>;
   consumeTap(): Promise<Tap>;
   addListener(
     name: "openReminder",
@@ -36,28 +47,25 @@ export function configurarNotificacoesNativas(
     .then(async () => {
       if (!Capacitor.isNativePlatform()) return "web";
       if (!hasNativeReminders()) return "update";
-      let permission = await LocalNotifications.checkPermissions();
       const dados = useUserStore.getState().dados;
-      if (
-        dados.notificacoes &&
-        permission.display !== "granted" &&
-        requestPermission
-      )
-        permission = await LocalNotifications.requestPermissions();
+      if (dados.notificacoes && requestPermission) {
+        const permission = await LocalNotifications.checkPermissions();
+        if (permission.display !== "granted")
+          await LocalNotifications.requestPermissions();
+      }
+      // Persist the plan in the first native call, before the webview can be paused.
+      const status = await Native.sync({
+        plan: nativeReminderPlan(useUserStore.getState().dados),
+      });
       const pending = await LocalNotifications.getPending();
       const legacy = pending.notifications
         .filter((n) => n.id >= 1000 && n.id < 2000)
         .map((n) => ({ id: n.id }));
-      const status = await Native.sync({
-        plan: nativeReminderPlan(useUserStore.getState().dados),
-      });
       if (legacy.length)
         await LocalNotifications.cancel({ notifications: legacy });
       window.dispatchEvent(new Event("louri-reminders-updated"));
       if (!dados.notificacoes) return "disabled";
-      return permission.display === "granted" && status.permission
-        ? "scheduled"
-        : "denied";
+      return status.permission ? "scheduled" : "denied";
     });
   return queue;
 }
@@ -71,6 +79,9 @@ export async function testNotification(delayed = false) {
 }
 export async function openNotificationSettings() {
   if (hasNativeReminders()) await Native.openSettings();
+}
+export async function openBackgroundSettings() {
+  if (hasNativeReminders()) await Native.openAppSettings();
 }
 export async function openExactSettings() {
   if (hasNativeReminders())
@@ -94,8 +105,8 @@ export function watchReminderTap(onTap: (target: Tap) => void) {
       })
       .catch(() => {});
   const resume = () => {
+    void configurarNotificacoesNativas().catch(() => {});
     if (document.visibilityState === "visible") {
-      void configurarNotificacoesNativas().catch(() => {});
       void consume().catch(() => {});
     }
   };

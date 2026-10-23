@@ -5,14 +5,29 @@ import {
   notificationStatus,
   openExactSettings,
   openNotificationSettings,
+  openBackgroundSettings,
   testNotification,
 } from "../services/notificationService";
 import type { ReminderStatus } from "../services/notificationService";
 import { Icon } from "./ui/AppUI";
+import { notificationTestResult } from "../utils/notificationDiagnostics";
 export function NotificationHealth() {
   const [health, setHealth] = useState<ReminderStatus | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const isXiaomi = /xiaomi|redmi|poco/i.test(
+    `${health?.manufacturer || ""} ${health?.brand || ""}`
+  );
+  const testResult = notificationTestResult(health || {});
+  const openBackground = async () => {
+    try {
+      await openBackgroundSettings();
+    } catch {
+      setMessage(
+        "Abra Configurações → Apps → Louri e confira a economia de bateria e a inicialização automática."
+      );
+    }
+  };
   const refresh = () =>
     notificationStatus()
       .then(setHealth)
@@ -29,10 +44,14 @@ export function NotificationHealth() {
     window.addEventListener("louri-reminders-updated", onResume);
     window.addEventListener("focus", onResume);
     document.addEventListener("visibilitychange", onResume);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 15000);
     return () => {
       window.removeEventListener("louri-reminders-updated", onResume);
       window.removeEventListener("focus", onResume);
       document.removeEventListener("visibilitychange", onResume);
+      clearInterval(timer);
     };
   }, []);
   const test = async (delayed: boolean) => {
@@ -80,7 +99,10 @@ export function NotificationHealth() {
         <h2>Está chegando aí?</h2>
         <Icon name="bell" size={19} />
       </div>
-      <p>Teste primeiro. Assim você sabe se o aparelho permite os avisos.</p>
+      <p>
+        O teste imediato verifica a exibição. O de 1 minuto verifica o
+        agendamento, inclusive fora do app.
+      </p>
       {health ? (
         <div className="app-health-rows">
           <div>
@@ -93,6 +115,24 @@ export function NotificationHealth() {
               {health.exact ? "Alarmes precisos" : "Horário aproximado"}
             </strong>
           </div>
+          <div>
+            <span>Segundo plano no Android</span>
+            <strong>
+              {health.backgroundRestricted === undefined
+                ? "Não verificado nesta versão"
+                : health.backgroundRestricted
+                ? "Restrito"
+                : "Sem bloqueio detectado"}
+            </strong>
+          </div>
+          {health.model && (
+            <div>
+              <span>Aparelho</span>
+              <strong>
+                {health.brand} {health.model}
+              </strong>
+            </div>
+          )}
           <div>
             <span>Próximo lembrete</span>
             <strong>
@@ -118,6 +158,26 @@ export function NotificationHealth() {
                 })}
               </strong>
             </div>
+          )}
+          {!!health.testAt && (
+            <>
+              <div>
+                <span>Horário do teste agendado</span>
+                <strong>
+                  {new Date(health.testAt).toLocaleTimeString("pt-BR")}
+                </strong>
+              </div>
+              <div>
+                <span>Recebido pelo Louri</span>
+                <strong>
+                  {health.testReceivedAt
+                    ? new Date(health.testReceivedAt).toLocaleTimeString(
+                        "pt-BR"
+                      )
+                    : "Aguardando o Android"}
+                </strong>
+              </div>
+            </>
           )}
         </div>
       ) : (
@@ -146,9 +206,57 @@ export function NotificationHealth() {
         </button>
       </div>
       {health && (
+        <p className="app-health-message" role="status">
+          {testResult.text}
+        </p>
+      )}
+      {health && (
+        <details className="app-notification-device-help">
+          <summary>Ver detalhes dos disparos</summary>
+          <div className="app-health-rows">
+            <div>
+              <span>Última confirmação de agendamento</span>
+              <strong>
+                {health.lastArmedAt
+                  ? new Date(health.lastArmedAt).toLocaleString("pt-BR")
+                  : "Sem registro nesta versão"}
+              </strong>
+            </div>
+            <div>
+              <span>Último alarme recebido pelo Louri</span>
+              <strong>
+                {health.lastReceiverAt
+                  ? new Date(health.lastReceiverAt).toLocaleString("pt-BR")
+                  : "Ainda sem registro"}
+              </strong>
+            </div>
+            <div>
+              <span>Resultado do último lembrete</span>
+              <strong>
+                {(
+                  {
+                    posted: "Aviso enviado",
+                    completed: "Meta já concluída",
+                    quiet: "Horário de silêncio",
+                    expired: "Entregue com atraso",
+                    duplicate: "Já enviado",
+                    replaced: "Agendamento atualizado",
+                    permission_blocked: "Exibição bloqueada",
+                    disabled: "Lembretes desativados",
+                  } as Record<string, string>
+                )[health.lastOutcome || ""] || "Ainda sem registro"}
+              </strong>
+            </div>
+          </div>
+        </details>
+      )}
+      {health && (
         <div className="app-notification-links">
           <button type="button" onClick={() => void openNotificationSettings()}>
             Permissões do aparelho
+          </button>
+          <button type="button" onClick={() => void openBackground()}>
+            Configurações de segundo plano
           </button>
           {!health.exact && (
             <button type="button" onClick={() => void openExactSettings()}>
@@ -160,6 +268,45 @@ export function NotificationHealth() {
           </button>
         </div>
       )}
+      <details
+        className="app-notification-device-help"
+        open={isXiaomi || undefined}
+      >
+        <summary>
+          {isXiaomi
+            ? "Configurar neste Xiaomi/Redmi/POCO"
+            : "Ajuda para Xiaomi, Redmi e POCO"}
+        </summary>
+        <p>
+          No seu Redmi, confira também as opções do fabricante. O diagnóstico
+          padrão do Android não consegue confirmar todas elas.
+        </p>
+        <ol>
+          <li>
+            Em <strong>Apps → Louri → Economia de bateria</strong>, procure{" "}
+            <strong>Sem restrições</strong>.
+          </li>
+          <li>
+            Em <strong>Apps → Permissões</strong>, procure{" "}
+            <strong>Inicialização automática</strong> ou{" "}
+            <strong>Inicialização em segundo plano</strong> e confira o Louri.
+            Os nomes variam entre MIUI e HyperOS.
+          </li>
+          <li>
+            Em <strong>Alarmes e lembretes</strong>, confira a permissão de
+            horários precisos. Depois agende o teste novamente e aperte Início.
+          </li>
+        </ol>
+        {health && (
+          <button
+            type="button"
+            className="app-text-button"
+            onClick={() => void openBackground()}
+          >
+            Abrir configurações do Louri
+          </button>
+        )}
+      </details>
       {health && !health.batteryUnrestricted && (
         <p className="app-helper">
           Se o teste chegar mas os lembretes atrasarem, confira as restrições de
@@ -167,8 +314,8 @@ export function NotificationHealth() {
         </p>
       )}
       <p className="app-helper">
-        Fechar o app normalmente mantém o agendamento. Se usar “Forçar parada”,
-        abra o Louri novamente para reativar os avisos.
+        Ao testar, volte para a tela inicial sem usar “Forçar parada”. Depois
+        reabra o diagnóstico para conferir se o Android entregou o alarme.
       </p>
       {message && (
         <p className="app-health-message" role="status">
