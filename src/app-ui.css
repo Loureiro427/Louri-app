@@ -9,11 +9,11 @@
   --app-text: #f0f4f1;
   --app-muted: #8b9696;
   --app-faint: #657273;
-  --app-green: #19ce70;
-  --app-green-soft: #112a1e;
-  --app-blue: #78b6ee;
-  --app-orange: #e8aa76;
-  --app-red: #ee9089;
+  --app-green: #00d563;
+  --app-green-soft: #082a1a;
+  --app-blue: #3795ff;
+  --app-orange: #ff920f;
+  --app-red: #ff625a;
   color: var(--app-text);
   color-scheme: dark;
   font-variant-numeric: tabular-nums;
@@ -173,7 +173,7 @@
   gap: 8px;
 }
 .app-button--primary {
-  background: #19ce70;
+  background: #00d563;
   color: #06190e;
 }
 .app-button--secondary {
@@ -1107,7 +1107,7 @@
   height: 57px;
   width: 57px;
   border-radius: 50%;
-  background: #19ce70;
+  background: #00d563;
   color: #06190e;
   display: grid;
   place-items: center;
@@ -1468,7 +1468,7 @@
   font-weight: 600;
 }
 .app-legacy-dialog button.bg-yellow-500 {
-  background: #19ce70;
+  background: #00d563;
   color: #06190e;
 }
 .app-modal-scrim {
@@ -1917,6 +1917,76 @@
   padding-top: calc(30px + env(safe-area-inset-top));
 }
 .app-legacy-dialog button.bg-yellow-400 {
-  background: #19ce70;
+  background: #00d563;
   color: #06190e;
+}
+.app-daily-goals {
+  padding: 20px;
+}
+.app-daily-goals .app-section-heading {
+  margin-bottom: 8px;
+}
+.app-daily-goals .app-section-heading > svg {
+  color: var(--app-orange);
+}
+.app-daily-goals > p {
+  font-size: 11px;
+  color: var(--app-muted);
+  line-height: 1.7;
+  margin: 0;
+}
+.app-streak-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin: 20px 0 16px;
+}
+.app-streak-week > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+  color: var(--app-muted);
+}
+.app-streak-week i {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--app-soft);
+  border: 1px solid var(--app-border);
+  font-size: 11px;
+  font-style: normal;
+}
+.app-streak-week .is-today i {
+  border-color: var(--app-green);
+  color: var(--app-green);
+}
+.app-streak-week .is-complete i {
+  background: var(--app-green);
+  border-color: var(--app-green);
+  color: #041b0c;
+}
+.app-daily-goal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 0;
+  border-top: 1px solid var(--app-line);
+  font-size: 11px;
+}
+.app-daily-goal-row svg {
+  color: var(--app-green);
+  flex-shrink: 0;
+}
+.app-daily-goal-row span {
+  flex: 1;
+  color: var(--app-muted);
+}
+.app-daily-goal-row strong {
+  font-weight: 500;
+  font-size: 10px;
+  white-space: nowrap;
 }

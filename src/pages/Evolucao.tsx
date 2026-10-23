@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useUserStore } from "../store/useUserStore";
 import CalendarHistory from "../components/CalendarHistory";
+import { dailyGoals, localDayKey, previousDay } from "../utils/dailyStreak";
 import {
   Icon,
   PageHeader,
@@ -13,6 +14,10 @@ export function Evolucao() {
   const dados = useUserStore((state) => state.dados);
   const [streakInfo, setStreakInfo] = useState(false);
   const streak = dados.streak || 0;
+  const goals = dailyGoals(dados);
+  const today = localDayKey(new Date());
+  const week = [today];
+  for (let i = 1; i < 7; i++) week.unshift(previousDay(week[0]));
   const milestone =
     [7, 14, 30, 90].find((value) => value > streak) || streak + 10;
   const weights = Object.entries(dados.historicoPeso || {})
@@ -84,6 +89,80 @@ export function Evolucao() {
           <p>Dias de metas completas</p>
         </button>
       </div>
+      <section
+        className="app-card app-daily-goals"
+        aria-label="Progresso da sequência diária"
+      >
+        <div className="app-section-heading">
+          <h2>
+            {goals.complete
+              ? "Dia completo!"
+              : streak > 0
+              ? "Mantenha sua sequência"
+              : "Sua sequência começa hoje"}
+          </h2>
+          <Icon name={goals.complete ? "check" : "flame"} size={20} />
+        </div>
+        <p>
+          {goals.complete
+            ? "Mais um dia de cuidado registrado."
+            : streak > 0
+            ? "Complete as duas metas para manter sua sequência."
+            : "Complete as duas metas para somar seu primeiro dia."}
+        </p>
+        <div className="app-streak-week" aria-label="Últimos sete dias">
+          {week.map((key) => {
+            const completed = Boolean(dados.diasMetasConcluidas?.[key]);
+            const date = new Date(`${key}T12:00:00`);
+            return (
+              <div
+                key={key}
+                className={`${completed ? "is-complete" : ""} ${
+                  key === today ? "is-today" : ""
+                }`}
+                aria-label={`${date.toLocaleDateString("pt-BR")}: ${
+                  completed
+                    ? "metas completas"
+                    : key === today
+                    ? "em andamento"
+                    : "sem dia completo"
+                }`}
+              >
+                <span>
+                  {date
+                    .toLocaleDateString("pt-BR", { weekday: "short" })
+                    .replace(".", "")}
+                </span>
+                <i>
+                  {completed ? <Icon name="check" size={15} /> : date.getDate()}
+                </i>
+              </div>
+            );
+          })}
+        </div>
+        <div className="app-daily-goal-row">
+          <Icon name={goals.waterDone ? "check" : "water"} size={18} />
+          <span>Meta de água</span>
+          <strong>
+            {litersText(dados.aguaConsumida || 0)} /{" "}
+            {litersText(goals.waterGoal)} L
+          </strong>
+        </div>
+        <div className="app-daily-goal-row">
+          <Icon
+            name={
+              goals.active > 0 && goals.completed === goals.active
+                ? "check"
+                : "plan"
+            }
+            size={18}
+          />
+          <span>Refeições do plano</span>
+          <strong>
+            {goals.completed} de {goals.active}
+          </strong>
+        </div>
+      </section>
       <section>
         <SectionHeading title="Histórico de peso" />
         {weights.length > 1 ? (
@@ -190,6 +269,13 @@ export function Evolucao() {
           <p className="app-body-copy">
             Cada dia em que você atinge a meta de água e registra todas as
             refeições do plano soma um ponto à sua sequência.
+          </p>
+          <p className="app-body-copy">
+            Cada dia conta uma vez, até a meia-noite no seu aparelho. Sua
+            sequência continua durante o dia seguinte; se passar um dia inteiro
+            sem completar as metas, ela reinicia. Refeições livres não
+            substituem as do plano. Se você desfizer um registro de hoje, o
+            ponto é recalculado.
           </p>
           <div className="app-streak-milestone">
             <span>Próximo marco</span>

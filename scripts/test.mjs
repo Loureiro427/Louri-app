@@ -250,6 +250,215 @@ try {
     assert.deepEqual(result.almoco, ["frango"]);
     assert.deepEqual(result.lancheNoite, ["iogurte_noite"]);
   });
+
+  const streakMath = await server.ssrLoadModule("/src/utils/dailyStreak.ts");
+  const streakDay = (day) => new Date(2026, 9, day, 12);
+  const completeDay = {
+    ...initial,
+    peso: "70",
+    ultimaData: "2026-10-23",
+    refeicoesAtivas: ["cafeManha", "janta"],
+    refeicoesConcluidas: ["cafeManha", "janta"],
+    aguaConsumida: 2450,
+  };
+  test("Sequência soma apenas uma vez e persiste ao reabrir", () => {
+    const earned = streakMath.reconcileDailyStreak(completeDay, streakDay(23));
+    assert.equal(earned.streak, 1);
+    assert.equal(earned.ultimoDiaPontuado, "2026-10-23");
+    assert.equal(
+      streakMath.reconcileDailyStreak(earned, streakDay(23)),
+      earned
+    );
+    const restored = JSON.parse(JSON.stringify(earned));
+    assert.equal(
+      streakMath.reconcileDailyStreak(restored, streakDay(23)).streak,
+      1
+    );
+  });
+  test("Água ou refeições incompletas e refeição livre não pontuam", () => {
+    assert.equal(
+      streakMath.reconcileDailyStreak(
+        { ...completeDay, aguaConsumida: 2449 },
+        streakDay(23)
+      ).streak,
+      0
+    );
+    assert.equal(
+      streakMath.reconcileDailyStreak(
+        {
+          ...completeDay,
+          refeicoesConcluidas: ["cafeManha", "refeicaoLivre_1"],
+        },
+        streakDay(23)
+      ).streak,
+      0
+    );
+    assert.equal(
+      streakMath.reconcileDailyStreak(
+        { ...completeDay, refeicoesAtivas: [] },
+        streakDay(23)
+      ).streak,
+      0
+    );
+  });
+  test("Dias consecutivos somam e um dia perdido reinicia sem apagar histórico", () => {
+    const day1 = streakMath.reconcileDailyStreak(completeDay, streakDay(23));
+    const nextMorning = {
+      ...day1,
+      ultimaData: "2026-10-24",
+      aguaConsumida: 0,
+      refeicoesConcluidas: [],
+    };
+    assert.equal(
+      streakMath.reconcileDailyStreak(nextMorning, streakDay(24)).streak,
+      1
+    );
+    const day2 = streakMath.reconcileDailyStreak(
+      { ...day1, ultimaData: "2026-10-24" },
+      streakDay(24)
+    );
+    assert.equal(day2.streak, 2);
+    const missed = streakMath.reconcileDailyStreak(
+      {
+        ...day2,
+        ultimaData: "2026-10-26",
+        aguaConsumida: 0,
+        refeicoesConcluidas: [],
+      },
+      streakDay(26)
+    );
+    assert.equal(missed.streak, 0);
+    assert.equal(missed.diasMetasConcluidas["2026-10-23"], true);
+    assert.equal(
+      streakMath.reconcileDailyStreak(
+        { ...missed, ...completeDay, ultimaData: "2026-10-26" },
+        streakDay(26)
+      ).streak,
+      1
+    );
+  });
+  test("Desfazer o dia retira apenas o ponto de hoje e recompletar o devolve", () => {
+    const earned = streakMath.reconcileDailyStreak(
+      { ...completeDay, diasMetasConcluidas: { "2026-10-22": true } },
+      streakDay(23)
+    );
+    assert.equal(earned.streak, 2);
+    const undone = streakMath.reconcileDailyStreak(
+      { ...earned, aguaConsumida: 0 },
+      streakDay(23)
+    );
+    assert.equal(undone.streak, 1);
+    assert.equal(undone.ultimoDiaPontuado, "2026-10-22");
+    assert.equal(undone.diasMetasConcluidas["2026-10-23"], undefined);
+    assert.equal(
+      streakMath.reconcileDailyStreak(
+        { ...undone, aguaConsumida: 2450 },
+        streakDay(23)
+      ).streak,
+      2
+    );
+  });
+  test("Datas antigas em pt-BR são migradas e metas atuais não alteram dias anteriores", () => {
+    const migrated = streakMath.reconcileDailyStreak(
+      {
+        ...completeDay,
+        aguaConsumida: 0,
+        streak: 3,
+        ultimoDiaPontuado: "22/10/2026",
+      },
+      streakDay(23)
+    );
+    assert.equal(migrated.streak, 3);
+    assert.equal(migrated.diasMetasConcluidas["2026-10-20"], true);
+    assert.equal(migrated.ultimoDiaPontuado, "2026-10-22");
+    assert.equal(
+      streakMath.reconcileDailyStreak(
+        { ...migrated, peso: "100" },
+        streakDay(23)
+      ).streak,
+      3
+    );
+    assert.equal(streakMath.previousDay("2026-01-01"), "2025-12-31");
+    assert.equal(streakMath.previousDay("2024-03-01"), "2024-02-29");
+  });
+  test("Ações reais da loja recalculam sequência ao registrar, desfazer e zerar", () => {
+    reset();
+    store.getState().setDados({ peso: "70", refeicoesAtivas: ["cafeManha"] });
+    store.getState().adicionarAgua(2450, 99999);
+    store
+      .getState()
+      .registrarRefeicao("cafeManha", "Café", "☕", 100, ["Pão"], {
+        proteina: 2,
+        carbo: 20,
+        gordura: 1,
+      });
+    assert.equal(store.getState().dados.streak, 1);
+    store.getState().desfazerRefeicao("cafeManha");
+    assert.equal(store.getState().dados.streak, 0);
+    store
+      .getState()
+      .registrarRefeicao("cafeManha", "Café", "☕", 100, ["Pão"], {
+        proteina: 2,
+        carbo: 20,
+        gordura: 1,
+      });
+    assert.equal(store.getState().dados.streak, 1);
+    store.getState().zerarAgua();
+    assert.equal(store.getState().dados.streak, 0);
+    store.getState().adicionarAgua(2450, 99999);
+    assert.equal(store.getState().dados.streak, 1);
+    store.getState().zerarDieta();
+    assert.equal(store.getState().dados.streak, 0);
+  });
+
+  test("Virada real da loja preserva sequência ontem e zera após um dia perdido", () => {
+    const NativeDate = globalThis.Date;
+    let timestamp = new NativeDate(2026, 9, 23, 23, 59).getTime();
+    class ClockDate extends NativeDate {
+      constructor(...args) {
+        if (args.length) super(...args);
+        else super(timestamp);
+      }
+      static now() {
+        return timestamp;
+      }
+    }
+    try {
+      globalThis.Date = ClockDate;
+      reset();
+      store.getState().setDados({ peso: "70", refeicoesAtivas: ["cafeManha"] });
+      store
+        .getState()
+        .registrarRefeicao("cafeManha", "Café", "☕", 100, ["Pão"], {
+          proteina: 2,
+          carbo: 20,
+          gordura: 1,
+        });
+      store.getState().adicionarAgua(2450, 99999);
+      assert.equal(store.getState().dados.streak, 1);
+      timestamp = new NativeDate(2026, 9, 24, 0, 1).getTime();
+      store.getState().verificarViradaDeDia();
+      assert.equal(store.getState().dados.streak, 1);
+      assert.equal(store.getState().dados.aguaConsumida, 0);
+      assert.equal(store.getState().dados.ultimaData, "2026-10-24");
+      store.getState().verificarStreak();
+      assert.equal(store.getState().dados.streak, 1);
+      assert.equal(
+        store.getState().dados.diasMetasConcluidas["2026-10-24"],
+        undefined
+      );
+      timestamp = new NativeDate(2026, 9, 25, 0, 1).getTime();
+      store.getState().adicionarAgua(200, 99999);
+      assert.equal(store.getState().dados.streak, 0);
+      assert.equal(
+        store.getState().dados.diasMetasConcluidas["2026-10-23"],
+        true
+      );
+    } finally {
+      globalThis.Date = NativeDate;
+      reset();
+    }
+  });
   console.log(`${passed} verificações passaram.`);
 } finally {
   await server.close();
