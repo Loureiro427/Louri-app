@@ -1,16 +1,8 @@
+import { calculateWaterGoal, calculateCaloricGoal, getCronograma, getRotina } from '../utils/nutritionMath';
 import { useState } from 'react';
 import { createPortal } from 'react-dom'; // <-- IMPORTAÇÃO ADICIONADA
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
-
-const CONFIG_REFEICOES: Record<string, { titulo: string; icone: string }> = {
-  cafeManha: { titulo: 'Café da Manhã', icone: '☕' },
-  almoco: { titulo: 'Almoço', icone: '🍽️' },
-  lancheTarde: { titulo: 'Lanche da Tarde', icone: '🍎' },
-  cafeTarde: { titulo: 'Café da Tarde', icone: '🧋' },
-  janta: { titulo: 'Jantar', icone: '🍲' },
-  lancheNoite: { titulo: 'Lanche da Noite', icone: '🌙' },
-};
 
 export function Plano() {
   const navigate = useNavigate();
@@ -28,15 +20,10 @@ export function Plano() {
   const sexo = dados.sexo || 'M';
   const objetivo = dados.objetivo || 'manter';
 
-  const metaAguaMl = Math.round((pesoNum * 35) / 1000) * 1000;
-  const metaAguaL = (metaAguaMl / 1000).toFixed(1);
+  const metaAguaMl = calculateWaterGoal(pesoNum);
+  const metaAguaL = (metaAguaMl / 1000).toFixed(2);
 
-  // Cálculo TMB exato por Sexo Biológico (Mifflin-St Jeor)
-  let tmb = 10 * pesoNum + 6.25 * alturaNum - 5 * idadeNum;
-  tmb = sexo === 'M' ? tmb + 5 : tmb - 161;
-  let metaCalorias = Math.round(tmb * 1.3);
-  if (objetivo === 'perder') metaCalorias -= 400;
-  if (objetivo === 'ganhar') metaCalorias += 400;
+  const metaCalorias = calculateCaloricGoal(pesoNum, alturaNum, idadeNum, sexo, objetivo);
 
   // Macros (Distribuição baseada no objetivo)
   let pProt = 0.30, pCarbo = 0.45, pGordura = 0.25;
@@ -56,63 +43,8 @@ export function Plano() {
   const progressoCarbo = Math.min(100, (consumidoCarbo / gCarboMeta) * 100);
   const progressoGord = Math.min(100, (consumidoGord / gGordMeta) * 100);
 
-  // --- HORÁRIOS E CRONOGRAMA DINÂMICO ---
-  const converterParaMinutos = (horaStr: string) => {
-    if (!horaStr) return 0;
-    const [h, m] = horaStr.split(':').map(Number);
-    return h * 60 + m;
-  };
-  const formatarMinutos = (minutosTotal: number) => {
-    const h = Math.floor(minutosTotal / 60) % 24;
-    const m = Math.floor(minutosTotal % 60);
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  };
-
-  const acordaMin = converterParaMinutos(dados.horaAcorda || '07:00');
-  let dormeMin = converterParaMinutos(dados.horaDorme || '22:00');
-  if (dormeMin < acordaMin) dormeMin += 24 * 60; 
-  
-  const tempoAcordado = dormeMin - acordaMin;
-  const horasJejum = Math.floor((24 * 60 - tempoAcordado) / 60);
-
-  // --- ORDENAÇÃO CRONOLÓGICA E HORÁRIOS INTELIGENTES ---
-  const ORDEM_CRONOLOGICA = ['cafeManha', 'almoco', 'lancheTarde', 'cafeTarde', 'janta', 'lancheNoite'];
-
-  const ativasBrutas = dados.refeicoesAtivas && dados.refeicoesAtivas.length > 0 
-    ? dados.refeicoesAtivas 
-    : ['cafeManha', 'almoco', 'lancheTarde', 'janta'];
-
-  const ativas = ORDEM_CRONOLOGICA.filter(key => ativasBrutas.includes(key));
-
-  const totalRef = ativas.length;
-  const inicio = acordaMin + 30; 
-  const fim = Math.max(inicio + 60, dormeMin - 90); 
-  const span = fim - inicio;
-
-  const cronograma = ativas.map((key, index) => {
-    let minutosOffset;
-
-    if (totalRef === 1) {
-      if (key === 'cafeManha') {
-        minutosOffset = acordaMin + 30;
-      } else if (key === 'almoco') {
-        minutosOffset = Math.min(dormeMin - 120, Math.max(acordaMin + 120, 12 * 60 + 30));
-      } else if (key === 'janta') {
-        minutosOffset = Math.min(dormeMin - 120, Math.max(acordaMin + 180, 20 * 60));
-      } else {
-        minutosOffset = acordaMin + span / 2;
-      }
-    } else {
-      minutosOffset = inicio + (span * (index / (totalRef - 1)));
-    }
-
-    const config = CONFIG_REFEICOES[key] || { titulo: key, icone: '🍽️' };
-    return {
-      titulo: config.titulo,
-      icone: config.icone,
-      horario: formatarMinutos(Math.round(minutosOffset))
-    };
-  });
+  const cronograma = getCronograma(dados);
+  const horasJejum = getRotina(dados).horasDescanso.toFixed(1);
 
   // --- CONTEÚDO DOS MODAIS DE DICAS ---
   const dicasMacros = {
@@ -187,7 +119,7 @@ export function Plano() {
             temaEscuro ? 'bg-zinc-950/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
           }`}>
             <span className="text-xl">🌙</span>
-            <span className={`text-[10px] uppercase font-bold ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>Jejum</span>
+            <span className={`text-[10px] uppercase font-bold ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>Descanso</span>
             <span className={`text-sm font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{horasJejum}h</span>
           </div>
         </div>

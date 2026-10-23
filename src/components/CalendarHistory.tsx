@@ -1,3 +1,4 @@
+import { CONFIG_REFEICOES } from '../utils/nutritionMath';
 import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useUserStore } from '../store/useUserStore';
@@ -44,17 +45,9 @@ export default function CalendarHistory() {
     const refeicoesHojeDetalhadas: Record<string, RefeicaoDetalhe> = {};
     if (dados.refeicoesConcluidas && dados.caloriasPorRefeicao) {
       dados.refeicoesConcluidas.forEach((key: string) => {
-        const tituloMap: Record<string, { titulo: string; icone: string }> = {
-          cafeManha: { titulo: 'Café da Manhã', icone: '☕' },
-          almoco: { titulo: 'Almoço', icone: '🍽️' },
-          lancheTarde: { titulo: 'Lanche da Tarde', icone: '🍎' },
-          cafeTarde: { titulo: 'Café da Tarde', icone: '🧋' },
-          janta: { titulo: 'Jantar', icone: '🍲' },
-          lancheNoite: { titulo: 'Lanche da Noite', icone: '🌙' },
-        };
-        const info = tituloMap[key] || { titulo: key, icone: '🍽️' };
+        const info = CONFIG_REFEICOES[key] || { titulo: key, icone: '🍽️' };
 
-        refeicoesHojeDetalhadas[key] = {
+        refeicoesHojeDetalhadas[key] = historicoCombinado[hojeStr]?.refeicoesDetalhadas[key] || {
           titulo: info.titulo,
           icone: info.icone,
           calorias: dados.caloriasPorRefeicao[key] || 0,
@@ -75,7 +68,7 @@ export default function CalendarHistory() {
     };
 
     return historicoCombinado;
-  }, [dados.historico, dados.aguaConsumida, dados.caloriasConsumidas, dados.refeicoesConcluidas, dados.caloriasPorRefeicao, dados.alimentos, hojeStr]);
+  }, [dados.historico, dados.aguaConsumida, dados.caloriasConsumidas, dados.refeicoesConcluidas, dados.caloriasPorRefeicao, dados.macrosPorRefeicao, dados.alimentos, hojeStr]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();

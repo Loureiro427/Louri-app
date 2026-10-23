@@ -1,3 +1,5 @@
+import { DICIONARIO_ALIMENTOS as ALIMENTOS_POR_REFEICAO } from '../data/alimentos';
+import { CONFIG_REFEICOES } from '../utils/nutritionMath';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
@@ -113,18 +115,7 @@ function HorizontalRulerPicker({ min, max, value, onChange, suffix }: { min: num
 
 
 // --- DICIONÁRIOS ---
-const ALIMENTOS_POR_REFEICAO: Record<string, { id: string; nome: string; emoji: string }[]> = {
-  cafeManha: [{ id: 'pao', nome: 'Pão Francês', emoji: '🥖' }, { id: 'tapioca', nome: 'Tapioca / Crepioca', emoji: '🌮' }, { id: 'ovo', nome: 'Ovo Mexido / Cozido', emoji: '🍳' }, { id: 'queijo', nome: 'Queijo Minas', emoji: '🧀' }, { id: 'cuscuz', nome: 'Cuscuz', emoji: '🌽' }, { id: 'aveia', nome: 'Aveia', emoji: '🥣' }, { id: 'banana', nome: 'Banana', emoji: '🍌' }, { id: 'maca', nome: 'Maçã', emoji: '🍎' }, { id: 'mamao', nome: 'Mamão', emoji: '🍈' }, { id: 'leite', nome: 'Leite / Iogurte', emoji: '🥛' }, { id: 'cafe', nome: 'Café', emoji: '☕' }, { id: 'bolo', nome: 'Bolo Caseiro', emoji: '🥮' }],
-  almoco: [{ id: 'arroz', nome: 'Arroz', emoji: '🍚' }, { id: 'feijao', nome: 'Feijão', emoji: '🍲' }, { id: 'frango', nome: 'Frango Grelhado', emoji: '🍗' }, { id: 'carne', nome: 'Carne Bovina', emoji: '🥩' }, { id: 'peixe', nome: 'Peixe', emoji: '🐟' }, { id: 'batatadoce', nome: 'Batata Doce', emoji: '🍠' }, { id: 'pure', nome: 'Purê', emoji: '🥔' }, { id: 'macarrao', nome: 'Macarrão', emoji: '🍝' }, { id: 'salada', nome: 'Salada Verde', emoji: '🥗' }, { id: 'legumes', nome: 'Legumes', emoji: '🥦' }, { id: 'ovo_almoco', nome: 'Ovo Cozido', emoji: '🥚' }, { id: 'farofa', nome: 'Farofa', emoji: '🌾' }],
-  lancheTarde: [{ id: 'paodequeijo', nome: 'Pão de Queijo', emoji: '🧀' }, { id: 'fruta_tarde', nome: 'Frutas Variadas', emoji: '🍌' }, { id: 'vitamina', nome: 'Vitamina', emoji: '🥤' }, { id: 'tapioca_tarde', nome: 'Tapioca', emoji: '🌮' }, { id: 'castanhas', nome: 'Castanhas', emoji: '🥜' }, { id: 'iogurte', nome: 'Iogurte Natural', emoji: '🍶' }, { id: 'cafe_tarde', nome: 'Café ou Chá', emoji: '☕' }, { id: 'biscoito', nome: 'Biscoito', emoji: '🍪' }, { id: 'crepioca', nome: 'Crepioca', emoji: '🍳' }, { id: 'sanduiche', nome: 'Sanduíche', emoji: '🥪' }],
-  cafeTarde: [{ id: 'cuscuz_tarde', nome: 'Cuscuz', emoji: '🌽' }, { id: 'pao_chapa', nome: 'Pão na Chapa', emoji: '🍞' }, { id: 'bolo_tarde', nome: 'Bolo Simples', emoji: '🥮' }, { id: 'fruta_l', nome: 'Fruta', emoji: '🍎' }, { id: 'cha', nome: 'Chá', emoji: '🍵' }],
-  janta: [{ id: 'frango_janta', nome: 'Frango Desfiado', emoji: '🍗' }, { id: 'sopa', nome: 'Sopa', emoji: '🍲' }, { id: 'omelete', nome: 'Omelete', emoji: '🍳' }, { id: 'salada_janta', nome: 'Salada', emoji: '🥗' }, { id: 'arroz_janta', nome: 'Arroz', emoji: '🍚' }, { id: 'pure_janta', nome: 'Purê', emoji: '🥔' }, { id: 'wrap', nome: 'Wrap Fit', emoji: '🌯' }, { id: 'legumes_assados', nome: 'Legumes Assados', emoji: '🥕' }, { id: 'carne_janta', nome: 'Carne Magra', emoji: '🥩' }, { id: 'peixe_janta', nome: 'Peixe Grelhado', emoji: '🐟' }],
-  lancheNoite: [{ id: 'chapa_noite', nome: 'Chá Relaxante', emoji: '🍵' }, { id: 'ceia_fruta', nome: 'Fruta Leve', emoji: '🍌' }, { id: 'iogurte_noite', nome: 'Iogurte Proteico', emoji: '🥛' }, { id: 'barra_cereal', nome: 'Barra de Cereal', emoji: '🥜' }],
-};
-
-const NOMES_REFEICOES: Record<string, { nome: string; emoji: string }> = {
-  cafeManha: { nome: 'Café da Manhã', emoji: '☕' }, almoco: { nome: 'Almoço', emoji: '🍽️' }, lancheTarde: { nome: 'Lanche da Tarde', emoji: '🍎' }, cafeTarde: { nome: 'Café da Tarde', emoji: '🧋' }, janta: { nome: 'Jantar', emoji: '🍲' }, lancheNoite: { nome: 'Lanche da Noite', emoji: '🌙' },
-};
+const NOMES_REFEICOES = Object.fromEntries(Object.entries(CONFIG_REFEICOES).map(([key, value]) => [key, { nome: value.titulo, emoji: value.icone }]));
 
 export function Onboarding() {
   const navigate = useNavigate();
@@ -221,7 +212,8 @@ export function Onboarding() {
         return;
       }
     }
-    setDados(formData);
+    setDados({ ...formData, nome: formData.nome.trim(), idade: String(formData.idade), peso: String(formData.peso), altura: String(formData.altura) });
+    useUserStore.getState().atualizarPeso(String(formData.peso));
     navigate('/');
   };
 
@@ -380,7 +372,7 @@ export function Onboarding() {
         {step === 5 && (
           <div className="flex flex-col flex-1 w-full animate-in fade-in slide-in-from-right-4">
             <h1 className="text-2xl font-medium tracking-tight mb-2">Qual o seu sexo biológico?</h1>
-            <p className="text-sm text-zinc-500 mb-8">Necessário para o cálculo exato do metabolismo (TMB).</p>
+            <p className="text-sm text-zinc-500 mb-8">Usado para estimar o metabolismo (TMB).</p>
             <div className="flex-1 flex flex-col gap-4 justify-center -mt-10">
               <button 
                 onClick={() => handleChange('sexo', 'M')} 

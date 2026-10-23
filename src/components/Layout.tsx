@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    const atualizar = () => useUserStore.getState().verificarViradaDeDia();
+    atualizar();
+    const timer = window.setInterval(atualizar, 30000);
+    window.addEventListener('focus', atualizar);
+    document.addEventListener('visibilitychange', atualizar);
+    return () => { clearInterval(timer); window.removeEventListener('focus', atualizar); document.removeEventListener('visibilitychange', atualizar); };
+  }, []);
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -35,7 +43,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     setIsFabOpen(false); 
 
     if (acao === 'agua') {
-      adicionarAgua(250, 10000);
+      adicionarAgua(250, 99999);
       mostrarToast('💧 +250ml de Água registados!');
     } else if (acao === 'peso') {
       setPesoInput(''); 
@@ -46,10 +54,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const guardarPeso = () => {
-    const pesoNum = Number(pesoInput);
+    const pesoNum = Number(pesoInput.replace(',', '.'));
     
     if (pesoInput && pesoNum >= 30 && pesoNum <= 300) {
-      atualizarPeso(pesoInput);
+      atualizarPeso(String(pesoNum));
       setModalPesoAberto(false); 
       mostrarToast('⚖ Peso atualizado com sucesso!'); // ✅ Emoji normalizado sem conflito de bytes
     } else if (pesoInput) {
@@ -189,12 +197,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="pb-safe">
               <div className="flex justify-between items-center h-16 max-w-md mx-auto px-6 relative">
                 
-                <Link to="/" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
+                <Link aria-label="Início" to="/" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
                   <HomeIcon active={isActive('/')} temaEscuro={temaEscuro} />
                   {isActive('/') && <ActiveIndicator />}
                 </Link>
 
-                <Link to="/plano" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
+                <Link aria-label="Plano" to="/plano" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
                   <FoodIcon active={isActive('/plano')} temaEscuro={temaEscuro} />
                   {isActive('/plano') && <ActiveIndicator />}
                 </Link>
@@ -216,12 +224,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   </motion.button>
                 </div>
 
-                <Link to="/evolucao" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
+                <Link aria-label="Evolução" to="/evolucao" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
                   <ChartIcon active={isActive('/evolucao')} temaEscuro={temaEscuro} />
                   {isActive('/evolucao') && <ActiveIndicator />}
                 </Link>
 
-                <Link to="/perfil" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
+                <Link aria-label="Perfil" to="/perfil" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
                   <ProfileIcon active={isActive('/perfil')} temaEscuro={temaEscuro} />
                   {isActive('/perfil') && <ActiveIndicator />}
                 </Link>

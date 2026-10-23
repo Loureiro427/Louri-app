@@ -93,7 +93,7 @@ export function Evolucao() {
               <div>
                 <h3 className="text-xl font-bold">O que é a Sequência?</h3>
                 <p className={`text-sm mt-2 leading-relaxed ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                  A tua sequência (streak) regista os dias consecutivos em que entraste na aplicação e registaste pelo menos uma refeição ou copo de água. Serve para medir a tua consistência!
+                  A tua sequência conta os dias consecutivos em que atingiste a meta de água e registaste todas as refeições do plano. Cada dia completo vale um ponto!
                 </p>
               </div>
 

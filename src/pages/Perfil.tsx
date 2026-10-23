@@ -1,3 +1,4 @@
+import { calculateIMC } from '../utils/nutritionMath';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -214,8 +215,7 @@ export function Perfil() {
   };
 
   const peso = Number(dados.peso) || 70;
-  const alturaM = (Number(dados.altura) || 170) / 100;
-  const imc = Number((peso / (alturaM * alturaM)).toFixed(1));
+  const imc = calculateIMC(peso, Number(dados.altura) || 170);
   
   let imcCategoria = 'Normal';
   let imcCor = 'text-green-500';
@@ -335,13 +335,13 @@ export function Perfil() {
         }`}>
           <div className={`flex justify-between items-center p-4 border-b ${temaEscuro ? 'border-zinc-800/50' : 'border-zinc-100'}`}>
             <span className={`text-sm font-medium ${temaEscuro ? 'text-zinc-300' : 'text-zinc-600'}`}>Notificações</span>
-            <button onClick={() => { setDados({ notificacoes: !notificacoes }); configurarNotificacoesNativas(); }} className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${notificacoes ? 'bg-green-500' : 'bg-zinc-700'}`}>
+            <button aria-label="Notificações" role="switch" aria-checked={notificacoes} onClick={() => { setDados({ notificacoes: !notificacoes }); configurarNotificacoesNativas(); }} className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${notificacoes ? 'bg-green-500' : 'bg-zinc-700'}`}>
               <div className={`w-4 h-4 rounded-full shadow-md transform transition-transform ${notificacoes ? 'translate-x-6 bg-zinc-950' : 'translate-x-0 bg-white'}`} />
             </button>
           </div>
           <div className="flex justify-between items-center p-4">
             <span className={`text-sm font-medium ${temaEscuro ? 'text-zinc-300' : 'text-zinc-600'}`}>Tema Escuro</span>
-            <button onClick={() => setDados({ temaEscuro: !temaEscuro })} className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${temaEscuro ? 'bg-green-500' : 'bg-zinc-700'}`}>
+            <button aria-label="Tema escuro" role="switch" aria-checked={temaEscuro} onClick={() => setDados({ temaEscuro: !temaEscuro })} className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${temaEscuro ? 'bg-green-500' : 'bg-zinc-700'}`}>
               <div className={`w-4 h-4 rounded-full shadow-md transform transition-transform ${temaEscuro ? 'translate-x-6 bg-zinc-950' : 'translate-x-0 bg-white'}`} />
             </button>
           </div>

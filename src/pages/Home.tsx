@@ -1,85 +1,11 @@
+import { MealComposer } from '../components/MealComposer';
+import { calcularPorcoes, DICIONARIO_ALIMENTOS } from '../data/alimentos';
+import { calculateWaterGoal, calculateCaloricGoal, getCronograma, getRotina } from '../utils/nutritionMath';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/useUserStore';
 import logoImg from '../assets/logo.png';
-
-const DICIONARIO_ALIMENTOS: Record<string, { id: string; nome: string; emoji: string; kcal100g: number; prot: number; carbo: number; gord: number }[]> = {
-  cafeManha: [
-    { id: 'pao', nome: 'Pão Francês', emoji: '🥖', kcal100g: 280, prot: 9, carbo: 58, gord: 3 }, 
-    { id: 'tapioca', nome: 'Tapioca', emoji: '🌮', kcal100g: 340, prot: 0, carbo: 85, gord: 0 },
-    { id: 'ovo', nome: 'Ovo', emoji: '🍳', kcal100g: 155, prot: 13, carbo: 1, gord: 11 }, 
-    { id: 'queijo', nome: 'Queijo', emoji: '🧀', kcal100g: 350, prot: 25, carbo: 2, gord: 30 },
-    { id: 'cuscuz', nome: 'Cuscuz', emoji: '🌽', kcal100g: 110, prot: 3, carbo: 23, gord: 1 }, 
-    { id: 'aveia', nome: 'Aveia', emoji: '🥣', kcal100g: 380, prot: 16, carbo: 66, gord: 7 },
-    { id: 'banana', nome: 'Banana', emoji: '🍌', kcal100g: 90, prot: 1, carbo: 23, gord: 0 }, 
-    { id: 'maca', nome: 'Maçã', emoji: '🍎', kcal100g: 52, prot: 0, carbo: 14, gord: 0 },
-    { id: 'mamao', nome: 'Mamão', emoji: '🍈', kcal100g: 43, prot: 0, carbo: 11, gord: 0 }, 
-    { id: 'leite', nome: 'Leite / Iogurte', emoji: '🥛', kcal100g: 60, prot: 3, carbo: 5, gord: 3 },
-    { id: 'cafe', nome: 'Café', emoji: '☕', kcal100g: 2, prot: 0, carbo: 0, gord: 0 }, 
-    { id: 'bolo', nome: 'Bolo Caseiro', emoji: '🥮', kcal100g: 350, prot: 5, carbo: 50, gord: 15 },
-  ],
-  almoco: [
-    { id: 'arroz', nome: 'Arroz', emoji: '🍚', kcal100g: 130, prot: 2, carbo: 28, gord: 0 }, 
-    { id: 'feijao', nome: 'Feijão', emoji: '🍲', kcal100g: 75, prot: 5, carbo: 14, gord: 0 },
-    { id: 'frango', nome: 'Frango', emoji: '🍗', kcal100g: 165, prot: 31, carbo: 0, gord: 3 }, 
-    { id: 'carne', nome: 'Carne', emoji: '🥩', kcal100g: 250, prot: 26, carbo: 0, gord: 15 },
-    { id: 'peixe', nome: 'Peixe', emoji: '🐟', kcal100g: 105, prot: 20, carbo: 0, gord: 2 }, 
-    { id: 'batatadoce', nome: 'Batata / Mandioca', emoji: '🍠', kcal100g: 86, prot: 1, carbo: 20, gord: 0 },
-    { id: 'pure', nome: 'Purê', emoji: '🥔', kcal100g: 110, prot: 2, carbo: 15, gord: 4 }, 
-    { id: 'macarrao', nome: 'Macarrão', emoji: '🍝', kcal100g: 158, prot: 5, carbo: 30, gord: 1 },
-    { id: 'salada', nome: 'Salada', emoji: '🥗', kcal100g: 15, prot: 1, carbo: 3, gord: 0 }, 
-    { id: 'legumes', nome: 'Legumes', emoji: '🥦', kcal100g: 35, prot: 2, carbo: 7, gord: 0 },
-    { id: 'ovo_almoco', nome: 'Ovo Cozido', emoji: '🥚', kcal100g: 155, prot: 13, carbo: 1, gord: 11 }, 
-    { id: 'farofa', nome: 'Farofa', emoji: '🌾', kcal100g: 400, prot: 2, carbo: 80, gord: 8 },
-  ],
-  lancheTarde: [
-    { id: 'paodequeijo', nome: 'Pão de Queijo', emoji: '🧀', kcal100g: 330, prot: 5, carbo: 40, gord: 15 }, 
-    { id: 'fruta_tarde', nome: 'Frutas', emoji: '🍌', kcal100g: 80, prot: 1, carbo: 20, gord: 0 },
-    { id: 'vitamina', nome: 'Vitamina', emoji: '🥤', kcal100g: 85, prot: 3, carbo: 12, gord: 2 }, 
-    { id: 'tapioca_tarde', nome: 'Tapioca', emoji: '🌮', kcal100g: 340, prot: 0, carbo: 85, gord: 0 },
-    { id: 'castanhas', nome: 'Castanhas', emoji: '🥜', kcal100g: 600, prot: 15, carbo: 20, gord: 55 }, 
-    { id: 'iogurte', nome: 'Iogurte', emoji: '🍶', kcal100g: 60, prot: 3, carbo: 5, gord: 3 },
-    { id: 'cafe_tarde', nome: 'Café / Chá', emoji: '☕', kcal100g: 2, prot: 0, carbo: 0, gord: 0 }, 
-    { id: 'biscoito', nome: 'Biscoito', emoji: '🍪', kcal100g: 450, prot: 6, carbo: 70, gord: 15 },
-    { id: 'crepioca', nome: 'Crepioca', emoji: '🍳', kcal100g: 200, prot: 8, carbo: 25, gord: 7 }, 
-    { id: 'sanduiche', nome: 'Sanduíche', emoji: '🥪', kcal100g: 250, prot: 12, carbo: 30, gord: 8 },
-  ],
-  cafeTarde: [
-    { id: 'cuscuz_tarde', nome: 'Cuscuz', emoji: '🌽', kcal100g: 110, prot: 3, carbo: 23, gord: 1 },
-    { id: 'pao_chapa', nome: 'Pão na Chapa', emoji: '🍞', kcal100g: 300, prot: 7, carbo: 50, gord: 8 },
-    { id: 'bolo_tarde', nome: 'Bolo Simples', emoji: '🥮', kcal100g: 350, prot: 5, carbo: 50, gord: 15 },
-    { id: 'fruta_l', nome: 'Fruta', emoji: '🍎', kcal100g: 52, prot: 0, carbo: 14, gord: 0 },
-    { id: 'cha', nome: 'Chá', emoji: '🍵', kcal100g: 2, prot: 0, carbo: 0, gord: 0 },
-  ],
-  janta: [
-    { id: 'frango_janta', nome: 'Frango', emoji: '🍗', kcal100g: 165, prot: 31, carbo: 0, gord: 3 }, 
-    { id: 'sopa', nome: 'Sopa', emoji: '🍲', kcal100g: 50, prot: 2, carbo: 8, gord: 1 },
-    { id: 'omelete', nome: 'Omelete', emoji: '🍳', kcal100g: 155, prot: 13, carbo: 1, gord: 11 }, 
-    { id: 'salada_janta', nome: 'Salada', emoji: '🥗', kcal100g: 15, prot: 1, carbo: 3, gord: 0 },
-    { id: 'arroz_janta', nome: 'Arroz', emoji: '🍚', kcal100g: 130, prot: 2, carbo: 28, gord: 0 }, 
-    { id: 'pure_janta', nome: 'Purê', emoji: '🥔', kcal100g: 110, prot: 2, carbo: 15, gord: 4 },
-    { id: 'wrap', nome: 'Wrap Fit', emoji: '🌯', kcal100g: 220, prot: 10, carbo: 25, gord: 8 }, 
-    { id: 'legumes_assados', nome: 'Legumes', emoji: '🥕', kcal100g: 65, prot: 2, carbo: 10, gord: 2 },
-    { id: 'carne_janta', nome: 'Carne Magra', emoji: '🥩', kcal100g: 180, prot: 26, carbo: 0, gord: 7 }, 
-    { id: 'peixe_janta', nome: 'Peixe', emoji: '🐟', kcal100g: 105, prot: 20, carbo: 0, gord: 2 },
-  ],
-  lancheNoite: [
-    { id: 'chapa_noite', nome: 'Chá Relaxante', emoji: '🍵', kcal100g: 2, prot: 0, carbo: 0, gord: 0 },
-    { id: 'ceia_fruta', nome: 'Fruta Leve', emoji: '🍌', kcal100g: 90, prot: 1, carbo: 23, gord: 0 },
-    { id: 'iogurte_noite', nome: 'Iogurte Proteico', emoji: '🥛', kcal100g: 65, prot: 8, carbo: 6, gord: 1 },
-    { id: 'barra_cereal', nome: 'Barra de Cereal', emoji: '🥜', kcal100g: 400, prot: 6, carbo: 65, gord: 10 },
-  ],
-};
-
-const CONFIG_REFEICOES: Record<string, { titulo: string; icone: string }> = {
-  cafeManha: { titulo: 'Café da Manhã', icone: '☕' },
-  almoco: { titulo: 'Almoço', icone: '🍽️' },
-  lancheTarde: { titulo: 'Lanche da Tarde', icone: '🍎' },
-  cafeTarde: { titulo: 'Café da Tarde', icone: '🧋' },
-  janta: { titulo: 'Jantar', icone: '🍲' },
-  lancheNoite: { titulo: 'Lanche da Noite', icone: '🌙' },
-};
 
 export function Home() {
   const navigate = useNavigate();
@@ -98,8 +24,7 @@ export function Home() {
   const [mostrarModalDieta, setMostrarModalDieta] = useState(false);
   const [mostrarModalDesfazerDieta, setMostrarModalDesfazerDieta] = useState(false);
   
-  const [refeicaoModal, setRefeicaoModal] = useState<any>(null); 
-  const [porcoesModal, setPorcoesModal] = useState<Record<string, number>>({}); 
+  const [refeicaoModal, setRefeicaoModal] = useState<ReturnType<typeof getCronograma>[number] | null>(null);
   const [minutosAtuais, setMinutosAtuais] = useState(0);
 
   useEffect(() => {
@@ -115,14 +40,6 @@ export function Home() {
     const timer = setInterval(atualizarTempo, 60000); 
     return () => clearInterval(timer);
   }, [dados.nome, verificarViradaDeDia]);
-
-  // Função utilitária para garantir que o input focado nunca fique tapado pelo teclado
-  const handleFocusInput = (e: React.FocusEvent<HTMLInputElement>) => {
-    const target = e.target;
-    setTimeout(() => {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
-  };
 
   if (!dados.nome) {
     return (
@@ -173,133 +90,32 @@ export function Home() {
   const primeiroNome = dados.nome ? dados.nome.trim().split(' ')[0] : '';
   const pesoNum = Number(dados.peso) || 70;
   
-  const metaAguaMl = Math.round(pesoNum * 35 / 1000) * 1000; 
+  const metaAguaMl = calculateWaterGoal(pesoNum);
   const aguaAtualMl = dados.aguaConsumida || 0;
   const progressoAgua = Math.min(100, Math.round((aguaAtualMl / metaAguaMl) * 100));
   
-  let tmb = 10 * pesoNum + 6.25 * (Number(dados.altura) || 170) - 5 * (Number(dados.idade) || 25);
-  tmb = dados.sexo === 'M' ? tmb + 5 : tmb - 161;
-  let metaCalorias = Math.round(tmb * 1.3);
-  if (dados.objetivo === 'perder') metaCalorias -= 400; 
-  if (dados.objetivo === 'ganhar') metaCalorias += 400; 
+  const metaCalorias = calculateCaloricGoal(pesoNum, Number(dados.altura) || 170, Number(dados.idade) || 25, dados.sexo || 'M', dados.objetivo);
 
   const caloriasConsumidas = dados.caloriasConsumidas || 0;
   const progressoCalorias = Math.min(100, Math.round((caloriasConsumidas / metaCalorias) * 100));
   
-  const converterParaMinutos = (horaStr: string) => {
-    if (!horaStr) return 0;
-    const [h, m] = horaStr.split(':').map(Number);
-    return h * 60 + m;
-  };
-  const formatarMinutos = (minutosTotal: number) => {
-    const h = Math.floor(minutosTotal / 60) % 24;
-    const m = Math.floor(minutosTotal % 60);
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  };
-
-  const acordaMin = converterParaMinutos(dados.horaAcorda || '07:00');
-  let dormeMin = converterParaMinutos(dados.horaDorme || '22:00');
-  if (dormeMin < acordaMin) dormeMin += 24 * 60; 
-
-  const ORDEM_CRONOLOGICA = ['cafeManha', 'almoco', 'lancheTarde', 'cafeTarde', 'janta', 'lancheNoite'];
-
-  const ativasBrutas = dados.refeicoesAtivas && dados.refeicoesAtivas.length > 0 
-    ? dados.refeicoesAtivas 
-    : ['cafeManha', 'almoco', 'lancheTarde', 'janta'];
-
-  const ativas = ORDEM_CRONOLOGICA.filter(key => ativasBrutas.includes(key));
-
-  const REFEICOES = ativas.map((key) => {
-    let minutosOffset;
-
-    if (key === 'cafeManha') {
-      minutosOffset = acordaMin + 30;
-    } else if (key === 'almoco') {
-      minutosOffset = Math.max(acordaMin + 180, 12.5 * 60);
-    } else if (key === 'lancheTarde') {
-      minutosOffset = Math.max(acordaMin + 270, 16 * 60);
-    } else if (key === 'cafeTarde') {
-      minutosOffset = Math.max(acordaMin + 330, 17.5 * 60);
-    } else if (key === 'janta') {
-      minutosOffset = Math.min(dormeMin - 90, Math.max(acordaMin + 420, 20 * 60));
-    } else if (key === 'lancheNoite') {
-      minutosOffset = dormeMin - 30;
-    } else {
-      minutosOffset = acordaMin + 120;
-    }
-
-    minutosOffset = Math.max(acordaMin, Math.min(minutosOffset, dormeMin - 30));
-
-    const config = CONFIG_REFEICOES[key] || { titulo: key, icone: '🍽️' };
-    return {
-      key,
-      titulo: config.titulo,
-      icone: config.icone,
-      minutos: Math.round(minutosOffset),
-      horario: formatarMinutos(Math.round(minutosOffset))
-    };
-  });
+  const REFEICOES = getCronograma(dados);
+  const { acordaMin, dormeMin } = getRotina(dados);
+  const minutosRotina = dormeMin >= 1440 && minutosAtuais < acordaMin ? minutosAtuais + 1440 : minutosAtuais;
 
   const refeicoesFeitas = dados.refeicoesConcluidas || [];
-  const refeicoesFeitasInfo = REFEICOES.filter(r => refeicoesFeitas.includes(r.key));
+  const refeicoesFeitasInfo = Object.entries(dados.historico?.[dados.ultimaData]?.refeicoesDetalhadas || {}).map(([key, r]) => ({ key, titulo: r.titulo }));
 
-  const abrirModalRefeicao = (refeicao: any) => {
-    if (refeicoesFeitas.includes(refeicao.key)) return; 
-    setRefeicaoModal(refeicao);
-    setPorcoesModal({}); 
+  const abrirModalRefeicao = (refeicao: ReturnType<typeof getCronograma>[number]) => {
+    if (!refeicoesFeitas.includes(refeicao.key)) setRefeicaoModal(refeicao);
   };
-
-  const toggleAlimentoModal = (idAlimento: string) => {
-    setPorcoesModal(prev => {
-      const novo = { ...prev };
-      if (novo[idAlimento] !== undefined) {
-        delete novo[idAlimento]; 
-      } else {
-        novo[idAlimento] = 100; 
-      }
-      return novo;
-    });
-  };
-
-  const atualizarGramas = (idAlimento: string, gramas: string) => {
-    if (gramas.length > 4) return; 
-    setPorcoesModal(prev => ({ ...prev, [idAlimento]: Number(gramas) || 0 }));
-  };
-
-  const caloriasTotaisModal = Object.entries(porcoesModal).reduce((acc, [id, gramas]) => {
-    const alimento = DICIONARIO_ALIMENTOS[refeicaoModal?.key as keyof typeof DICIONARIO_ALIMENTOS]?.find(a => a.id === id);
-    if (!alimento) return acc;
-    return acc + Math.round((alimento.kcal100g / 100) * gramas);
-  }, 0);
-
-  const confirmarRefeicao = () => {
-    if (caloriasTotaisModal > 0) {
-      const macrosTotaisModal = Object.entries(porcoesModal).reduce((acc, [id, gramas]) => {
-        const alimento = DICIONARIO_ALIMENTOS[refeicaoModal?.key as keyof typeof DICIONARIO_ALIMENTOS]?.find(a => a.id === id) as any;
-        if (!alimento) return acc;
-        acc.proteina += Math.round((alimento.prot / 100) * gramas);
-        acc.carbo += Math.round((alimento.carbo / 100) * gramas);
-        acc.gordura += Math.round((alimento.gord / 100) * gramas);
-        return acc;
-      }, { proteina: 0, carbo: 0, gordura: 0 });
-
-      const dicionarioRef = DICIONARIO_ALIMENTOS[refeicaoModal.key] || [];
-      const nomesAlimentos = Object.keys(porcoesModal).map(id => {
-        const item = dicionarioRef.find(a => a.id === id);
-        return item ? item.nome : id;
-      });
-
-      registrarRefeicao(
-        refeicaoModal.key, 
-        refeicaoModal.titulo, 
-        refeicaoModal.icone, 
-        caloriasTotaisModal, 
-        nomesAlimentos, 
-        macrosTotaisModal
-      );
-
-      setRefeicaoModal(null);
-    }
+  const confirmarRefeicao = (porcoes: Record<string, number>) => {
+    if (!refeicaoModal) return;
+    const alimentos = DICIONARIO_ALIMENTOS[refeicaoModal.key] || [];
+    const total = calcularPorcoes(porcoes, alimentos);
+    registrarRefeicao(refeicaoModal.key, refeicaoModal.titulo, refeicaoModal.icone, total.calorias,
+      Object.keys(porcoes).map(id => alimentos.find(a => a.id === id)?.nome || id), total.macros, porcoes);
+    setRefeicaoModal(null);
   };
 
   const cancelarRefeicaoFeita = (refeicaoKey: string) => {
@@ -388,7 +204,7 @@ export function Home() {
             </div>
             <div className="text-right">
               <span className={`text-xl font-bold ${aguaAtualMl >= metaAguaMl ? 'text-green-500' : 'text-blue-500'}`}>{(aguaAtualMl / 1000).toFixed(2)}L</span>
-              <span className={`text-xs block ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>de {(metaAguaMl / 1000).toFixed(1)}L</span>
+              <span className={`text-xs block ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>de {(metaAguaMl / 1000).toFixed(2)}L</span>
             </div>
           </div>
           <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 border transition-colors ${
@@ -420,11 +236,11 @@ export function Home() {
             {REFEICOES.map((refeicao, index) => {
               const idsEscolhidos = dados.alimentos[refeicao.key as keyof typeof dados.alimentos] || [];
               const dicionarioRef = DICIONARIO_ALIMENTOS[refeicao.key] || [];
-              const alimentosCompletos = idsEscolhidos.map(id => dicionarioRef.find(item => item.id === id)).filter(Boolean); 
+              const alimentosCompletos = idsEscolhidos.map(id => dicionarioRef.find(item => item.id === id || item.nome === id)).filter(Boolean);
               
               const isFeita = refeicoesFeitas.includes(refeicao.key);
-              const isFuturo = minutosAtuais < refeicao.minutos - 60 && !isFeita;
-              const isAgora = minutosAtuais >= refeicao.minutos - 60 && minutosAtuais <= refeicao.minutos + 120 && !isFeita;
+              const isFuturo = minutosRotina < refeicao.minutos - 60 && !isFeita;
+              const isAgora = minutosRotina >= refeicao.minutos - 60 && minutosRotina <= refeicao.minutos + 120 && !isFeita;
 
               return (
                 <div key={refeicao.key} className={`flex gap-4 relative transition-all duration-500 ${isFuturo ? 'opacity-40 grayscale' : ''}`}>
@@ -527,10 +343,7 @@ export function Home() {
               <div className="flex flex-col gap-2 max-h-48 overflow-y-auto custom-scrollbar">
                 {refeicoesFeitasInfo.length > 0 ? (
                   refeicoesFeitasInfo.map(r => {
-                    const cals = (dados.alimentos[r.key as keyof typeof dados.alimentos] || []).reduce((acc, id) => {
-                      const alimento = DICIONARIO_ALIMENTOS[r.key as keyof typeof DICIONARIO_ALIMENTOS]?.find(a => a.id === id);
-                      return acc + (alimento?.kcal100g || 0);
-                    }, 0);
+                    const cals = dados.caloriasPorRefeicao[r.key] || 0;
 
                     return (
                       <div key={r.key} className={`flex justify-between items-center p-3 rounded-xl border transition-colors ${
@@ -563,141 +376,13 @@ export function Home() {
         document.body
       )}
 
-      {/* MODAL: REGISTAR REFEIÇÃO */}
       {refeicaoModal && createPortal(
-        <div className="fixed inset-0 z-50 animate-in slide-in-from-bottom-4 overscroll-none">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setRefeicaoModal(null)}></div>
-          
-          <div className={`absolute bottom-0 w-full h-[90vh] rounded-t-3xl flex flex-col overflow-hidden shadow-2xl transition-colors ${
-            temaEscuro ? 'bg-zinc-900 border-t border-zinc-800 text-white' : 'bg-white border-t border-zinc-200 text-zinc-900'
-          }`}>
-            
-            <div className="shrink-0 p-6 pb-2">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                  <span>{refeicaoModal.icone}</span> O que comeu?
-                </h3>
-                <button onClick={() => setRefeicaoModal(null)} className={`text-2xl font-bold ${temaEscuro ? 'text-zinc-400 hover:text-white' : 'text-zinc-500 hover:text-zinc-900'}`}>×</button>
-              </div>
-              
-              <div className={`flex items-center gap-4 p-4 rounded-2xl border transition-colors ${
-                temaEscuro ? 'bg-zinc-950/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
-              }`}>
-                <span className="text-3xl">🔥</span>
-                <div className="flex-1 text-center">
-                  <p className={`text-4xl font-black ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>{caloriasTotaisModal} <span className={`text-sm font-normal ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Kcal</span></p>
-                  <p className={`text-xs mt-1 ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>Calculado automaticamente</p>
-                </div>
-              </div>
-
-              <p className={`text-xs uppercase tracking-wider font-semibold mt-4 ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Personalize a sua refeição:</p>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto px-6 pb-32 custom-scrollbar">
-              <div className="grid grid-cols-3 gap-2">
-                {(() => {
-                  const favoritosDaRefeicao = dados.alimentos[refeicaoModal.key as keyof typeof dados.alimentos] || [];
-                  const todosAlimentos = DICIONARIO_ALIMENTOS[refeicaoModal.key as keyof typeof DICIONARIO_ALIMENTOS] || [];
-
-                  const alimentosOrdenados = [...todosAlimentos].sort((a, b) => {
-                    const aFav = favoritosDaRefeicao.includes(a.id) ? -1 : 1;
-                    const bFav = favoritosDaRefeicao.includes(b.id) ? -1 : 1;
-                    return aFav - bFav;
-                  });
-
-                  return alimentosOrdenados.map((alimento) => {
-                    const gramas = porcoesModal[alimento.id];
-                    const estaSelecionado = gramas !== undefined;
-                    const kcalCalculada = estaSelecionado ? Math.round((alimento.kcal100g / 100) * gramas) : 0;
-                    const isFavorito = favoritosDaRefeicao.includes(alimento.id);
-
-                    return (
-                      <div
-                        key={alimento.id}
-                        onClick={() => !estaSelecionado && toggleAlimentoModal(alimento.id)}
-                        className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 gap-1 ${
-                          estaSelecionado
-                            ? 'bg-orange-500/10 border-orange-500 text-orange-500 shadow-md'
-                            : temaEscuro 
-                              ? 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700 cursor-pointer' 
-                              : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:border-zinc-300 cursor-pointer shadow-sm'
-                        }`}
-                      >
-                        {isFavorito && !estaSelecionado && (
-                          <span className="absolute top-1.5 left-2 text-[8px] text-green-500 font-bold">★</span>
-                        )}
-
-                        {estaSelecionado && (
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); toggleAlimentoModal(alimento.id); }}
-                            className={`absolute -top-2 -right-2 rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-500 hover:text-white shadow-lg z-10 transition-colors ${
-                              temaEscuro ? 'bg-zinc-800 text-zinc-400' : 'bg-zinc-200 text-zinc-600'
-                            }`}
-                          >
-                            ×
-                          </button>
-                        )}
-
-                        <span className="text-2xl">{alimento.emoji}</span>
-                        <span className="text-[10px] font-bold text-center leading-tight truncate w-full">{alimento.nome}</span>
-                        
-                        {estaSelecionado ? (
-                          <div className="flex flex-col items-center w-full mt-1" onClick={(e) => e.stopPropagation()}>
-                            <div className={`flex items-center rounded-lg px-2 py-1 border border-orange-500/40 w-full justify-center ${
-                              temaEscuro ? 'bg-zinc-950 text-white' : 'bg-white text-zinc-900 shadow-inner'
-                            }`}>
-                              <input 
-                                type="number" 
-                                maxLength={4}
-                                value={gramas === 0 ? '' : gramas}
-                                onChange={(e) => atualizarGramas(alimento.id, e.target.value)}
-                                onFocus={handleFocusInput}
-                                className="w-10 bg-transparent text-center text-xs outline-none appearance-none font-bold"
-                                placeholder="0"
-                                autoFocus
-                              />
-                              <span className={`text-[9px] ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>g</span>
-                            </div>
-                            <span className="text-[9px] text-orange-500 font-bold mt-1">{kcalCalculada} kcal</span>
-                          </div>
-                        ) : (
-                          <span className="text-[9px] text-zinc-400 opacity-0 hover:opacity-100 transition-opacity hidden md:block">Toque para adicionar</span>
-                        )}
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
-
-            <div className={`absolute bottom-0 left-0 w-full px-6 py-4 flex justify-between items-center z-50 border-t ${
-              temaEscuro ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
-            }`}>
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
-                  Total
-                </span>
-                <span className="text-xl font-bold text-orange-500">
-                  {caloriasTotaisModal} kcal
-                </span>
-              </div>
-              
-              <button 
-                onClick={confirmarRefeicao}
-                disabled={caloriasTotaisModal === 0}
-                className={`px-8 py-3.5 rounded-2xl font-bold shadow-lg transition-all active:scale-95 ${
-                  caloriasTotaisModal > 0 
-                    ? 'bg-green-500 hover:bg-green-400 text-zinc-950 shadow-green-500/20' 
-                    : temaEscuro ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                }`}
-              >
-                Registar
-              </button>
-            </div>
-
+        <div className="fixed inset-0 z-[60] flex items-end justify-center" role="dialog" aria-modal="true" aria-label={refeicaoModal.titulo}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setRefeicaoModal(null)} />
+          <div className="relative w-full max-w-md h-[90dvh] rounded-t-3xl overflow-hidden shadow-2xl">
+            <MealComposer alimentos={DICIONARIO_ALIMENTOS[refeicaoModal.key] || []} memoriaKey={refeicaoModal.key} titulo={refeicaoModal.titulo} onClose={() => setRefeicaoModal(null)} onConfirm={confirmarRefeicao} />
           </div>
-        </div>,
-        document.body
+        </div>, document.body
       )}
 
       {/* Modal Desfazer Água */}

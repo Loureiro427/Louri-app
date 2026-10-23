@@ -41,7 +41,8 @@ export function SwipeNavigator({ children }: { children: React.ReactNode }) {
       >
         {components.map((Component, index) => (
           <div 
-            key={rotasMain[index]} 
+            key={rotasMain[index]}
+            inert={index !== visualIndex}
             className="w-1/4 h-full flex flex-col overflow-y-auto overflow-x-hidden pb-24"
           >
             <Component />

@@ -1,7 +1,9 @@
+import { calculateWaterGoal, refeicoesPadrao } from '../utils/nutritionMath';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface RefeicaoDetalhe {
+export interface RefeicaoDetalhe {
+  porcoes?: Record<string, number>;
   titulo: string;
   icone: string;
   calorias: number;
@@ -15,7 +17,9 @@ interface DayRecord {
   refeicoesDetalhadas: Record<string, RefeicaoDetalhe>;
 }
 
-interface UserData {
+export interface UserData {
+  favoritos: string[];
+  ultimasPorcoes: Record<string, Record<string, number>>;
   nome: string;
   idade: string;
   peso: string;
@@ -47,10 +51,11 @@ interface UserStore {
   modalPesoAberto: boolean;
   setMostrarNavbar: (visivel: boolean) => void;
   setModalPesoAberto: (aberto: boolean) => void;
+  toggleFavorito: (id: string) => void;
   setDados: (novosDados: Partial<UserData>) => void;
   adicionarAgua: (quantidade: number, metaMax: number) => void;
   zerarAgua: () => void;
-  registrarRefeicao: (refeicaoKey: string, tituloRef: string, iconeRef: string, calorias: number, alimentosConsumidos: string[], macros: { proteina: number; carbo: number; gordura: number }) => void;
+  registrarRefeicao: (refeicaoKey: string, tituloRef: string, iconeRef: string, calorias: number, alimentosConsumidos: string[], macros: { proteina: number; carbo: number; gordura: number }, porcoes?: Record<string, number>) => void;
   desfazerRefeicao: (refeicaoKey: string) => void;
   zerarDieta: () => void;
   verificarViradaDeDia: () => void;
@@ -59,7 +64,6 @@ interface UserStore {
 }
 
 const macrosZerados = { proteina: 0, carbo: 0, gordura: 0 };
-const refeicoesPadrao = ['cafeManha', 'almoco', 'lancheTarde', 'janta'];
 
 // Função auxiliar para obter a data atual no formato YYYY-MM-DD
 const getHojeStr = () => {
@@ -71,6 +75,8 @@ export const useUserStore = create<UserStore>()(
   persist(
     (set, get) => ({
       dados: {
+        favoritos: [],
+        ultimasPorcoes: {},
         nome: '',
         idade: '',
         peso: '',
@@ -99,6 +105,7 @@ export const useUserStore = create<UserStore>()(
       modalPesoAberto: false,
       setMostrarNavbar: (visivel) => set({ mostrarNavbar: visivel }),
       setModalPesoAberto: (aberto) => set({ modalPesoAberto: aberto }),
+      toggleFavorito: (id) => set(state => ({ dados: { ...state.dados, favoritos: (state.dados.favoritos || []).includes(id) ? state.dados.favoritos.filter(v => v !== id) : [...(state.dados.favoritos || []), id] } })),
       setDados: (novosDados) => set((state) => ({ dados: { ...state.dados, ...novosDados } })),
       
       atualizarPeso: (novoPeso) => set((state) => {
@@ -113,6 +120,8 @@ export const useUserStore = create<UserStore>()(
       }),
 
       adicionarAgua: (quantidade, metaMax) => {
+        get().verificarViradaDeDia();
+        if (!Number.isFinite(quantidade)) return;
         set((state) => {
           const atual = state.dados.aguaConsumida || 0;
           const novaAgua = Math.max(0, Math.min(metaMax, atual + quantidade));
@@ -136,7 +145,9 @@ export const useUserStore = create<UserStore>()(
         get().verificarStreak();
       },
       
-      zerarAgua: () => set((state) => {
+      zerarAgua: () => {
+        get().verificarViradaDeDia();
+        set((state) => {
         const hojeStr = getHojeStr();
         const historicoAtual = state.dados.historico || {};
         const diaAtualRegisto = historicoAtual[hojeStr] || { aguaConsumida: 0, caloriasConsumidas: 0, refeicoesDetalhadas: {} };
@@ -151,9 +162,13 @@ export const useUserStore = create<UserStore>()(
             }
           } 
         };
-      }),
+        });
+      },
       
-      registrarRefeicao: (refeicaoKey, tituloRef, iconeRef, calorias, alimentosConsumidos, macros) => {
+      registrarRefeicao: (refeicaoKey, tituloRef, iconeRef, calorias, alimentosConsumidos, macros, porcoes) => {
+        get().verificarViradaDeDia();
+        if (!Number.isFinite(calorias) || calorias <= 0 || Object.values(macros).some(v => !Number.isFinite(v) || v < 0)) return;
+        if (get().dados.refeicoesConcluidas.includes(refeicaoKey)) return;
         set((state) => {
           const refeicoesAtuais = state.dados.refeicoesConcluidas || [];
           const caloriasAtuais = state.dados.caloriasConsumidas || 0;
@@ -164,6 +179,7 @@ export const useUserStore = create<UserStore>()(
           const novasRefeicoesConcluidas = [...refeicoesAtuais, refeicaoKey];
 
           const detalheRefeicao: RefeicaoDetalhe = {
+            porcoes,
             titulo: tituloRef,
             icone: iconeRef,
             calorias,
@@ -177,6 +193,7 @@ export const useUserStore = create<UserStore>()(
           return {
             dados: {
               ...state.dados,
+              ultimasPorcoes: porcoes ? { ...(state.dados.ultimasPorcoes || {}), [refeicaoKey.startsWith('refeicaoLivre_') ? 'livre' : refeicaoKey]: { ...porcoes } } : state.dados.ultimasPorcoes || {},
               caloriasConsumidas: novasCalorias,
               caloriasPorRefeicao: { ...state.dados.caloriasPorRefeicao, [refeicaoKey]: calorias },
               macrosConsumidos: {
@@ -186,7 +203,6 @@ export const useUserStore = create<UserStore>()(
               },
               macrosPorRefeicao: { ...state.dados.macrosPorRefeicao, [refeicaoKey]: macros },
               refeicoesConcluidas: novasRefeicoesConcluidas,
-              alimentos: { ...state.dados.alimentos, [refeicaoKey]: alimentosConsumidos },
               historico: {
                 ...historicoAtual,
                 [hojeStr]: {
@@ -204,7 +220,9 @@ export const useUserStore = create<UserStore>()(
         get().verificarStreak();
       },
       
-      desfazerRefeicao: (refeicaoKey) => set((state) => {
+      desfazerRefeicao: (refeicaoKey) => {
+        get().verificarViradaDeDia();
+        set((state) => {
         const refeicoesAtuais = state.dados.refeicoesConcluidas || [];
         const caloriasAtuais = state.dados.caloriasConsumidas || 0;
         const macrosAtuais = state.dados.macrosConsumidos || { ...macrosZerados };
@@ -250,9 +268,12 @@ export const useUserStore = create<UserStore>()(
             }
           },
         };
-      }),
+        });
+      },
 
-      zerarDieta: () => set((state) => {
+      zerarDieta: () => {
+        get().verificarViradaDeDia();
+        set((state) => {
         const hojeStr = getHojeStr();
         const historicoAtual = state.dados.historico || {};
         const diaAtualRegisto = historicoAtual[hojeStr] || { aguaConsumida: state.dados.aguaConsumida || 0, caloriasConsumidas: 0, refeicoesDetalhadas: {} };
@@ -275,11 +296,12 @@ export const useUserStore = create<UserStore>()(
             }
           }
         };
-      }),
+        });
+      },
 
       verificarStreak: () => set((state) => {
         const pesoNum = Number(state.dados.peso) || 70;
-        const metaAguaMl = Math.round((pesoNum * 35) / 1000) * 1000;
+        const metaAguaMl = calculateWaterGoal(pesoNum);
         
         const ativas = state.dados.refeicoesAtivas && state.dados.refeicoesAtivas.length > 0 
           ? state.dados.refeicoesAtivas 
@@ -314,10 +336,15 @@ export const useUserStore = create<UserStore>()(
 
       verificarViradaDeDia: () => set((state) => {
         const hoje = getHojeStr();
+        const ontem = new Date();
+        ontem.setDate(ontem.getDate() - 1);
+        const ultimo = state.dados.ultimoDiaPontuado;
+        const streak = ultimo && ultimo !== new Date().toLocaleDateString('pt-BR') && ultimo !== ontem.toLocaleDateString('pt-BR') ? 0 : state.dados.streak;
         if (state.dados.ultimaData && state.dados.ultimaData !== hoje) {
           return {
             dados: { 
               ...state.dados, 
+              streak,
               ultimaData: hoje, 
               aguaConsumida: 0, 
               caloriasConsumidas: 0, 
@@ -330,9 +357,16 @@ export const useUserStore = create<UserStore>()(
         } else if (!state.dados.ultimaData) {
           return { dados: { ...state.dados, ultimaData: hoje } };
         }
-        return state;
+        return streak !== state.dados.streak ? { dados: { ...state.dados, streak } } : state;
       }),
     }),
-    { name: 'nutri-app-storage' }
+    {
+      name: 'nutri-app-storage',
+      partialize: state => ({ dados: state.dados }),
+      merge: (persisted, current) => {
+        const saved = persisted as { dados?: Partial<UserData> } | undefined;
+        return { ...current, dados: { ...current.dados, ...(saved?.dados || {}) } };
+      },
+    }
   )
 );
