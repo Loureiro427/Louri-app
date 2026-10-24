@@ -1,0 +1,140 @@
+/* Short, finite animations. No permanent compositor layers or JS frame loops. */
+@media (prefers-reduced-motion: no-preference) {
+  .app-page-panel:not([hidden])
+    .app-page
+    > :is(
+      .app-page-header,
+      .app-energy-card,
+      .app-next-action,
+      .app-water-card,
+      .app-day-reflection,
+      .app-stat-pair,
+      .app-daily-goals,
+      .app-profile-identity
+    ) {
+    animation: louri-content-enter 220ms cubic-bezier(0.2, 0.7, 0.3, 1)
+      backwards;
+  }
+  .app-page-panel:not([hidden]) .app-page > :nth-child(2) {
+    animation-delay: 25ms;
+  }
+  .app-page-panel:not([hidden]) .app-page > :nth-child(3) {
+    animation-delay: 45ms;
+  }
+  .app-page-panel:not([hidden]) .app-page > :nth-child(4) {
+    animation-delay: 65ms;
+  }
+  .app-page-panel:not([hidden]) .app-page > :nth-child(5) {
+    animation-delay: 80ms;
+  }
+
+  :is(.louri-app, .app-themed)
+    :is(
+      .app-button,
+      .app-icon-button,
+      .app-avatar-button,
+      .app-meal-card,
+      .app-food-select,
+      .app-water-actions > button,
+      .app-action-row,
+      .app-swap-option,
+      .app-period-control > button,
+      .app-segmented > button
+    ) {
+    transition: transform 120ms ease-out, background-color 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+  :is(.louri-app, .app-themed)
+    :is(
+      .app-button,
+      .app-icon-button,
+      .app-avatar-button,
+      .app-meal-card,
+      .app-food-select,
+      .app-water-actions > button,
+      .app-action-row,
+      .app-swap-option
+    ):not(:disabled):active {
+    transform: scale(0.98);
+  }
+
+  .app-progress > span {
+    transition: transform 320ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .app-switch > i {
+    transition: transform 180ms ease-out;
+  }
+  .app-switch {
+    transition: background-color 180ms ease-out;
+  }
+  .app-fab-button {
+    transition: background-color 160ms ease-out, transform 120ms ease-out;
+  }
+  .app-fab-button:active {
+    transform: translateX(-50%) scale(0.94);
+  }
+  .app-fab-menu {
+    animation: louri-floating-enter 180ms ease-out;
+  }
+  .app-feedback,
+  .app-toast {
+    animation: louri-floating-enter 180ms ease-out;
+  }
+  .app-sheet,
+  .app-composer-sheet {
+    animation: app-sheet-in 220ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .app-nav-link > svg {
+    transition: transform 160ms ease-out;
+  }
+  .app-nav-link.is-active > svg {
+    animation: louri-confirm 200ms ease-out;
+  }
+  .app-food-select[aria-pressed="true"] .app-food-select-state svg {
+    animation: louri-confirm 180ms ease-out;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :is(.louri-app, .app-themed)
+    :is(
+      .app-button--secondary,
+      .app-meal-card,
+      .app-action-row,
+      .app-swap-option
+    ):not(:disabled):hover {
+    background-color: var(--app-raised);
+  }
+}
+
+@keyframes louri-content-enter {
+  from {
+    opacity: 0.65;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes louri-floating-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+@keyframes louri-confirm {
+  0% {
+    transform: scale(0.88);
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

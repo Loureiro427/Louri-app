@@ -320,11 +320,12 @@
   overflow: hidden;
 }
 .app-progress > span {
+  width: 100%;
+  transform-origin: left center;
   height: 100%;
   display: block;
   border-radius: inherit;
   background: var(--tone, var(--app-green));
-  transition: width 0.3s;
 }
 .app-tone-green {
   --tone: var(--app-green);
