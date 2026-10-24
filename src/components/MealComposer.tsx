@@ -1,3 +1,10 @@
+import { DiscardChanges } from "./DiscardChanges";
+import {
+  foodMatches,
+  recentFoodRanks,
+  samePortions,
+} from "../utils/foodSearch";
+import type { Ref } from "react";
 import { PortionInput } from "./PortionInput";
 import { ContextTip } from "./AppGuide";
 import { householdMeasure, lastMealPortions } from "../utils/easyMeals";
@@ -5,7 +12,14 @@ import { fullCatalog } from "../utils/appFeatures";
 import { recipeForCatalog } from "../utils/appFeatures";
 import { FoodLibrary } from "./FoodLibrary";
 import { useBackLayer } from "../hooks/useBackLayer";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { Alimento } from "../data/alimentos";
 import { calcularPorcoes, todosAlimentos } from "../data/alimentos";
 import { normalizeMealPreferences } from "../utils/mealPreferences";
@@ -16,7 +30,9 @@ import {
   replacementCandidates,
   replacementPortion,
 } from "../utils/dailyExperience";
+export type MealComposerHandle = { requestClose: () => void };
 type Props = {
+  ref?: Ref<MealComposerHandle>;
   alimentos: Alimento[];
   initialPorcoes?: Record<string, number>;
   confirmLabel?: string;
@@ -25,12 +41,8 @@ type Props = {
   onClose: () => void;
   onConfirm: (porcoes: Record<string, number>) => void;
 };
-const normalizar = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
 export function MealComposer({
+  ref,
   alimentos: suppliedFoods,
   initialPorcoes = {},
   confirmLabel = "Registrar refeição",
@@ -42,18 +54,49 @@ export function MealComposer({
   const section = useRef<HTMLElement>(null);
   const dados = useUserStore((state) => state.dados);
   const [library, setLibrary] = useState(false);
+  const [newFoodName, setNewFoodName] = useState("");
+  const [discard, setDiscard] = useState(false);
   const [busca, setBusca] = useState("");
   const [swap, setSwap] = useState<Alimento | null>(null);
   const [swapSearch, setSwapSearch] = useState("");
   const [notice, setNotice] = useState("");
-  useBackLayer(true, () => {
-    if (library) setLibrary(false);
-    else if (swap) setSwap(null);
-    else onClose();
-  });
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [porcoes, setPorcoes] =
     useState<Record<string, number>>(initialPorcoes);
+  const [initial] = useState(() => ({ ...initialPorcoes }));
+  const dirty = !samePortions(initial, porcoes);
+  const requestClose = useCallback(
+    () => (dirty ? setDiscard(true) : onClose()),
+    [dirty, onClose],
+  );
+  useImperativeHandle(ref, () => ({ requestClose }), [requestClose]);
+  useBackLayer(true, () => {
+    if (library) setLibrary(false);
+    else if (swap) setSwap(null);
+    else requestClose();
+  });
+  useEffect(() => {
+    if (!dirty) return;
+    const prevent = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", prevent);
+    return () => window.removeEventListener("beforeunload", prevent);
+  }, [dirty]);
+  const recent = useMemo(() => recentFoodRanks(dados), [dados]);
+  const recentNames = useMemo(() => {
+    const result = new Map<string, number>();
+    for (const food of fullCatalog(dados)) {
+      const rank = recent.get(food.id);
+      if (rank !== undefined)
+        result.set(
+          food.nome,
+          Math.min(result.get(food.nome) ?? Infinity, rank),
+        );
+    }
+    return result;
+  }, [dados, recent]);
   const alimentos = [
     ...fullCatalog(dados).filter((f) => Object.keys(porcoes).includes(f.id)),
     ...suppliedFoods,
@@ -62,7 +105,10 @@ export function MealComposer({
     (f, i, all) =>
       all.findIndex(
         (a) =>
-          a.id === f.id || (!f.id.startsWith("custom_") && a.nome === f.nome),
+          a.id === f.id ||
+          (!f.id.startsWith("custom_") &&
+            !a.id.startsWith("custom_") &&
+            a.nome === f.nome),
       ) === i,
   );
   const [saving, setSaving] = useState(false);
@@ -76,7 +122,9 @@ export function MealComposer({
   const preferences =
     normalizeMealPreferences(dados.alimentos)[memoriaKey] || [];
   const favoriteId = (item: Alimento) =>
-    todosAlimentos.find((a) => a.nome === item.nome)?.id || item.id;
+    item.id.startsWith("custom_")
+      ? item.id
+      : todosAlimentos.find((a) => a.nome === item.nome)?.id || item.id;
   const isFavorite = (item: Alimento) =>
     favorites.includes(favoriteId(item)) || favorites.includes(item.id);
   const repeat = useMemo(
@@ -86,18 +134,19 @@ export function MealComposer({
   const filtered = alimentos
     .filter(
       (item) =>
-        normalizar(item.nome).includes(normalizar(busca)) &&
-        (!favoritesOnly || isFavorite(item)),
+        foodMatches(item, busca) && (!favoritesOnly || isFavorite(item)),
     )
     .sort(
       (a, b) =>
+        (recentNames.get(a.nome) ?? Infinity) -
+          (recentNames.get(b.nome) ?? Infinity) ||
         Number(isFavorite(b)) - Number(isFavorite(a)) ||
         Number(preferences.includes(b.id)) - Number(preferences.includes(a.id)),
     );
   const total = calcularPorcoes(porcoes, alimentos);
   const alternatives = swap
     ? replacementCandidates(swap, porcoes[swap.id], alimentos)
-        .filter((f) => normalizar(f.nome).includes(normalizar(swapSearch)))
+        .filter((f) => foodMatches(f, swapSearch))
         .slice(0, swapSearch ? 50 : 8)
     : [];
   const count = Object.values(porcoes).filter((g) => g > 0).length;
@@ -126,14 +175,14 @@ export function MealComposer({
           if (!section.current?.contains(e.target as Node)) return;
           if (e.key === "Escape") {
             e.preventDefault();
-            onClose();
+            requestClose();
           }
           if (e.key !== "Tab") return;
           const items = Array.from(
             section.current?.querySelectorAll<HTMLElement>(
               "button:not(:disabled),input:not(:disabled)",
             ) || [],
-          );
+          ).filter((item) => item.getClientRects().length > 0);
           const first = items[0],
             last = items.at(-1);
           if (
@@ -158,7 +207,7 @@ export function MealComposer({
             <button
               className="app-icon-button"
               aria-label="Fechar refeição"
-              onClick={onClose}
+              onClick={requestClose}
             >
               <Icon name="close" size={20} />
             </button>
@@ -183,10 +232,13 @@ export function MealComposer({
           </label>
           <button
             className="app-text-button app-library-button"
-            onClick={() => setLibrary(true)}
+            onClick={() => {
+              setNewFoodName("");
+              setLibrary(true);
+            }}
           >
             <Icon name="star" size={14} />
-            Minha coleção · salvar combinação ou criar alimento
+            Meus alimentos
           </button>
           <div className="app-composer-toolbar">
             <div className="app-segmented">
@@ -325,6 +377,7 @@ export function MealComposer({
                       </span>
                       <span className="app-food-list-copy">
                         <strong>{item.nome}</strong>
+                        {item.preparo && <small>{item.preparo}</small>}
                         <small>
                           {selected
                             ? `${Math.round(
@@ -392,10 +445,20 @@ export function MealComposer({
               <p>
                 {favoritesOnly
                   ? "Toque na estrela ao lado de um alimento para salvar."
-                  : "Tente buscar por outro nome."}
+                  : "Tente um nome popular ou adicione seu próprio alimento."}
               </p>
             </div>
           )}
+          <button
+            className="app-text-button app-add-personal"
+            onClick={() => {
+              setNewFoodName(busca.trim());
+              setLibrary(true);
+            }}
+          >
+            <Icon name="plus" size={16} />
+            Não achei meu alimento · adicionar
+          </button>
           <p className="app-helper">
             Porções e valores aproximados. Você pode ajustar os gramas.
           </p>
@@ -424,9 +487,9 @@ export function MealComposer({
             </div>
             <button
               className="app-button app-button--primary"
-              disabled={total.calorias <= 0 || saving}
+              disabled={count === 0 || saving}
               onClick={() => {
-                if (submitted.current || total.calorias <= 0) return;
+                if (submitted.current || count === 0) return;
                 submitted.current = true;
                 setSaving(true);
                 onConfirm(
@@ -442,9 +505,21 @@ export function MealComposer({
           </div>
         </footer>
       </section>
+      {discard && (
+        <DiscardChanges onKeep={() => setDiscard(false)} onDiscard={onClose} />
+      )}
       {library && (
         <FoodLibrary
           porcoes={porcoes}
+          initialName={newFoodName}
+          onSelect={(id, grams) => {
+            setPorcoes((previous) => ({ ...previous, [id]: grams }));
+            setBusca("");
+            setFavoritesOnly(false);
+            setNotice(
+              "Alimento selecionado. Confira a quantidade antes de registrar.",
+            );
+          }}
           onApply={(p) => setPorcoes(recipeForCatalog(dados, p, memoriaKey))}
           onClose={() => setLibrary(false)}
         />

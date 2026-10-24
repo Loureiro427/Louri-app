@@ -1405,17 +1405,15 @@ try {
       macros: { proteina: 13, carbo: 1, gordura: 11 },
       porcoes: { ovo: 100, alimento_removido: 50 },
     };
-    store
-      .getState()
-      .setDados({
-        historico: {
-          "2026-01-01": {
-            aguaConsumida: 200,
-            caloriasConsumidas: 155,
-            refeicoesDetalhadas: { cafeManha: meal },
-          },
+    store.getState().setDados({
+      historico: {
+        "2026-01-01": {
+          aguaConsumida: 200,
+          caloriasConsumidas: 155,
+          refeicoesDetalhadas: { cafeManha: meal },
         },
-      });
+      },
+    });
     const before = structuredClone(store.getState().dados);
     const portions = easyMeals.lastMealPortions(before, "cafeManha");
     assert.deepEqual(portions, { ovo: 100 });
@@ -1477,6 +1475,326 @@ try {
     delete saved.tutorialVisto;
     delete saved.dicasVistas;
     assert.deepEqual(saved, before);
+  });
+  const search = await server.ssrLoadModule("/src/utils/foodSearch.ts");
+  const custom = await server.ssrLoadModule("/src/utils/customFood.ts");
+  const remindersNav = await server.ssrLoadModule(
+    "/src/utils/reminderNavigation.ts",
+  );
+  const grocery = await server.ssrLoadModule("/src/utils/shoppingList.ts");
+  test("Busca aceita acentos, nomes populares e palavras em qualquer ordem sem confundir preparos", () => {
+    const bread = food.todosAlimentos.find((f) => f.id === "pao");
+    assert.ok(search.foodMatches(bread, "  PAO francês "));
+    assert.ok(search.foodMatches(bread, "cacetinho"));
+    assert.ok(search.foodMatches(bread, "sal pao"));
+    const cassava = food.todosAlimentos.find((f) => f.id === "mandioca_cozida");
+    assert.ok(search.foodMatches(cassava, "macaxeira"));
+    assert.ok(
+      search.foodMatches(cassava, "aipim cozido".replace("cozido", "cozida")),
+    );
+    assert.equal(
+      search.foodMatches(
+        food.todosAlimentos.find((f) => f.id === "batatadoce"),
+        "mandioca",
+      ),
+      false,
+    );
+    assert.ok(
+      search.foodMatches(
+        food.todosAlimentos.find((f) => f.id === "arroz"),
+        "arroz cozido",
+      ),
+    );
+    assert.equal(
+      search.foodMatches(
+        food.todosAlimentos.find((f) => f.id === "arroz_cru"),
+        "arroz cozido",
+      ),
+      false,
+    );
+  });
+  test("Recentes respeitam a data e não transformam preferência ou busca em consumo", () => {
+    reset();
+    const data = structuredClone(store.getState().dados);
+    const meal = (id) => ({
+      titulo: "Refeição",
+      icone: "🍽️",
+      calorias: 10,
+      alimentos: [id],
+      macros: { proteina: 0, carbo: 0, gordura: 0 },
+      porcoes: { [id]: 100 },
+    });
+    data.historico = {
+      "2026-01-01": {
+        aguaConsumida: 0,
+        caloriasConsumidas: 10,
+        refeicoesDetalhadas: { a: meal("pao") },
+      },
+      "2026-01-02": {
+        aguaConsumida: 0,
+        caloriasConsumidas: 10,
+        refeicoesDetalhadas: { b: meal("ovo") },
+      },
+      "2999-01-01": {
+        aguaConsumida: 0,
+        caloriasConsumidas: 10,
+        refeicoesDetalhadas: { c: meal("frango") },
+      },
+    };
+    const before = structuredClone(data),
+      ranks = search.recentFoodRanks(data);
+    assert.ok(ranks.get("ovo") < ranks.get("pao"));
+    assert.equal(ranks.has("frango"), false);
+    assert.deepEqual(data, before);
+  });
+  test("Comparação de alterações aceita ordem diferente e identifica quantidade removida ou editada", () => {
+    assert.ok(
+      search.samePortions(
+        { pao: 50, ovo: 100 },
+        { ovo: 100, pao: 50, banana: 0 },
+      ),
+    );
+    assert.equal(search.samePortions({ pao: 50 }, { pao: 25 }), false);
+    assert.equal(search.samePortions({ pao: 50 }, {}), false);
+  });
+  test("Alimento personalizado converte a porção do rótulo, aceita vírgula e exige dados completos", () => {
+    const item = custom.createCustomFood(
+      "Meu cereal",
+      "30",
+      ["90", "3", "18", "0,5"],
+      "custom_cereal",
+    );
+    assert.equal(item.kcal100g, 300);
+    assert.equal(item.prot, 10);
+    assert.equal(item.carbo, 60);
+    assert.equal(item.porcaoReferencia, 30);
+    assert.equal(
+      typeof custom.createCustomFood(
+        "Meu cereal",
+        "30",
+        ["90", "", "18", "0,5"],
+        "custom_a",
+      ),
+      "string",
+    );
+    assert.equal(
+      typeof custom.createCustomFood(
+        "Meu cereal",
+        "0",
+        ["90", "3", "18", "0,5"],
+        "custom_a",
+      ),
+      "string",
+    );
+    assert.equal(
+      typeof custom.createCustomFood(
+        "Meu cereal",
+        "30",
+        ["90", "30", "30", "30"],
+        "custom_a",
+      ),
+      "string",
+    );
+    reset();
+    store.getState().setDados({ alimentosPersonalizados: [item] });
+    assert.ok(
+      features
+        .mealCatalog(store.getState().dados, "janta")
+        .some((f) => f.id === item.id),
+    );
+    assert.equal(
+      JSON.parse(storage.get("nutri-app-storage")).state.dados
+        .alimentosPersonalizados[0].porcaoReferencia,
+      30,
+    );
+  });
+  test("Personalizado de zero calorias registra porção real sem aceitar refeição vazia", () => {
+    reset();
+    const item = custom.createCustomFood(
+      "Gelatina zero",
+      "100",
+      ["0", "0", "0", "0"],
+      "custom_zero",
+    );
+    assert.equal(item.kcal100g, 0);
+    store
+      .getState()
+      .registrarRefeicao(
+        "refeicaoLivre_zero",
+        "Gelatina",
+        "🍽️",
+        0,
+        [item.nome],
+        { proteina: 0, carbo: 0, gordura: 0 },
+        { custom_zero: 100 },
+      );
+    assert.ok(
+      store.getState().dados.refeicoesConcluidas.includes("refeicaoLivre_zero"),
+    );
+    store
+      .getState()
+      .registrarRefeicao(
+        "vazia",
+        "Vazia",
+        "🍽️",
+        0,
+        [],
+        { proteina: 0, carbo: 0, gordura: 0 },
+        {},
+      );
+    assert.equal(
+      store.getState().dados.refeicoesConcluidas.includes("vazia"),
+      false,
+    );
+  });
+  test("Toque de lembrete aguarda montagem e uma confirmação antiga não apaga o aviso seguinte", () => {
+    const inbox = remindersNav.createReminderInbox();
+    inbox.publish({ meal: "janta" });
+    const first = inbox.get();
+    let notified = 0;
+    const stop = inbox.subscribe(() => notified++);
+    assert.equal(first.meal, "janta");
+    inbox.publish({ meal: "almoco" });
+    inbox.acknowledge(first);
+    assert.equal(inbox.get().meal, "almoco");
+    inbox.acknowledge(inbox.get());
+    assert.equal(inbox.get(), null);
+    assert.equal(notified, 2);
+    stop();
+  });
+  test("Lembrete abre refeição pendente, mostra registro concluído e mantém o dia anterior", () => {
+    reset();
+    const data = {
+      ...store.getState().dados,
+      refeicoesAtivas: ["janta"],
+      refeicoesConcluidas: [],
+    };
+    assert.equal(
+      remindersNav.resolveReminder(data, { meal: "janta" }).type,
+      "meal",
+    );
+    assert.equal(
+      remindersNav.resolveReminder(
+        { ...data, refeicoesConcluidas: ["janta"] },
+        { meal: "janta" },
+      ).type,
+      "record",
+    );
+    assert.equal(
+      remindersNav.resolveReminder(data, { meal: "almoco" }).type,
+      "unavailable",
+    );
+    assert.equal(
+      remindersNav.resolveReminder(data, { meal: "janta", day: "2026-01-01" })
+        .type,
+      "history",
+    );
+  });
+  test("Compras agrupa unidades compatíveis sem misturar preparo, despensa ou quantidade desconhecida", () => {
+    const item = {
+      id: "a",
+      nome: "Feijão",
+      emoji: "🍲",
+      categoria: "Mercearia",
+      quantidade: "500",
+      unidade: "g",
+      comprado: false,
+      emCasa: false,
+      manual: true,
+      quantidadeEditada: true,
+      referenciaGramas: 500,
+    };
+    const merged = grocery.consolidateShoppingItems([
+      item,
+      { ...item, id: "b", nome: "feijao", quantidade: "1", unidade: "kg" },
+    ]);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].quantidade, "1500");
+    assert.equal(merged[0].unidade, "g");
+    assert.equal(item.quantidade, "500");
+    assert.equal(
+      grocery.consolidateShoppingItems([
+        item,
+        { ...item, id: "b", preparo: "Cru" },
+      ]).length,
+      2,
+    );
+    assert.equal(
+      grocery.consolidateShoppingItems([
+        item,
+        { ...item, id: "b", emCasa: true },
+      ]).length,
+      2,
+    );
+    assert.equal(
+      grocery.consolidateShoppingItems([
+        item,
+        { ...item, id: "b", quantidade: "" },
+      ]).length,
+      2,
+    );
+  });
+  test("Revisão mantém IDs e referências distinguem arroz cru de cozido sem reescrever histórico", () => {
+    const cooked = food.todosAlimentos.find((f) => f.id === "arroz"),
+      raw = food.todosAlimentos.find((f) => f.id === "arroz_cru");
+    assert.equal(cooked.kcal100g, 128);
+    assert.equal(raw.kcal100g, 358);
+    assert.match(cooked.fonte, /TACO/);
+    assert.equal(
+      food.todosAlimentos.find((f) => f.id === "tapioca").kcal100g,
+      289,
+    );
+    reset();
+    store
+      .getState()
+      .registrarRefeicao(
+        "cafeManha",
+        "Café",
+        "☕",
+        777,
+        ["Arroz antigo"],
+        { proteina: 1, carbo: 2, gordura: 3 },
+        { arroz: 100 },
+      );
+    features.mealCatalog(store.getState().dados, "cafeManha");
+    assert.equal(store.getState().dados.caloriasConsumidas, 777);
+  });
+  test("Atualizar compra preserva item homônimo com unidade ou estado diferente", () => {
+    reset();
+    const data = {
+      ...store.getState().dados,
+      refeicoesAtivas: ["almoco"],
+      alimentos: { almoco: ["arroz"] },
+      porcoesPlano: { almoco: { arroz: 100 } },
+    };
+    const original = grocery.buildShoppingList(data, 1)[0];
+    const other = {
+      ...original,
+      id: "manual:extra",
+      quantidade: "1",
+      unidade: "un",
+      emCasa: true,
+      manual: true,
+      quantidadeEditada: true,
+    };
+    const result = grocery.buildShoppingList(data, 7, [original, other]);
+    assert.equal(result.length, 2);
+    assert.equal(result.find((i) => i.id === other.id).unidade, "un");
+    assert.equal(result.find((i) => i.id === other.id).emCasa, true);
+  });
+  test("Personalizado com o mesmo nome mantém valores e identidade próprios no registro", () => {
+    reset();
+    const own = custom.createCustomFood(
+      "Ovo",
+      "100",
+      ["200", "10", "2", "15"],
+      "custom_own_ovo",
+    );
+    const data = { ...store.getState().dados, alimentosPersonalizados: [own] };
+    const catalog = features.mealCatalog(data, "cafeManha", ["ovo", own.id]);
+    assert.ok(catalog.some((f) => f.id === "ovo"));
+    assert.ok(catalog.some((f) => f.id === own.id));
+    assert.equal(food.calcularPorcoes({ [own.id]: 50 }, catalog).calorias, 100);
   });
   console.log(`${passed} verificações passaram.`);
 } finally {

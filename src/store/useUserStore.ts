@@ -202,7 +202,12 @@ export const useUserStore = create<UserStore>()(
           meal &&
           (!change.key ||
             !Number.isFinite(meal.calorias) ||
-            meal.calorias <= 0 ||
+            meal.calorias < 0 ||
+            (meal.calorias === 0 &&
+              (!meal.alimentos.length ||
+                !Object.values(meal.porcoes || {}).some(
+                  (g) => g > 0 && Number.isFinite(g),
+                ))) ||
             Object.values(meal.macros).some(
               (v) => !Number.isFinite(v) || v < 0,
             ))
@@ -339,7 +344,12 @@ export const useUserStore = create<UserStore>()(
         get().verificarViradaDeDia();
         if (
           !Number.isFinite(calorias) ||
-          calorias <= 0 ||
+          calorias < 0 ||
+          (calorias === 0 &&
+            (!alimentosConsumidos.length ||
+              !Object.values(porcoes || {}).some(
+                (g) => g > 0 && Number.isFinite(g),
+              ))) ||
           Object.values(macros).some((v) => !Number.isFinite(v) || v < 0)
         )
           return;

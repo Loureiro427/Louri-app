@@ -1,242 +1,369 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUserStore } from "../store/useUserStore";
-import { Sheet } from "./ui/AppUI";
+import { Icon, Sheet } from "./ui/AppUI";
 import { fullCatalog } from "../utils/appFeatures";
+import { createCustomFood } from "../utils/customFood";
+import { foodMatches, normalizeFoodText } from "../utils/foodSearch";
+import { numberText } from "./ui/format";
+import { DiscardChanges } from "./DiscardChanges";
 export function FoodLibrary({
-  porcoes,
+  porcoes = {},
   onApply,
+  onSelect,
   onClose,
+  initialName = "",
 }: {
-  porcoes: Record<string, number>;
-  onApply: (p: Record<string, number>) => void;
+  porcoes?: Record<string, number>;
+  onApply?: (p: Record<string, number>) => void;
+  onSelect?: (id: string, grams: number) => void;
   onClose: () => void;
+  initialName?: string;
 }) {
   const dados = useUserStore((s) => s.dados);
-  const [tab, setTab] = useState<"recipes" | "food">("recipes");
+  const [tab, setTab] = useState<"recipes" | "food">("food");
+  const [adding, setAdding] = useState(Boolean(initialName));
   const [name, setName] = useState("");
-  const [foodName, setFoodName] = useState("");
+  const [foodName, setFoodName] = useState(initialName);
   const [base, setBase] = useState("100");
   const [values, setValues] = useState(["", "", "", ""]);
+  const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const saveFood = () => {
-    const numbers = values.map((v) => Number(v.replace(",", "."))),
-      grams = Number(base.replace(",", "."));
-    if (
-      !foodName.trim() ||
-      !Number.isFinite(grams) ||
-      grams <= 0 ||
-      grams > 10000 ||
-      values.some((v) => !v.trim()) ||
-      numbers.some((v) => !Number.isFinite(v) || v < 0) ||
-      numbers[0] <= 0 ||
-      (numbers[0] / grams) * 100 > 1000 ||
-      numbers.slice(1).some((n) => n > grams) ||
-      numbers.slice(1).reduce((a, b) => a + b, 0) > grams + 1
-    ) {
-      setError(
-        "Confira o nome, a porção, as calorias e os macros da embalagem."
-      );
-      return;
-    }
-    const food = {
-      id: `custom_${crypto.randomUUID()}`,
-      nome: foodName.trim(),
-      emoji: "🍽️",
-      kcal100g: (numbers[0] / grams) * 100,
-      prot: (numbers[1] / grams) * 100,
-      carbo: (numbers[2] / grams) * 100,
-      gord: (numbers[3] / grams) * 100,
+  const [discard, setDiscard] = useState(false);
+  const dirty = Boolean(
+    foodName.trim() || values.some((v) => v.trim()) || name.trim(),
+  );
+  useEffect(() => {
+    if (!dirty) return;
+    const prevent = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
     };
-    useUserStore
-      .getState()
-      .setDados({
-        alimentosPersonalizados: [
-          ...(dados.alimentosPersonalizados || []),
-          food,
-        ],
-      });
-    setMessage(
-      "Alimento adicionado ao catálogo. Busque pelo nome para usá-lo."
-    );
-    setError("");
-    setFoodName("");
-    setValues(["", "", "", ""]);
-  };
+    window.addEventListener("beforeunload", prevent);
+    return () => window.removeEventListener("beforeunload", prevent);
+  }, [dirty]);
+  const close = () => (dirty ? setDiscard(true) : onClose());
+  const foods = dados.alimentosPersonalizados || [];
   return (
-    <Sheet title="Minha coleção" onClose={onClose}>
-      <div className="app-tools-grid">
-        <button
-          className={`app-button app-button--${
-            tab === "recipes" ? "primary" : "secondary"
-          }`}
-          onClick={() => {
-            setTab("recipes");
-            setError("");
-            setMessage("");
-          }}
+    <>
+      <Sheet
+        title="Meus alimentos"
+        description="Seus alimentos personalizados e combinações ficam salvos neste aparelho."
+        onClose={close}
+      >
+        <div
+          className="app-segmented app-personal-tabs"
+          aria-label="Minha alimentação"
         >
-          Refeições salvas
-        </button>
-        <button
-          className={`app-button app-button--${
-            tab === "food" ? "primary" : "secondary"
-          }`}
-          onClick={() => {
-            setTab("food");
-            setError("");
-            setMessage("");
-          }}
-        >
-          Novo alimento
-        </button>
-      </div>
-      {tab === "recipes" ? (
-        <>
-          <form
-            className="app-feature-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!name.trim() || !Object.values(porcoes).some((g) => g > 0)) {
-                setError("Selecione alimentos e dê um nome à combinação.");
-                return;
-              }
-              useUserStore
-                .getState()
-                .setDados({
-                  refeicoesSalvas: [
-                    ...(dados.refeicoesSalvas || []),
-                    {
-                      id: crypto.randomUUID(),
-                      nome: name.trim(),
-                      porcoes: Object.fromEntries(
-                        Object.entries(porcoes).filter(([, g]) => g > 0)
-                      ),
-                    },
-                  ],
-                });
-              setName("");
-              setError("");
-              setMessage("Combinação salva.");
-            }}
+          <button
+            aria-pressed={tab === "food"}
+            className={tab === "food" ? "is-active" : ""}
+            onClick={() => setTab("food")}
           >
-            <label>
-              Nome da combinação
-              <input
-                maxLength={60}
-                value={name}
-                placeholder="Meu café de sempre"
-                onChange={(e) => setName(e.target.value)}
-              />
-            </label>
-            <button className="app-button app-button--secondary" type="submit">
-              Salvar seleção atual
-            </button>
-          </form>
-          <p className="app-helper">
-            Usar uma combinação substitui a seleção atual. Revise as porções
-            antes de registrar.
-          </p>
-          {(dados.refeicoesSalvas || []).map((recipe) => (
-            <div className="app-recipe-row" key={recipe.id}>
+            Alimentos
+          </button>
+          <button
+            aria-pressed={tab === "recipes"}
+            className={tab === "recipes" ? "is-active" : ""}
+            onClick={() => setTab("recipes")}
+          >
+            Refeições salvas
+          </button>
+        </div>
+        {tab === "food" ? (
+          <>
+            {!adding && (
               <button
+                className="app-button app-button--primary app-wide-button"
                 onClick={() => {
-                  onApply(recipe.porcoes);
-                  onClose();
+                  setAdding(true);
+                  setError("");
                 }}
               >
-                <strong>{recipe.nome}</strong>
-                <small>
-                  {Object.entries(recipe.porcoes)
-                    .map(
-                      ([id, g]) =>
-                        `${
-                          fullCatalog(dados).find((f) => f.id === id)?.nome ||
-                          id
-                        } (${g} g)`
-                    )
-                    .join(" · ")}
-                </small>
+                <Icon name="plus" size={17} />
+                Adicionar alimento
               </button>
-              <button
-                aria-label={`Excluir combinação ${recipe.nome}`}
-                onClick={() =>
+            )}
+            {adding && (
+              <form
+                className="app-feature-form app-personal-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const result = createCustomFood(
+                    foodName,
+                    base,
+                    values,
+                    `custom_${crypto.randomUUID()}`,
+                  );
+                  if (typeof result === "string") {
+                    setError(result);
+                    return;
+                  }
+                  if (
+                    foods.some(
+                      (f) =>
+                        normalizeFoodText(f.nome) ===
+                        normalizeFoodText(result.nome),
+                    )
+                  ) {
+                    setError(
+                      "Você já tem um alimento com esse nome. Use o item salvo ou acrescente a marca ao nome.",
+                    );
+                    return;
+                  }
                   useUserStore
                     .getState()
-                    .setDados({
+                    .setDados({ alimentosPersonalizados: [...foods, result] });
+                  setFoodName("");
+                  setBase("100");
+                  setValues(["", "", "", ""]);
+                  setError("");
+                  setAdding(false);
+                  if (onSelect) {
+                    onSelect(result.id, result.porcaoReferencia || 100);
+                    onClose();
+                  } else
+                    setMessage(
+                      "Alimento salvo. Ele já está disponível na busca de qualquer refeição.",
+                    );
+                }}
+              >
+                <h3 className="app-sheet-section-title">
+                  O que você vai comer?
+                </h3>
+                <p className="app-helper">
+                  Tenha a tabela nutricional da embalagem por perto. Copie tudo
+                  da mesma coluna: o peso da porção e os valores abaixo.
+                </p>
+                <label>
+                  Nome do alimento
+                  <input
+                    required
+                    maxLength={70}
+                    value={foodName}
+                    placeholder="Ex.: meu iogurte de morango"
+                    onChange={(e) => setFoodName(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Essa porção pesa quantos gramas?
+                  <input
+                    required
+                    inputMode="decimal"
+                    value={base}
+                    onChange={(e) => setBase(e.target.value)}
+                  />
+                </label>
+                <p className="app-helper">
+                  Exemplo: se a coluna diz “porção de 30 g”, digite 30 e copie
+                  os valores daquela coluna. Use gramas; ml não são convertidos
+                  automaticamente.
+                </p>
+                {[
+                  "Calorias (kcal)",
+                  "Proteínas (g)",
+                  "Carboidratos (g)",
+                  "Gorduras totais (g)",
+                ].map((label, i) => (
+                  <label key={label}>
+                    {label}
+                    <input
+                      required
+                      inputMode="decimal"
+                      value={values[i]}
+                      placeholder="Digite 0 se o rótulo indicar zero"
+                      onChange={(e) =>
+                        setValues(
+                          values.map((v, j) => (i === j ? e.target.value : v)),
+                        )
+                      }
+                    />
+                  </label>
+                ))}
+                {error && (
+                  <p className="app-field-error" role="alert">
+                    {error}
+                  </p>
+                )}
+                <button
+                  className="app-button app-button--primary"
+                  type="submit"
+                >
+                  {onSelect
+                    ? "Salvar e usar nesta refeição"
+                    : "Salvar alimento"}
+                </button>
+                <button
+                  className="app-text-button"
+                  type="button"
+                  onClick={() => setAdding(false)}
+                >
+                  Voltar à minha lista
+                </button>
+              </form>
+            )}
+            {!adding && (
+              <>
+                {foods.length > 0 && (
+                  <label className="app-search">
+                    <Icon name="search" size={18} />
+                    <input
+                      aria-label="Buscar nos meus alimentos"
+                      placeholder="Buscar nos meus alimentos"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                    />
+                  </label>
+                )}
+                <div className="app-personal-list">
+                  {foods
+                    .filter((f) => foodMatches(f, query))
+                    .map((f) => (
+                      <article className="app-personal-food" key={f.id}>
+                        <span aria-hidden="true">{f.emoji}</span>
+                        <div>
+                          <strong>{f.nome}</strong>
+                          <small>
+                            {numberText(f.kcal100g, 1)} kcal por 100 g
+                          </small>
+                        </div>
+                        {onSelect && (
+                          <button
+                            className="app-text-button"
+                            onClick={() => {
+                              onSelect(f.id, f.porcaoReferencia || 100);
+                              onClose();
+                            }}
+                          >
+                            Usar
+                          </button>
+                        )}
+                      </article>
+                    ))}
+                </div>
+                {!foods.length && (
+                  <div className="app-empty-state">
+                    <Icon name="plan" size={28} />
+                    <h3>Seu cantinho de alimentos</h3>
+                    <p>
+                      Não achou o que vai comer? Adicione pelo rótulo. Depois,
+                      basta buscar pelo nome.
+                    </p>
+                  </div>
+                )}
+                {foods.length > 0 &&
+                  !foods.some((f) => foodMatches(f, query)) && (
+                    <p className="app-empty">
+                      Nenhum dos seus alimentos tem esse nome.
+                    </p>
+                  )}
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            {onApply && (
+              <form
+                className="app-feature-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (
+                    !name.trim() ||
+                    !Object.values(porcoes).some((g) => g > 0)
+                  ) {
+                    setError(
+                      "Escolha alimentos na refeição e dê um nome à combinação.",
+                    );
+                    return;
+                  }
+                  useUserStore.getState().setDados({
+                    refeicoesSalvas: [
+                      ...(dados.refeicoesSalvas || []),
+                      {
+                        id: crypto.randomUUID(),
+                        nome: name.trim(),
+                        porcoes: Object.fromEntries(
+                          Object.entries(porcoes).filter(([, g]) => g > 0),
+                        ),
+                      },
+                    ],
+                  });
+                  setName("");
+                  setError("");
+                  setMessage("Combinação salva.");
+                }}
+              >
+                <label>
+                  Nome da combinação
+                  <input
+                    maxLength={60}
+                    placeholder="Meu café de sempre"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </label>
+                <button className="app-button app-button--secondary">
+                  Salvar seleção atual
+                </button>
+                {error && (
+                  <p className="app-field-error" role="alert">
+                    {error}
+                  </p>
+                )}
+              </form>
+            )}
+            <p className="app-helper">
+              {onApply
+                ? "Usar uma combinação substitui a seleção atual. Confira as porções antes de registrar."
+                : "Para salvar uma combinação, abra uma refeição, escolha alimentos e toque em Meus alimentos → Refeições salvas."}
+            </p>
+            {(dados.refeicoesSalvas || []).map((recipe) => (
+              <div className="app-recipe-row" key={recipe.id}>
+                <button
+                  disabled={!onApply}
+                  onClick={() => {
+                    onApply?.(recipe.porcoes);
+                    onClose();
+                  }}
+                >
+                  <strong>{recipe.nome}</strong>
+                  <small>
+                    {Object.entries(recipe.porcoes)
+                      .map(
+                        ([id, g]) =>
+                          `${fullCatalog(dados).find((f) => f.id === id)?.nome || id} (${numberText(g, 1)} g)`,
+                      )
+                      .join(" · ")}
+                  </small>
+                </button>
+                <button
+                  aria-label={`Excluir combinação ${recipe.nome}`}
+                  onClick={() =>
+                    useUserStore.getState().setDados({
                       refeicoesSalvas: dados.refeicoesSalvas?.filter(
-                        (r) => r.id !== recipe.id
+                        (r) => r.id !== recipe.id,
                       ),
                     })
-                }
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </>
-      ) : (
-        <form
-          className="app-feature-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            saveFood();
-          }}
-        >
-          <p className="app-helper">
-            Copie os valores do rótulo para a porção indicada. O app converte
-            para 100 g.
+                  }
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {!dados.refeicoesSalvas?.length && (
+              <p className="app-empty">Suas combinações vão aparecer aqui.</p>
+            )}
+          </>
+        )}
+        {message && (
+          <p className="app-inline-notice" role="status">
+            {message}
           </p>
-          <label>
-            Nome do alimento
-            <input
-              maxLength={70}
-              value={foodName}
-              onChange={(e) => setFoodName(e.target.value)}
-            />
-          </label>
-          <label>
-            Porção do rótulo (g)
-            <input
-              inputMode="decimal"
-              value={base}
-              onChange={(e) => setBase(e.target.value)}
-            />
-          </label>
-          {[
-            "Calorias (kcal)",
-            "Proteína (g)",
-            "Carboidratos (g)",
-            "Gorduras (g)",
-          ].map((label, i) => (
-            <label key={label}>
-              {label}
-              <input
-                inputMode="decimal"
-                value={values[i]}
-                onChange={(e) =>
-                  setValues(
-                    values.map((v, j) => (j === i ? e.target.value : v))
-                  )
-                }
-              />
-            </label>
-          ))}
-          <button className="app-button app-button--primary" type="submit">
-            Adicionar alimento
-          </button>
-        </form>
+        )}
+      </Sheet>
+      {discard && (
+        <DiscardChanges onKeep={() => setDiscard(false)} onDiscard={onClose} />
       )}
-      {error && (
-        <p className="app-field-error" role="alert">
-          {error}
-        </p>
-      )}
-      {message && (
-        <p className="app-helper" role="status">
-          {message}
-        </p>
-      )}
-    </Sheet>
+    </>
   );
 }

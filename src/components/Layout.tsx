@@ -1,3 +1,4 @@
+import { reminderInbox } from "../utils/reminderNavigation";
 import {
   configurarNotificacoesNativas,
   watchReminderTap,
@@ -48,19 +49,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         const route = ["/", "/evolucao"].includes(target.route || "")
           ? target.route!
           : "/";
+        if (route === "/") reminderInbox.publish(target);
         navigate(route);
-        setTimeout(
-          () =>
-            window.dispatchEvent(
-              new CustomEvent("louri-reminder-open", {
-                detail: {
-                  meal: target.meal,
-                  water: target.kind === "water",
-                },
-              }),
-            ),
-          100,
-        );
       }),
     [navigate],
   );

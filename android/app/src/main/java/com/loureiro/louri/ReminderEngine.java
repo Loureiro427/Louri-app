@@ -141,7 +141,7 @@ public final class ReminderEngine {
     }
     private static boolean show(Context c,String title,String body,String route,String meal,String kind,int id) {
         channel(c);if(!allowed(c))return false;
-        Intent open=new Intent(c,MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("louriRoute",route).putExtra("louriMeal",meal).putExtra("louriKind",kind);
+        Intent open=new Intent(c,MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("louriRoute",route).putExtra("louriMeal",meal).putExtra("louriKind",kind).putExtra("louriDay",day());
         PendingIntent tap=PendingIntent.getActivity(c,id,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder builder=new NotificationCompat.Builder(c,CHANNEL).setSmallIcon(R.drawable.ic_louri_notification).setColor(0xff00d563).setContentTitle(title).setContentText(body).setStyle(new NotificationCompat.BigTextStyle().bigText(body)).setContentIntent(tap).setAutoCancel(true).setOnlyAlertOnce(false);
         if(!"test".equals(kind)) {

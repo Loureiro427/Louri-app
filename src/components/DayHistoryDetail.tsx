@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
@@ -7,6 +7,7 @@ import { CONFIG_REFEICOES } from "../utils/nutritionMath";
 import { localDayKey } from "../utils/dailyStreak";
 import { mealCatalog } from "../utils/appFeatures";
 import { calcularPorcoes } from "../data/alimentos";
+import type { MealComposerHandle } from "./MealComposer";
 import { MealComposer } from "./MealComposer";
 import { Icon, Sheet } from "./ui/AppUI";
 import { litersText, numberText } from "./ui/format";
@@ -20,6 +21,7 @@ export function DayHistoryDetail({
   record?: DayRecord;
   onClose: () => void;
 }) {
+  const composer = useRef<MealComposerHandle>(null);
   const dados = useUserStore((s) => s.dados);
   const navigate = useNavigate();
   const today = localDayKey(new Date());
@@ -37,7 +39,7 @@ export function DayHistoryDetail({
     return createPortal(
       <div
         className={`app-themed app-meal-overlay ${
-          dados.temaEscuro ?? true ? "" : "app-light"
+          (dados.temaEscuro ?? true) ? "" : "app-light"
         }`}
         role="dialog"
         aria-modal="true"
@@ -46,15 +48,16 @@ export function DayHistoryDetail({
         <button
           className="app-modal-scrim"
           aria-label="Voltar ao dia"
-          onClick={() => setEditing(null)}
+          onClick={() => composer.current?.requestClose()}
         />
         <div className="app-composer-sheet">
           <MealComposer
+            ref={composer}
             key={`${date}-${editing}`}
             alimentos={mealCatalog(
               dados,
               editing,
-              Object.keys(record?.refeicoesDetalhadas[editing]?.porcoes || {})
+              Object.keys(record?.refeicoesDetalhadas[editing]?.porcoes || {}),
             )}
             initialPorcoes={record?.refeicoesDetalhadas[editing]?.porcoes || {}}
             confirmLabel="Salvar neste dia"
@@ -76,21 +79,21 @@ export function DayHistoryDetail({
                   macros: total.macros,
                   porcoes,
                   alimentos: Object.keys(porcoes).map(
-                    (id) => catalog.find((f) => f.id === id)?.nome || id
+                    (id) => catalog.find((f) => f.id === id)?.nome || id,
                   ),
                 },
               });
               if (saved) {
                 setEditing(null);
                 setMessage(
-                  "Refeição salva neste dia. Os registros de hoje continuam iguais."
+                  "Refeição salva neste dia. Os registros de hoje continuam iguais.",
                 );
               }
             }}
           />
         </div>
       </div>,
-      document.body
+      document.body,
     );
   return (
     <Sheet
@@ -99,8 +102,8 @@ export function DayHistoryDetail({
         past
           ? "Esqueceu algo? Você pode completar ou corrigir aqui."
           : date === today
-          ? "Seu acompanhamento de hoje"
-          : "Esse dia ainda vai chegar."
+            ? "Seu acompanhamento de hoje"
+            : "Esse dia ainda vai chegar."
       }
       onClose={onClose}
     >
@@ -133,7 +136,7 @@ export function DayHistoryDetail({
             setMessage(
               saved
                 ? "Água atualizada neste dia."
-                : "Confira a quantidade de água."
+                : "Confira a quantidade de água.",
             );
           }}
         >
@@ -260,7 +263,7 @@ export function DayHistoryDetail({
             }
             onClick={() =>
               setEditing(
-                choice === "livre" ? `refeicaoLivre_${Date.now()}` : choice
+                choice === "livre" ? `refeicaoLivre_${Date.now()}` : choice,
               )
             }
           >

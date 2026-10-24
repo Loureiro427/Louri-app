@@ -4,7 +4,7 @@ import { localDayKey, previousDay } from "./dailyStreak";
 export function mealCatalog(
   dados: UserData,
   key?: string,
-  keepIds: string[] = []
+  keepIds: string[] = [],
 ) {
   const selected =
     key && Array.isArray(dados.alimentos?.[key]) ? dados.alimentos[key] : [];
@@ -20,8 +20,11 @@ export function mealCatalog(
     (a, i, all) =>
       all.findIndex(
         (b) =>
-          b.id === a.id || (!a.id.startsWith("custom_") && b.nome === a.nome)
-      ) === i
+          b.id === a.id ||
+          (!a.id.startsWith("custom_") &&
+            !b.id.startsWith("custom_") &&
+            b.nome === a.nome),
+      ) === i,
   );
 }
 export function fullCatalog(dados: UserData) {
@@ -33,7 +36,7 @@ export function fullCatalog(dados: UserData) {
 export function recipeForCatalog(
   dados: UserData,
   portions: Record<string, number>,
-  key?: string
+  key?: string,
 ) {
   const source = fullCatalog(dados),
     target = mealCatalog(dados, key, Object.keys(portions));
@@ -73,8 +76,8 @@ export function shoppingItems(dados: UserData) {
   const ids = [
     ...new Set(
       (dados.refeicoesAtivas || []).flatMap((key) =>
-        Array.isArray(dados.alimentos?.[key]) ? dados.alimentos[key] : []
-      )
+        Array.isArray(dados.alimentos?.[key]) ? dados.alimentos[key] : [],
+      ),
     ),
   ];
   const items = ids
@@ -83,17 +86,17 @@ export function shoppingItems(dados: UserData) {
     .map((food) => {
       const name = food!.nome;
       const category = /fruta|banana|maçã|mamão|legume|salada|batata/i.test(
-        name
+        name,
       )
         ? "Hortifruti"
         : /frango|carne|peixe|ovo|omelete/i.test(name)
-        ? "Proteínas"
-        : /leite|iogurte|queijo/i.test(name)
-        ? "Laticínios"
-        : "Mercearia";
+          ? "Proteínas"
+          : /leite|iogurte|queijo/i.test(name)
+            ? "Laticínios"
+            : "Mercearia";
       const grams = (dados.refeicoesAtivas || []).reduce(
         (sum, key) => sum + (dados.porcoesPlano?.[key]?.[food!.id] || 0),
-        0
+        0,
       );
       return { ...food!, category, grams };
     });
@@ -103,7 +106,7 @@ export function shoppingItems(dados: UserData) {
     const existing = grouped.get(key);
     grouped.set(
       key,
-      existing ? { ...existing, grams: existing.grams + item.grams } : item
+      existing ? { ...existing, grams: existing.grams + item.grams } : item,
     );
   }
   return [...grouped.values()];

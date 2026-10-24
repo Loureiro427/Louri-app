@@ -1,15 +1,18 @@
-export const DICIONARIO_ALIMENTOS: Record<
-  string,
-  {
-    id: string;
-    nome: string;
-    emoji: string;
-    kcal100g: number;
-    prot: number;
-    carbo: number;
-    gord: number;
-  }[]
-> = {
+import { reviewCatalog } from "./catalogReview";
+export interface Alimento {
+  id: string;
+  nome: string;
+  emoji: string;
+  kcal100g: number;
+  prot: number;
+  carbo: number;
+  gord: number;
+  preparo?: string;
+  fonte?: string;
+  aliases?: string[];
+  porcaoReferencia?: number;
+}
+export const DICIONARIO_ALIMENTOS: Record<string, Alimento[]> = {
   cafeManha: [
     {
       id: "pao",
@@ -501,16 +504,16 @@ export const DICIONARIO_ALIMENTOS: Record<
   ],
 };
 
-export type Alimento = (typeof DICIONARIO_ALIMENTOS)[string][number];
+reviewCatalog(DICIONARIO_ALIMENTOS);
 export const todosAlimentos = Object.values(DICIONARIO_ALIMENTOS)
   .flat()
   .filter(
-    (item, i, lista) => lista.findIndex((a) => a.nome === item.nome) === i
+    (item, i, lista) => lista.findIndex((a) => a.nome === item.nome) === i,
   )
   .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 export function calcularPorcoes(
   porcoes: Record<string, number>,
-  alimentos: Alimento[]
+  alimentos: Alimento[],
 ) {
   return Object.entries(porcoes).reduce(
     (total, [id, gramas]) => {
@@ -522,6 +525,6 @@ export function calcularPorcoes(
       total.macros.gordura += Math.round((item.gord * gramas) / 100);
       return total;
     },
-    { calorias: 0, macros: { proteina: 0, carbo: 0, gordura: 0 } }
+    { calorias: 0, macros: { proteina: 0, carbo: 0, gordura: 0 } },
   );
 }

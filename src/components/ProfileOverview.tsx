@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { FoodLibrary } from "./FoodLibrary";
 import { AppGuide } from "./AppGuide";
 import { ReminderSettings } from "./ReminderSettings";
 import { useNavigate } from "react-router-dom";
@@ -21,6 +23,7 @@ export function ProfileOverview({
   onSignOut: () => void;
 }) {
   const navigate = useNavigate();
+  const [foodsOpen, setFoodsOpen] = useState(false);
   const dados = useUserStore((state) => state.dados);
   const dark = dados.temaEscuro ?? true;
   const notifications = dados.notificacoes ?? true;
@@ -154,6 +157,12 @@ export function ProfileOverview({
       <section>
         <SectionHeading title="Ajuda e informação" />
         <div className="app-card app-settings-list">
+          <ActionRow
+            icon="plan"
+            title="Meus alimentos"
+            detail="Adicionar alimentos pelo rótulo"
+            onClick={() => setFoodsOpen(true)}
+          />
           <AppGuide replay />
           <ActionRow icon="idea" title="Deixe sua ideia" onClick={openIdea} />
           <ActionRow
@@ -186,6 +195,7 @@ export function ProfileOverview({
           onClick={onSignOut}
         />
       </div>
+      {foodsOpen && <FoodLibrary onClose={() => setFoodsOpen(false)} />}
       <p className="app-profile-footer">
         Louri <span>Beta</span>
       </p>

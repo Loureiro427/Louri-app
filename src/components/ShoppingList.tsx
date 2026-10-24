@@ -1,16 +1,24 @@
 import { useState } from "react";
 import { useUserStore } from "../store/useUserStore";
-import { buildShoppingList, shoppingProgress } from "../utils/shoppingList";
+import {
+  buildShoppingList,
+  consolidateShoppingItems,
+  shoppingProgress,
+} from "../utils/shoppingList";
 import type { ShoppingItem, ShoppingListData } from "../utils/shoppingList";
 import { Icon, Progress, Sheet } from "./ui/AppUI";
 export function ShoppingList({ onClose }: { onClose: () => void }) {
   const dados = useUserStore((s) => s.dados);
-  const list = dados.listaCompras || {
+  const savedList = dados.listaCompras || {
     dias: 7,
     itens: buildShoppingList(dados, 7),
   };
+  const list = {
+    ...savedList,
+    itens: consolidateShoppingItems(savedList.itens),
+  };
   const [days, setDays] = useState(list.dias);
-  const [filter, setFilter] = useState<"pending" | "all">("pending");
+  const [filter, setFilter] = useState<"pending" | "all" | "pantry">("pending");
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [unit, setUnit] = useState("un");
@@ -25,14 +33,18 @@ export function ShoppingList({ onClose }: { onClose: () => void }) {
     save({
       ...list,
       itens: list.itens.map((item) =>
-        item.id === id ? { ...item, ...patch } : item
+        item.id === id ? { ...item, ...patch } : item,
       ),
     });
   const progress = shoppingProgress(list.itens);
   const shown = list.itens.filter(
-    (item) => filter === "all" || (!item.comprado && !item.emCasa)
+    (item) =>
+      filter === "all" ||
+      (filter === "pantry" ? item.emCasa : !item.comprado && !item.emCasa),
   );
-  const categories = [...new Set(shown.map((item) => item.categoria))];
+  const categories = [...new Set(shown.map((item) => item.categoria))].sort(
+    (a, b) => a.localeCompare(b, "pt-BR"),
+  );
   const units = ["un", "g", "kg", "ml", "L"];
   return (
     <Sheet
@@ -77,7 +89,7 @@ export function ShoppingList({ onClose }: { onClose: () => void }) {
               itens: buildShoppingList(dados, days, list.itens),
             });
             setMessage(
-              `Plano atualizado para ${days} dias. Seus itens e ajustes foram mantidos.`
+              `Plano atualizado para ${days} dias. Seus itens e ajustes foram mantidos.`,
             );
           }}
         >
@@ -108,6 +120,13 @@ export function ShoppingList({ onClose }: { onClose: () => void }) {
             Falta comprar
           </button>
           <button
+            className={filter === "pantry" ? "is-active" : ""}
+            aria-pressed={filter === "pantry"}
+            onClick={() => setFilter("pantry")}
+          >
+            Em casa ({progress.pantry})
+          </button>
+          <button
             className={filter === "all" ? "is-active" : ""}
             aria-pressed={filter === "all"}
             onClick={() => setFilter("all")}
@@ -133,7 +152,7 @@ export function ShoppingList({ onClose }: { onClose: () => void }) {
               list.itens.some(
                 (item) =>
                   item.nome.toLocaleLowerCase("pt-BR") ===
-                  name.trim().toLocaleLowerCase("pt-BR")
+                  name.trim().toLocaleLowerCase("pt-BR"),
               )
             ) {
               setError("Esse item já está na lista. Confira a aba Todos.");
@@ -254,7 +273,14 @@ export function ShoppingList({ onClose }: { onClose: () => void }) {
                     }
                   />
                   <span aria-hidden="true">{item.emoji}</span>
-                  <strong>{item.nome}</strong>
+                  <strong>
+                    {item.nome}
+                    {item.preparo && (
+                      <small className="app-shopping-prep">
+                        {item.preparo}
+                      </small>
+                    )}
+                  </strong>
                   <button
                     className="app-icon-button"
                     aria-label={`Remover ${item.nome} da lista`}
@@ -298,7 +324,7 @@ export function ShoppingList({ onClose }: { onClose: () => void }) {
                     ))}
                   </select>
                   <button
-                    aria-label={`Tenho ${item.nome} em casa`}
+                    aria-label={`Já tenho ${item.nome} em casa`}
                     aria-pressed={item.emCasa}
                     className={`app-shop-pantry ${
                       item.emCasa ? "is-active" : ""
@@ -312,7 +338,7 @@ export function ShoppingList({ onClose }: { onClose: () => void }) {
                     ) : (
                       <Icon name="home" size={13} />
                     )}
-                    Tenho em casa
+                    {item.emCasa ? "Em casa" : "Já tenho em casa"}
                   </button>
                 </div>
               </article>
@@ -323,12 +349,18 @@ export function ShoppingList({ onClose }: { onClose: () => void }) {
         <div className="app-empty-state">
           <Icon name={list.itens.length ? "check" : "file"} size={29} />
           <h3>
-            {list.itens.length ? "Tudo resolvido por aqui" : "Monte sua lista"}
+            {filter === "pantry"
+              ? "Ainda sem itens em casa"
+              : list.itens.length
+                ? "Tudo resolvido por aqui"
+                : "Monte sua lista"}
           </h3>
           <p>
-            {list.itens.length
-              ? "Os itens comprados e os que você já tem estão na aba Todos."
-              : "Use os alimentos do plano ou adicione o que precisa comprar."}
+            {filter === "pantry"
+              ? "Use Já tenho em casa em um item da lista para separá-lo do que falta comprar."
+              : list.itens.length
+                ? "Os itens comprados e os que você já tem estão na aba Todos."
+                : "Use os alimentos do plano ou adicione o que precisa comprar."}
           </p>
         </div>
       )}
@@ -360,7 +392,7 @@ export function ShoppingList({ onClose }: { onClose: () => void }) {
             });
             setFilter("pending");
             setMessage(
-              "Nova compra iniciada. Os itens em casa continuam separados."
+              "Nova compra iniciada. Os itens em casa continuam separados.",
             );
           }}
         >

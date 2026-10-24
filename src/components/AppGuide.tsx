@@ -12,7 +12,7 @@ const steps = [
   {
     icon: "plan" as const,
     title: "Registre o que você comeu",
-    text: "No Início, escolha a refeição e toque em Registrar. Selecione os alimentos, ajuste a quantidade e confira antes de salvar. Repetir última preenche a combinação para você revisar.",
+    text: "No Início, escolha a refeição e toque em Registrar. Selecione os alimentos, ajuste a quantidade e confira antes de salvar. Não achou um alimento? Toque em Meus alimentos para adicionar pelo rótulo.",
     example: "Comeu 2 ovos? Selecione Ovo → Medida caseira → 2×",
   },
   {

@@ -271,7 +271,7 @@ export function Sheet({
             panel.current?.querySelectorAll<HTMLElement>(
               "button:not(:disabled),input:not(:disabled),textarea,select,a[href]",
             ) || [],
-          );
+          ).filter((item) => item.getClientRects().length > 0);
           const first = items[0],
             last = items.at(-1);
           if (

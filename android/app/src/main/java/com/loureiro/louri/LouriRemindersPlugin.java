@@ -27,8 +27,8 @@ public class LouriRemindersPlugin extends Plugin {
     @PluginMethod public void consumeTap(PluginCall call) {
         Intent intent=getActivity().getIntent();JSObject target=new JSObject();
         if(intent!=null&&intent.hasExtra("louriRoute")) {
-            target.put("route",intent.getStringExtra("louriRoute"));target.put("meal",intent.getStringExtra("louriMeal"));target.put("kind",intent.getStringExtra("louriKind"));
-            intent.removeExtra("louriRoute");intent.removeExtra("louriMeal");intent.removeExtra("louriKind");
+            target.put("day",intent.getStringExtra("louriDay"));target.put("route",intent.getStringExtra("louriRoute"));target.put("meal",intent.getStringExtra("louriMeal"));target.put("kind",intent.getStringExtra("louriKind"));
+            intent.removeExtra("louriDay");intent.removeExtra("louriRoute");intent.removeExtra("louriMeal");intent.removeExtra("louriKind");
         }
         call.resolve(target);
     }

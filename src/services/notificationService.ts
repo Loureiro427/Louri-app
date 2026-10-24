@@ -20,7 +20,7 @@ export type ReminderStatus = {
   testReceivedAt?: number;
   testShown?: boolean;
 };
-type Tap = { route?: string; meal?: string; kind?: string };
+type Tap = { route?: string; meal?: string; kind?: string; day?: string };
 const Native = registerPlugin<{
   sync(options: {
     plan: ReturnType<typeof nativeReminderPlan>;

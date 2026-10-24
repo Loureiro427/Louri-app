@@ -1,12 +1,15 @@
+import { reminderInbox, resolveReminder } from "../utils/reminderNavigation";
+import { DayHistoryDetail } from "../components/DayHistoryDetail";
 import { AppGuide } from "../components/AppGuide";
 import { mealCatalog } from "../utils/appFeatures";
 import { dailyGoals } from "../utils/dailyStreak";
 import { nextDailyAction } from "../utils/dailyExperience";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
 import { WelcomeScreen } from "../components/WelcomeScreen";
+import type { MealComposerHandle } from "../components/MealComposer";
 import { MealComposer } from "../components/MealComposer";
 import { calcularPorcoes } from "../data/alimentos";
 import {
@@ -28,6 +31,14 @@ import { litersText, numberText } from "../components/ui/format";
 type Meal = ReturnType<typeof getCronograma>[number];
 export function Home() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const reminder = useSyncExternalStore(
+    reminderInbox.subscribe,
+    reminderInbox.get,
+    reminderInbox.get,
+  );
+  const [reminderDay, setReminderDay] = useState<string | null>(null);
+  const composer = useRef<MealComposerHandle>(null);
   const dados = useUserStore((state) => state.dados);
   const [time, setTime] = useState(() => new Date());
   const [summary, setSummary] = useState(false);
@@ -64,25 +75,46 @@ export function Home() {
     return () => clearInterval(timer);
   }, []);
   useEffect(() => {
-    const open = (event: Event) => {
-      const target = (event as CustomEvent<{ meal?: string; water?: boolean }>)
-        .detail;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active || reminderInbox.get() !== reminder) return;
+      if (
+        !reminder ||
+        pathname !== "/" ||
+        meal ||
+        detail ||
+        waterHistory ||
+        reminderDay
+      )
+        return;
+      useUserStore.getState().verificarViradaDeDia();
       const current = useUserStore.getState().dados;
       if (!current.nome) return;
-      if (target.meal) {
-        const ref = getCronograma(current).find((r) => r.key === target.meal);
-        if (ref) {
-          if (current.refeicoesConcluidas.includes(ref.key)) setDetail(ref.key);
-          else {
-            setEditing(false);
-            setMeal(ref);
-          }
-        }
-      } else if (target.water) setWaterHistory(true);
+      reminderInbox.acknowledge(reminder);
+      const destination = resolveReminder(current, reminder);
+      if (destination.type === "history") {
+        setReminderDay(destination.day);
+        setFeedback({
+          text: "Esse lembrete era de um dia anterior. Abri o registro daquele dia para você conferir.",
+        });
+      } else if (destination.type === "record") {
+        setDetail(destination.key);
+        setFeedback({
+          text: "Essa refeição já está registrada. Você pode conferir ou editar; ela não será contada de novo.",
+        });
+      } else if (destination.type === "meal") {
+        setEditing(false);
+        setMeal(destination.meal);
+      } else if (destination.type === "unavailable")
+        setFeedback({
+          text: "Essa refeição não está mais no seu plano. Você pode registrá-la como Refeição livre pelo botão +.",
+        });
+      else if (destination.type === "water") setWaterHistory(true);
+    });
+    return () => {
+      active = false;
     };
-    window.addEventListener("louri-reminder-open", open);
-    return () => window.removeEventListener("louri-reminder-open", open);
-  }, []);
+  }, [reminder, pathname, meal, detail, waterHistory, reminderDay]);
   if (!dados.nome) return <WelcomeScreen dark={dados.temaEscuro ?? true} />;
   const targets = getPlanTargets(dados);
   const schedule = getCronograma(dados);
@@ -416,6 +448,13 @@ export function Home() {
           <Icon name="chevron" size={15} />
         </button>
       </section>
+      {reminderDay && (
+        <DayHistoryDetail
+          date={reminderDay}
+          record={dados.historico?.[reminderDay]}
+          onClose={() => setReminderDay(null)}
+        />
+      )}
       {waterHistory && (
         <Sheet
           title="Água de hoje"
@@ -548,7 +587,7 @@ export function Home() {
             CONFIG_REFEICOES[detail]?.titulo ||
             "Refeição"
           }
-          description="Registro de hoje"
+          description="Esta refeição já está registrada hoje. Edite aqui se precisar corrigir."
           onClose={() => setDetail(null)}
         >
           <div className="app-sheet-total">
@@ -642,10 +681,11 @@ export function Home() {
             <button
               className="app-modal-scrim"
               aria-label="Fechar janela de refeição"
-              onClick={() => setMeal(null)}
+              onClick={() => composer.current?.requestClose()}
             />
             <div className="app-composer-sheet">
               <MealComposer
+                ref={composer}
                 alimentos={mealCatalog(
                   dados,
                   meal.key,
