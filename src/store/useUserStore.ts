@@ -1,5 +1,6 @@
 import type { ShoppingListData } from "../utils/shoppingList";
 import type { Alimento } from "../data/alimentos";
+import type { PortionPreference } from "../utils/portionPreferences";
 import { parseWeight } from "../utils/weightValidation";
 import { mergePersistedUser } from "../utils/persistedUser";
 import { reconcileDailyStreak } from "../utils/dailyStreak";
@@ -27,6 +28,7 @@ export interface DayRecord {
 }
 
 export interface UserData {
+  preferenciasMedida?: Record<string, PortionPreference>;
   tutorialVisto?: boolean;
   dicasVistas?: string[];
   listaCompras?: ShoppingListData;
@@ -127,6 +129,7 @@ export const useUserStore = create<UserStore>()(
   persist(
     (set, get) => ({
       dados: {
+        preferenciasMedida: {},
         favoritos: [],
         ultimasPorcoes: {},
         nome: "",

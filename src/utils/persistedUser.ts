@@ -1,4 +1,5 @@
 import type { UserData } from "../store/useUserStore";
+import { sanitizePortionPreference } from "./portionPreferences";
 
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -58,6 +59,14 @@ export function mergePersistedUser(
   merged.dicasVistas = Array.isArray(value.dicasVistas)
     ? value.dicasVistas.filter((item) => typeof item === "string")
     : [];
+  merged.preferenciasMedida = record(value.preferenciasMedida)
+    ? Object.fromEntries(
+        Object.entries(value.preferenciasMedida).flatMap(([id, raw]) => {
+          const preference = sanitizePortionPreference(raw);
+          return preference ? [[id, preference]] : [];
+        }),
+      )
+    : {};
   // Food preferences have several supported legacy formats. Leave them intact.
   if (value.alimentos === undefined || value.alimentos === null)
     merged.alimentos = defaults.alimentos;

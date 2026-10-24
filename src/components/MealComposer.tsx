@@ -1,6 +1,7 @@
 import { CustomFoodActions } from "./CustomFoodActions";
 import { FoodVisual } from "./FoodVisual";
 import { editedPortionFactor } from "../utils/editCustomFood";
+import { defaultFoodPortion } from "../utils/portionPreferences";
 import { DiscardChanges } from "./DiscardChanges";
 import {
   foodMatches,
@@ -10,7 +11,7 @@ import {
 import type { Ref } from "react";
 import { PortionInput } from "./PortionInput";
 import { ContextTip } from "./AppGuide";
-import { householdMeasure, lastMealPortions } from "../utils/easyMeals";
+import { lastMealPortions } from "../utils/easyMeals";
 import { fullCatalog } from "../utils/appFeatures";
 import { recipeForCatalog } from "../utils/appFeatures";
 import { FoodLibrary } from "./FoodLibrary";
@@ -165,8 +166,10 @@ export function MealComposer({
       const next = { ...previous };
       if (next[item.id] !== undefined) delete next[item.id];
       else
-        next[item.id] =
-          householdMeasure(item)?.grams || item.porcaoReferencia || 100;
+        next[item.id] = defaultFoodPortion(
+          item,
+          dados.preferenciasMedida?.[item.id],
+        );
       return next;
     });
   const quantity = (id: string, value: number) =>

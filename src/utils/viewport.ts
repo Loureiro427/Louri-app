@@ -3,8 +3,13 @@ export function visibleAppHeight(
   visual: number,
   baseline: number,
   keyboard: number,
+  scale = 1,
 ) {
-  const measured = Math.min(inner, visual > 0 ? visual : inner);
+  // Pinch zoom reduces the visual viewport without opening a keyboard.
+  const measured = Math.min(
+    inner,
+    scale > 1.01 ? inner : visual > 0 ? visual : inner,
+  );
   // Some WebViews overlay the IME without changing either browser height.
   return Math.max(
     120,

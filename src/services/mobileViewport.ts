@@ -33,6 +33,7 @@ export function installMobileViewport() {
       visual,
       baseline,
       keyboardHeight,
+      window.visualViewport?.scale || 1,
     );
     keyboardOpen =
       keyboardHeight > 0 || (editable() && baseline - height > 120);
@@ -44,7 +45,7 @@ export function installMobileViewport() {
       );
       lastHeight = height;
     }
-    if (editable())
+    if (editable() && (window.visualViewport?.scale || 1) <= 1.01)
       (document.activeElement as HTMLElement).scrollIntoView({
         block: "nearest",
         inline: "nearest",

@@ -40,6 +40,16 @@ export function editCustomFood(
   };
   // Old definitions and historical portions remain paired, including their original unit.
   return {
+    preferenciasMedida: {
+      ...Object.fromEntries(
+        Object.entries(dados.preferenciasMedida || {}).filter(
+          ([key]) => key !== id,
+        ),
+      ),
+      ...(dados.preferenciasMedida?.[id]
+        ? { [next.id]: dados.preferenciasMedida[id] }
+        : {}),
+    },
     alimentosPersonalizados: [
       ...dados.alimentosPersonalizados!.map((f) =>
         f.id === id ? { ...f, arquivado: true, substituidoPor: next.id } : f,

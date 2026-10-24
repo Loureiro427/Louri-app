@@ -2050,6 +2050,142 @@ try {
     features.mealCatalog(saved, "cafeManha", ["leite"]);
     assert.deepEqual(store.getState().dados, saved);
   });
+  const portionPrefs = await server.ssrLoadModule(
+    "/src/utils/portionPreferences.ts",
+  );
+  test("Copos e xícaras preservam ml ao trocar medida e aceitam tamanhos próprios", () => {
+    const drink = food.todosAlimentos.find((f) => f.id === "leite");
+    const cup = portionPrefs.portionPreference(drink, {
+      modo: "copo",
+      copoMl: 250,
+    });
+    assert.equal(cup.factor, 250);
+    assert.equal(500 / cup.factor, 2);
+    assert.equal(
+      portionPrefs.defaultFoodPortion(drink, { modo: "copo", copoMl: 250 }),
+      250,
+    );
+    assert.equal(
+      portionPrefs.portionPreference(drink, { modo: "xicara", xicaraMl: 80 })
+        .factor,
+      80,
+    );
+    assert.equal(
+      portionPrefs.portionPreference(drink, { modo: "base", copoMl: 250 })
+        .factor,
+      1,
+    );
+    assert.equal(portionPrefs.resizedVesselAmount(500, 250, 300), 600);
+    assert.equal(portionPrefs.resizedVesselAmount(9000, 200, 2000), 9999);
+    assert.equal(portionPrefs.parseVesselVolume("250,5"), 250.5);
+    for (const invalid of ["", "0", "-20", "abc", "2001", "Infinity"])
+      assert.equal(portionPrefs.parseVesselVolume(invalid), null);
+    const egg = food.todosAlimentos.find((f) => f.id === "ovo");
+    assert.equal(portionPrefs.portionPreference(egg).modo, "caseira");
+    assert.equal(
+      portionPrefs.portionPreference(egg, { modo: "base" }).modo,
+      "base",
+    );
+    assert.equal(
+      portionPrefs.portionPreference(egg, { modo: "copo" }).modo,
+      "base",
+    );
+  });
+  test("Preferência de medida reidrata, ignora dados inválidos e não altera consumo", () => {
+    reset();
+    const before = structuredClone(store.getState().dados);
+    store.getState().setDados({
+      preferenciasMedida: {
+        leite: { modo: "copo", copoMl: 250 },
+        ovo: { modo: "base" },
+      },
+    });
+    const saved = JSON.parse(localStorage.getItem("nutri-app-storage"));
+    assert.deepEqual(saved.state.dados.preferenciasMedida.leite, {
+      modo: "copo",
+      copoMl: 250,
+    });
+    const restored = persisted.mergePersistedUser(
+      {
+        ...saved.state.dados,
+        preferenciasMedida: {
+          ...saved.state.dados.preferenciasMedida,
+          ruim: { modo: "invalido" },
+          capacidade: { modo: "copo", copoMl: -2 },
+        },
+      },
+      initial,
+    );
+    assert.deepEqual(restored.preferenciasMedida.ovo, { modo: "base" });
+    assert.equal(restored.preferenciasMedida.ruim, undefined);
+    assert.equal(
+      portionPrefs.portionPreference(
+        food.todosAlimentos.find((f) => f.id === "leite"),
+        restored.preferenciasMedida.capacidade,
+      ).factor,
+      200,
+    );
+    assert.equal(restored.caloriasConsumidas, before.caloriasConsumidas);
+    assert.deepEqual(restored.historico, before.historico);
+  });
+  test("Editar personalizado transfere medidas e apagar retira sua preferência", () => {
+    const item = custom.createCustomFood(
+      "Bebida antiga",
+      "200",
+      ["100", "2", "20", "1"],
+      "custom_old",
+      "ml",
+    );
+    const next = custom.createCustomFood(
+      "Bebida nova",
+      "200",
+      ["100", "2", "20", "1"],
+      "custom_new",
+      "ml",
+    );
+    const data = {
+      ...initial,
+      alimentosPersonalizados: [item],
+      preferenciasMedida: {
+        [item.id]: { modo: "copo", copoMl: 300 },
+        leite: { modo: "base" },
+      },
+    };
+    const changed = { ...data, ...editing.editCustomFood(data, item.id, next) };
+    assert.deepEqual(changed.preferenciasMedida[next.id], {
+      modo: "copo",
+      copoMl: 300,
+    });
+    assert.equal(changed.preferenciasMedida[item.id], undefined);
+    const deleted = removal.removeCustomFood(changed, next.id);
+    assert.equal(deleted.preferenciasMedida[next.id], undefined);
+    assert.deepEqual(deleted.preferenciasMedida.leite, { modo: "base" });
+  });
+  test("Zoom não simula teclado e mantém redimensionamento nativo válido", () => {
+    assert.equal(viewport.visibleAppHeight(800, 400, 800, 0, 2), 800);
+    assert.equal(viewport.visibleAppHeight(800, 400, 800, 300, 2), 500);
+    assert.equal(viewport.visibleAppHeight(500, 500, 800, 300, 1), 500);
+  });
+  test("Ícones do manifesto e favicon estão incluídos nos arquivos públicos", () => {
+    const fs = require("node:fs");
+    const manifest = JSON.parse(
+      fs.readFileSync("public/manifest.json", "utf8"),
+    );
+    assert.equal(manifest.start_url, "./");
+    for (const icon of manifest.icons) {
+      assert.equal(icon.type, "image/png");
+      assert.ok(fs.existsSync(`public/${icon.src.replace(/^\.\//, "")}`));
+      const bytes = fs.readFileSync(`public/${icon.src.replace(/^\.\//, "")}`);
+      assert.equal(bytes.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
+      assert.equal(
+        `${bytes.readUInt32BE(16)}x${bytes.readUInt32BE(20)}`,
+        icon.sizes,
+      );
+    }
+    const html = fs.readFileSync("index.html", "utf8");
+    assert.ok(!html.includes("user-scalable=no"));
+    assert.ok(!html.includes("vite.svg"));
+  });
   console.log(`${passed} verificações passaram.`);
 } finally {
   await server.close();

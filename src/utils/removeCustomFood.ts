@@ -13,6 +13,11 @@ export function removeCustomFood(
     Object.fromEntries(Object.entries(p).filter(([key]) => key !== id));
   // Keep the nutritional definition so previously recorded meals remain editable.
   return {
+    preferenciasMedida: Object.fromEntries(
+      Object.entries(dados.preferenciasMedida || {}).filter(
+        ([key]) => key !== id,
+      ),
+    ),
     alimentosPersonalizados: dados.alimentosPersonalizados.map((f) =>
       f.id === id ? { ...f, arquivado: true } : f,
     ),

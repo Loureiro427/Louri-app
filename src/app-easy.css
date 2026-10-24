@@ -326,3 +326,38 @@ html[data-keyboard-open="true"] .app-composer .app-context-tip {
   flex-basis: 100%;
   padding: 0;
 }
+.app-measure-options {
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+}
+.app-measure-options button {
+  min-height: 44px;
+  font-size: 12px;
+}
+.app-vessel-adjust {
+  font-size: 12px;
+  text-align: left;
+}
+.app-custom-food-tools {
+  flex-wrap: wrap;
+}
+@media (max-height: 520px) {
+  .app-composer-header {
+    padding: 10px 16px;
+  }
+  .app-composer-title {
+    margin-bottom: 8px;
+  }
+  .app-composer-toolbar,
+  .app-library-button,
+  .app-composer-macros {
+    display: none;
+  }
+  .app-composer-footer {
+    padding: 8px 16px;
+  }
+  .app-sheet-header {
+    padding-bottom: 10px;
+  }
+}
