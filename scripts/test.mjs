@@ -18,7 +18,7 @@ try {
   const math = await server.ssrLoadModule("/src/utils/nutritionMath.ts");
   const food = await server.ssrLoadModule("/src/data/alimentos.ts");
   const { useUserStore: store } = await server.ssrLoadModule(
-    "/src/store/useUserStore.ts"
+    "/src/store/useUserStore.ts",
   );
   const test = (name, run) => {
     run();
@@ -31,7 +31,7 @@ try {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
       2,
-      "0"
+      "0",
     )}-${String(d.getDate()).padStart(2, "0")}`;
   };
   test("Água mantém os mililitros, sem arredondar para litros", () => {
@@ -53,11 +53,11 @@ try {
     assert.equal(agenda[0].horario, "07:01");
     assert.equal(agenda.at(-1).horario, "19:30");
     assert.ok(
-      agenda.every((r, i) => i === 0 || r.minutos >= agenda[i - 1].minutos)
+      agenda.every((r, i) => i === 0 || r.minutos >= agenda[i - 1].minutos),
     );
     assert.equal(
       math.getCronograma({ ...data, refeicoesAtivas: ["almoco"] }).length,
-      1
+      1,
     );
   });
   test("Jantar e ceia mantêm seus horários mesmo sem almoço", () => {
@@ -69,11 +69,11 @@ try {
     const agenda = math.getCronograma(dados);
     assert.deepEqual(
       agenda.map((r) => r.horario),
-      ["06:30", "19:30", "21:30"]
+      ["06:30", "19:30", "21:30"],
     );
     assert.equal(
       math.getCronograma({ ...dados, refeicoesAtivas: ["janta"] })[0].horario,
-      "19:30"
+      "19:30",
     );
     const keys = Object.keys(math.CONFIG_REFEICOES);
     for (let mask = 1; mask < 2 ** keys.length; mask++) {
@@ -95,20 +95,20 @@ try {
     const plano = math.getCronograma(dados);
     assert.deepEqual(
       plano.map((r) => r.horario),
-      ["20:00", "00:30"]
+      ["20:00", "00:30"],
     );
     assert.equal(plano[1].minutos, 1470);
     assert.equal(
       math
         .getCronograma({ ...dados, horariosRefeicoes: { janta: "99:99" } })
         .find((r) => r.key === "janta").horario,
-      "19:30"
+      "19:30",
     );
   });
   test("Porções contam calorias e macros proporcionais", () => {
     const r = food.calcularPorcoes(
       { pao: 50, ovo: 50 },
-      food.DICIONARIO_ALIMENTOS.cafeManha
+      food.DICIONARIO_ALIMENTOS.cafeManha,
     );
     assert.equal(r.calorias, 218);
     assert.equal(r.macros.proteina, 12);
@@ -126,7 +126,7 @@ try {
           140,
           ["Pão Francês"],
           { proteina: 5, carbo: 29, gordura: 2 },
-          { pao: 50 }
+          { pao: 50 },
         );
     assert.equal(store.getState().dados.caloriasConsumidas, 140);
     assert.deepEqual(store.getState().dados.alimentos.cafeManha, ["pao"]);
@@ -136,7 +136,7 @@ try {
     assert.equal(
       store.getState().dados.historico[today()].refeicoesDetalhadas.cafeManha
         .alimentos[0],
-      "Pão Francês"
+      "Pão Francês",
     );
   });
   test("Desfazer refeição reverte totais e preserva porções para repetir", () => {
@@ -146,7 +146,7 @@ try {
     assert.equal(
       Object.keys(store.getState().dados.historico[today()].refeicoesDetalhadas)
         .length,
-      0
+      0,
     );
     assert.deepEqual(store.getState().dados.ultimasPorcoes.cafeManha, {
       pao: 50,
@@ -171,7 +171,7 @@ try {
     assert.equal(store.getState().dados.caloriasConsumidas, 0);
     assert.equal(
       store.getState().dados.historico["2020-01-01"].aguaConsumida,
-      1000
+      1000,
     );
   });
   test("Virada de dia antes de registrar refeição não carrega totais antigos", () => {
@@ -187,7 +187,7 @@ try {
         140,
         ["Pão"],
         { proteina: 5, carbo: 29, gordura: 2 },
-        { pao: 50 }
+        { pao: 50 },
       );
     assert.equal(store.getState().dados.caloriasConsumidas, 140);
     assert.deepEqual(store.getState().dados.ultimasPorcoes.livre, { pao: 50 });
@@ -212,7 +212,7 @@ try {
   });
 
   const { normalizeMealPreferences } = await server.ssrLoadModule(
-    "/src/utils/mealPreferences.ts"
+    "/src/utils/mealPreferences.ts",
   );
   test("Cadastro aceita uma preferência antiga como texto sem falhar em values.map", () => {
     assert.deepEqual(normalizeMealPreferences({ cafeManha: "pao" }), {
@@ -241,7 +241,7 @@ try {
       normalizeMealPreferences({
         cafeManha: ["pao", "pao", "Ovo", null, "desconhecido"],
       }),
-      { cafeManha: ["pao", "ovo"] }
+      { cafeManha: ["pao", "ovo"] },
     );
     assert.deepEqual(normalizeMealPreferences(undefined), {});
     assert.deepEqual(normalizeMealPreferences(null), {});
@@ -269,21 +269,21 @@ try {
     assert.equal(earned.ultimoDiaPontuado, "2026-10-23");
     assert.equal(
       streakMath.reconcileDailyStreak(earned, streakDay(23)),
-      earned
+      earned,
     );
     const restored = JSON.parse(JSON.stringify(earned));
     assert.equal(
       streakMath.reconcileDailyStreak(restored, streakDay(23)).streak,
-      1
+      1,
     );
   });
   test("Água ou refeições incompletas e refeição livre não pontuam", () => {
     assert.equal(
       streakMath.reconcileDailyStreak(
         { ...completeDay, aguaConsumida: 2449 },
-        streakDay(23)
+        streakDay(23),
       ).streak,
-      0
+      0,
     );
     assert.equal(
       streakMath.reconcileDailyStreak(
@@ -291,16 +291,16 @@ try {
           ...completeDay,
           refeicoesConcluidas: ["cafeManha", "refeicaoLivre_1"],
         },
-        streakDay(23)
+        streakDay(23),
       ).streak,
-      0
+      0,
     );
     assert.equal(
       streakMath.reconcileDailyStreak(
         { ...completeDay, refeicoesAtivas: [] },
-        streakDay(23)
+        streakDay(23),
       ).streak,
-      0
+      0,
     );
   });
   test("Dias consecutivos somam e um dia perdido reinicia sem apagar histórico", () => {
@@ -313,11 +313,11 @@ try {
     };
     assert.equal(
       streakMath.reconcileDailyStreak(nextMorning, streakDay(24)).streak,
-      1
+      1,
     );
     const day2 = streakMath.reconcileDailyStreak(
       { ...day1, ultimaData: "2026-10-24" },
-      streakDay(24)
+      streakDay(24),
     );
     assert.equal(day2.streak, 2);
     const missed = streakMath.reconcileDailyStreak(
@@ -327,27 +327,27 @@ try {
         aguaConsumida: 0,
         refeicoesConcluidas: [],
       },
-      streakDay(26)
+      streakDay(26),
     );
     assert.equal(missed.streak, 0);
     assert.equal(missed.diasMetasConcluidas["2026-10-23"], true);
     assert.equal(
       streakMath.reconcileDailyStreak(
         { ...missed, ...completeDay, ultimaData: "2026-10-26" },
-        streakDay(26)
+        streakDay(26),
       ).streak,
-      1
+      1,
     );
   });
   test("Desfazer o dia retira apenas o ponto de hoje e recompletar o devolve", () => {
     const earned = streakMath.reconcileDailyStreak(
       { ...completeDay, diasMetasConcluidas: { "2026-10-22": true } },
-      streakDay(23)
+      streakDay(23),
     );
     assert.equal(earned.streak, 2);
     const undone = streakMath.reconcileDailyStreak(
       { ...earned, aguaConsumida: 0 },
-      streakDay(23)
+      streakDay(23),
     );
     assert.equal(undone.streak, 1);
     assert.equal(undone.ultimoDiaPontuado, "2026-10-22");
@@ -355,9 +355,9 @@ try {
     assert.equal(
       streakMath.reconcileDailyStreak(
         { ...undone, aguaConsumida: 2450 },
-        streakDay(23)
+        streakDay(23),
       ).streak,
-      2
+      2,
     );
   });
   test("Datas antigas em pt-BR são migradas e metas atuais não alteram dias anteriores", () => {
@@ -368,7 +368,7 @@ try {
         streak: 3,
         ultimoDiaPontuado: "22/10/2026",
       },
-      streakDay(23)
+      streakDay(23),
     );
     assert.equal(migrated.streak, 3);
     assert.equal(migrated.diasMetasConcluidas["2026-10-20"], true);
@@ -376,9 +376,9 @@ try {
     assert.equal(
       streakMath.reconcileDailyStreak(
         { ...migrated, peso: "100" },
-        streakDay(23)
+        streakDay(23),
       ).streak,
-      3
+      3,
     );
     assert.equal(streakMath.previousDay("2026-01-01"), "2025-12-31");
     assert.equal(streakMath.previousDay("2024-03-01"), "2024-02-29");
@@ -447,14 +447,14 @@ try {
       assert.equal(store.getState().dados.streak, 1);
       assert.equal(
         store.getState().dados.diasMetasConcluidas["2026-10-24"],
-        undefined
+        undefined,
       );
       timestamp = new NativeDate(2026, 9, 25, 0, 1).getTime();
       store.getState().adicionarAgua(200, 99999);
       assert.equal(store.getState().dados.streak, 0);
       assert.equal(
         store.getState().dados.diasMetasConcluidas["2026-10-23"],
-        true
+        true,
       );
     } finally {
       globalThis.Date = NativeDate;
@@ -477,7 +477,7 @@ try {
         100,
         ["Pão"],
         { proteina: 2, carbo: 20, gordura: 1 },
-        { pao: 50 }
+        { pao: 50 },
       );
     store
       .getState()
@@ -489,7 +489,7 @@ try {
         ["Pão"],
         { proteina: 4, carbo: 40, gordura: 2 },
         { pao: 100 },
-        true
+        true,
       );
     const d = store.getState().dados;
     assert.equal(d.caloriasConsumidas, 200);
@@ -502,7 +502,7 @@ try {
     assert.equal(d.streak, 1);
     assert.equal(
       d.historico[today()].refeicoesDetalhadas.cafeManha.porcoes.pao,
-      100
+      100,
     );
     store
       .getState()
@@ -514,7 +514,7 @@ try {
         ["Pão"],
         { proteina: 3, carbo: 30, gordura: 1 },
         { pao: 75 },
-        true
+        true,
       );
     assert.equal(store.getState().dados.caloriasConsumidas, 150);
   });
@@ -548,30 +548,30 @@ try {
     assert.equal(
       food.calcularPorcoes({ custom_test: 50 }, features.mealCatalog(d))
         .calorias,
-      100
+      100,
     );
     assert.deepEqual(
       features.recipeForCatalog(d, { custom_test: 50, desconhecido: 100 }),
-      { custom_test: 50 }
+      { custom_test: 50 },
     );
     const dinner = food.DICIONARIO_ALIMENTOS.janta[0];
     const mapped = features.recipeForCatalog(
       d,
       { [dinner.id]: 80 },
-      "cafeManha"
+      "cafeManha",
     );
     assert.ok(Object.values(mapped).includes(80));
     assert.equal(
       food.calcularPorcoes(
         mapped,
-        features.mealCatalog(d, "cafeManha", Object.keys(mapped))
+        features.mealCatalog(d, "cafeManha", Object.keys(mapped)),
       ).calorias,
-      Math.round(dinner.kcal100g * 0.8)
+      Math.round(dinner.kcal100g * 0.8),
     );
     assert.ok(
       features
         .mealCatalog(d, "cafeManha", Object.keys(mapped))
-        .some((f) => f.id === Object.keys(mapped)[0])
+        .some((f) => f.id === Object.keys(mapped)[0]),
     );
   });
   test("Compras usa apenas plano ativo, inclui IDs legados e não altera consumo", () => {
@@ -614,11 +614,11 @@ try {
     assert.equal(week.length, 7);
     assert.equal(
       week.reduce((n, d) => n + d.water, 0),
-      500
+      500,
     );
     assert.equal(
       week.reduce((n, d) => n + d.meals, 0),
-      2
+      2,
     );
     assert.equal(week.filter((d) => d.complete).length, 1);
   });
@@ -658,14 +658,14 @@ try {
     const catalog = features.mealCatalog(initial, "janta");
     assert.equal(new Set(catalog.map((f) => f.nome)).size, catalog.length);
     const alias = food.DICIONARIO_ALIMENTOS.janta.find(
-      (f) => f.nome === "Arroz"
+      (f) => f.nome === "Arroz",
     );
     const original = food.todosAlimentos.find((f) => f.nome === "Arroz");
     const editing = features.mealCatalog(initial, "janta", [original.id]);
     assert.ok(editing.some((f) => f.id === original.id));
     assert.equal(
       food.calcularPorcoes({ [original.id]: 100 }, editing).calorias,
-      original.kcal100g
+      original.kcal100g,
     );
     assert.ok(alias);
   });
@@ -682,7 +682,7 @@ try {
     const d = { ...initial, alimentosPersonalizados: [custom] };
     const normalized = normalizeMealPreferences(
       { cafeManha: ["custom_kept", "frango"] },
-      features.fullCatalog(d)
+      features.fullCatalog(d),
     );
     assert.deepEqual(normalized.cafeManha, ["custom_kept", "frango"]);
   });
@@ -753,8 +753,8 @@ try {
         assert.ok(
           Math.min(
             Math.abs(slots[i].minute - slots[j].minute),
-            1440 - Math.abs(slots[i].minute - slots[j].minute)
-          ) >= 10
+            1440 - Math.abs(slots[i].minute - slots[j].minute),
+          ) >= 10,
         );
     assert.equal(slots.filter((s) => s.minute === 420).length, 1);
     assert.equal(slots.find((s) => s.minute === 420).kind, "meal");
@@ -769,8 +769,8 @@ try {
     });
     assert.ok(
       plain.every(
-        (s) => s.messages.length === 1 && s.messages[0].body === s.body
-      )
+        (s) => s.messages.length === 1 && s.messages[0].body === s.body,
+      ),
     );
   });
   test("Plano nativo usa metas atuais sem carregar consumo de ontem para os avisos de hoje", () => {
@@ -796,66 +796,66 @@ try {
     assert.deepEqual(stale.doneMeals, []);
     assert.equal(
       reminders.nativeReminderPlan({ ...current, notificacoes: false }).enabled,
-      false
+      false,
     );
     assert.equal(
       reminders.nativeReminderPlan({ ...current, nome: "" }).enabled,
-      false
+      false,
     );
   });
 
   const diagnostics = await server.ssrLoadModule(
-    "/src/utils/notificationDiagnostics.ts"
+    "/src/utils/notificationDiagnostics.ts",
   );
   test("Teste imediato não confirma agendamento e teste futuro continua aguardando", () => {
     assert.equal(
       diagnostics.notificationTestResult({ lastShown: 999 }, 1000).state,
-      "none"
+      "none",
     );
     assert.equal(
       diagnostics.notificationTestResult(
         { testAt: 2000, testReceivedAt: 0 },
-        1000
+        1000,
       ).state,
-      "waiting"
+      "waiting",
     );
   });
   test("Diagnóstico separa atraso do Android, restrição de exibição e entrega real", () => {
     assert.equal(
       diagnostics.notificationTestResult({ testAt: 2000, exact: false }, 3000)
         .state,
-      "approximate"
+      "approximate",
     );
     assert.equal(
       diagnostics.notificationTestResult({ testAt: 2000, exact: true }, 3000)
         .state,
-      "overdue"
+      "overdue",
     );
     assert.equal(
       diagnostics.notificationTestResult(
         { testAt: 2000, testReceivedAt: 3000, testShown: false },
-        3000
+        3000,
       ).state,
-      "blocked"
+      "blocked",
     );
     assert.equal(
       diagnostics.notificationTestResult(
         { testAt: 2000, testReceivedAt: 3000, testShown: true },
-        3000
+        3000,
       ).state,
-      "received"
+      "received",
     );
     assert.equal(
       diagnostics.notificationTestResult(
         { testAt: 20000, testReceivedAt: 3000, testShown: true },
-        10000
+        10000,
       ).state,
-      "waiting"
+      "waiting",
     );
   });
 
   const experience = await server.ssrLoadModule(
-    "/src/utils/dailyExperience.ts"
+    "/src/utils/dailyExperience.ts",
   );
   test("Próxima ação acompanha o horário sem prender o usuário ao café esquecido", () => {
     const data = {
@@ -867,7 +867,7 @@ try {
     };
     const result = experience.nextDailyAction(
       data,
-      new Date(2026, 9, 23, 20, 0)
+      new Date(2026, 9, 23, 20, 0),
     );
     assert.equal(result.meal.key, "janta");
     assert.equal(result.earlier, true);
@@ -879,7 +879,7 @@ try {
         ...data,
         refeicoesConcluidas: data.refeicoesAtivas,
       }).meal,
-      undefined
+      undefined,
     );
   });
   test("Troca aproxima calorias sem reutilizar os macros do alimento anterior", () => {
@@ -932,7 +932,7 @@ try {
       store
         .getState()
         .corrigirDia("2020-01-01", { key: "almoco", refeicao: meal }),
-      true
+      true,
     );
     store
       .getState()
@@ -946,7 +946,7 @@ try {
     store.getState().corrigirDia("2020-01-01", { key: "almoco" });
     assert.equal(
       store.getState().dados.historico["2020-01-01"].caloriasConsumidas,
-      200
+      200,
     );
   });
   test("Correção de água passada rejeita valores inválidos e não reescreve hoje", () => {
@@ -954,21 +954,21 @@ try {
     store.getState().setDados({ ultimaData: today(), aguaConsumida: 500 });
     assert.equal(
       store.getState().corrigirDia("2020-01-02", { agua: 1250 }),
-      true
+      true,
     );
     assert.equal(
       store.getState().corrigirDia("2020-01-02", { agua: -1 }),
-      false
+      false,
     );
     assert.equal(store.getState().corrigirDia(today(), { agua: 900 }), false);
     assert.equal(
       store.getState().corrigirDia("2099-01-01", { agua: 900 }),
-      false
+      false,
     );
     assert.equal(store.getState().dados.aguaConsumida, 500);
     assert.equal(
       store.getState().dados.historico["2020-01-02"].aguaConsumida,
-      1250
+      1250,
     );
   });
   test("Peso antigo pode ser corrigido sem substituir o peso mais recente", () => {
@@ -996,11 +996,11 @@ try {
       experience
         .weightSeries(weights, 30, new Date(2026, 9, 23))
         .map((w) => w.value),
-      [81, 80]
+      [81, 80],
     );
     assert.equal(
       experience.weightSeries(weights, null, new Date(2026, 9, 23)).length,
-      3
+      3,
     );
   });
 
@@ -1046,7 +1046,7 @@ try {
     assert.equal(choices[0].id, "fish");
     assert.equal(
       choices.some((f) => f.id === "coffee" || f.id === "chicken"),
-      false
+      false,
     );
   });
   test("Primeiro peso retroativo não apaga o peso atual sem data histórica", () => {
@@ -1057,7 +1057,7 @@ try {
   });
 
   const weightValidation = await server.ssrLoadModule(
-    "/src/utils/weightValidation.ts"
+    "/src/utils/weightValidation.ts",
   );
   test("Todos os caminhos de peso respeitam os mesmos limites e aceitam vírgula", () => {
     for (const value of ["29.9", "300.1", "", "NaN", "-80", "Infinity"]) {
@@ -1089,7 +1089,7 @@ try {
     });
     assert.deepEqual(
       payload.embeds[0].fields.map((f) => f.name),
-      ["Mensagem", "Contato informado"]
+      ["Mensagem", "Contato informado"],
     );
     assert.deepEqual(payload.allowed_mentions, { parse: [] });
     assert.equal(JSON.stringify(payload).includes("Privado"), false);
@@ -1100,17 +1100,17 @@ try {
         message: "Sugestão",
         contact: "teste@example.com",
       }).embeds[0].fields.length,
-      1
+      1,
     );
     assert.throws(() =>
       support.supportPayload({
         kind: "support",
         message: "Olá",
         contact: "........",
-      })
+      }),
     );
     assert.throws(() =>
-      support.supportPayload({ kind: "idea", message: " ".repeat(20) })
+      support.supportPayload({ kind: "idea", message: " ".repeat(20) }),
     );
   });
   const testSupport = support.createSupportClient({
@@ -1134,36 +1134,36 @@ try {
         assert.equal(new URL(url).searchParams.get("wait"), "true");
         assert.equal(
           JSON.parse(options.body).embeds[0].fields[0].value,
-          "Teste local"
+          "Teste local",
         );
         return { ok: false, status: 500 };
       };
       try {
         await assert.rejects(
           testSupport.send({ kind: "support", message: "Teste local" }, false),
-          /Confirme/
+          /Confirme/,
         );
         assert.equal(requests, 0);
         await assert.rejects(
           testSupport.send({ kind: "support", message: "Teste local" }, true),
-          /Não foi possível/
+          /Não foi possível/,
         );
         assert.equal(storage.has(key), false);
         globalThis.fetch = async () => ({ ok: true, status: 200 });
         await testSupport.send(
           { kind: "support", message: "Teste local" },
-          true
+          true,
         );
         assert.equal(storage.has(key), true);
         await assert.rejects(
           testSupport.send({ kind: "support", message: "Teste local" }, true),
-          /Aguarde/
+          /Aguarde/,
         );
       } finally {
         globalThis.fetch = originalFetch;
         storage.delete(key);
       }
-    }
+    },
   );
 
   await asyncTest(
@@ -1186,11 +1186,11 @@ try {
       try {
         const first = client.send(
           { kind: "idea", message: "Sugestão de teste" },
-          true
+          true,
         );
         await assert.rejects(
           client.send({ kind: "idea", message: "Outra sugestão" }, true),
-          /ainda está sendo enviada/
+          /ainda está sendo enviada/,
         );
         assert.equal(requests, 1);
         release({ ok: false, status: 429 });
@@ -1202,7 +1202,7 @@ try {
         globalThis.fetch = originalFetch;
         storage.delete("louri_support_idea");
       }
-    }
+    },
   );
 
   const back = await server.ssrLoadModule("/src/utils/backNavigation.ts");
@@ -1246,7 +1246,7 @@ try {
         macrosConsumidos: { proteina: 20 },
         alimentos: ["pao"],
       },
-      initial
+      initial,
     );
     assert.equal(result.peso, "83");
     assert.deepEqual(result.historico, history);
@@ -1306,13 +1306,13 @@ try {
       };
       storage.set(
         "nutri-app-storage",
-        JSON.stringify({ state: { dados: legacy }, version: 0 })
+        JSON.stringify({ state: { dados: legacy }, version: 0 }),
       );
       await store.persist.rehydrate();
       for (const key of Object.keys(legacy))
         assert.deepEqual(store.getState().dados[key], legacy[key], key);
       assert.equal(JSON.parse(storage.get("nutri-app-storage")).version, 1);
-    }
+    },
   );
   test("Rascunho do suporte sobrevive ao fechamento na sessão, sem misturar canais", () => {
     drafts.supportDraft.set("support", "Minha mensagem offline");
@@ -1327,7 +1327,7 @@ try {
     async () => {
       const descriptor = Object.getOwnPropertyDescriptor(
         globalThis,
-        "navigator"
+        "navigator",
       );
       const originalFetch = globalThis.fetch;
       let requests = 0;
@@ -1352,7 +1352,7 @@ try {
             140,
             ["Pão"],
             { proteina: 4, carbo: 20, gordura: 1 },
-            { pao: 50 }
+            { pao: 50 },
           );
         await store.persist.rehydrate();
         assert.equal(store.getState().dados.aguaConsumida, 300);
@@ -1360,20 +1360,20 @@ try {
         assert.equal(
           store.getState().dados.historico[today()].refeicoesDetalhadas
             .cafeManha.porcoes.pao,
-          50
+          50,
         );
         drafts.supportDraft.set("support", "Não consigo enviar agora");
         await assert.rejects(
           testSupport.send(
             { kind: "support", message: drafts.supportDraft.get("support") },
-            true
+            true,
           ),
-          /sem internet/
+          /sem internet/,
         );
         assert.equal(requests, 0);
         assert.equal(
           drafts.supportDraft.get("support"),
-          "Não consigo enviar agora"
+          "Não consigo enviar agora",
         );
       } finally {
         if (descriptor)
@@ -1382,7 +1382,7 @@ try {
         globalThis.fetch = originalFetch;
         drafts.supportDraft.clear("support");
       }
-    }
+    },
   );
 
   test("Override de uuid mantém a geração de IDs utilizada pelo xcode", () => {
@@ -1393,6 +1393,90 @@ try {
     const ids = Array.from({ length: 100 }, () => project.generateUuid());
     assert.equal(new Set(ids).size, 100);
     assert.ok(ids.every((id) => /^[A-F0-9]{24}$/.test(id)));
+  });
+  const easyMeals = await server.ssrLoadModule("/src/utils/easyMeals.ts");
+  test("Repetir refeição recupera porções antigas sem alterar registros ou totais", () => {
+    reset();
+    const meal = {
+      titulo: "Café",
+      icone: "☕",
+      calorias: 155,
+      alimentos: ["Ovo"],
+      macros: { proteina: 13, carbo: 1, gordura: 11 },
+      porcoes: { ovo: 100, alimento_removido: 50 },
+    };
+    store
+      .getState()
+      .setDados({
+        historico: {
+          "2026-01-01": {
+            aguaConsumida: 200,
+            caloriasConsumidas: 155,
+            refeicoesDetalhadas: { cafeManha: meal },
+          },
+        },
+      });
+    const before = structuredClone(store.getState().dados);
+    const portions = easyMeals.lastMealPortions(before, "cafeManha");
+    assert.deepEqual(portions, { ovo: 100 });
+    portions.ovo = 50;
+    assert.deepEqual(store.getState().dados, before);
+    assert.deepEqual(easyMeals.lastMealPortions(before, "janta"), {});
+  });
+  test("Última combinação usa memória válida e recupera histórico se alimento foi removido", () => {
+    const base = structuredClone(store.getState().dados);
+    assert.deepEqual(
+      easyMeals.lastMealPortions(
+        { ...base, ultimasPorcoes: { cafeManha: { ovo: 150 } } },
+        "cafeManha",
+      ),
+      { ovo: 150 },
+    );
+    assert.deepEqual(
+      easyMeals.lastMealPortions(
+        { ...base, ultimasPorcoes: { cafeManha: { inexistente: 150 } } },
+        "cafeManha",
+      ),
+      { ovo: 100 },
+    );
+    assert.deepEqual(
+      easyMeals.lastMealPortions(
+        {
+          ...base,
+          historico: { "2999-01-01": base.historico["2026-01-01"] },
+          ultimasPorcoes: {},
+        },
+        "cafeManha",
+      ),
+      {},
+    );
+  });
+  test("Medida caseira só se aplica ao alimento correspondente e preserva meios de unidade", () => {
+    const egg = food.todosAlimentos.find((f) => f.id === "ovo");
+    assert.equal(easyMeals.householdMeasure(egg).grams * 2, 100);
+    assert.equal(easyMeals.householdMeasure(egg).grams * 0.5, 25);
+    assert.equal(
+      easyMeals.householdMeasure({ ...egg, id: "custom_ovo" }),
+      undefined,
+    );
+    assert.equal(
+      easyMeals.householdMeasure({ ...egg, nome: "Ovo com bacon" }),
+      undefined,
+    );
+  });
+  test("Tutorial e dicas dispensadas persistem sem alterar os dados da rotina", () => {
+    reset();
+    store.getState().verificarViradaDeDia();
+    const before = structuredClone(store.getState().dados);
+    store
+      .getState()
+      .setDados({ tutorialVisto: true, dicasVistas: ["history-edit"] });
+    const saved = JSON.parse(storage.get("nutri-app-storage")).state.dados;
+    assert.equal(saved.tutorialVisto, true);
+    assert.deepEqual(saved.dicasVistas, ["history-edit"]);
+    delete saved.tutorialVisto;
+    delete saved.dicasVistas;
+    assert.deepEqual(saved, before);
   });
   console.log(`${passed} verificações passaram.`);
 } finally {

@@ -54,6 +54,10 @@ export function mergePersistedUser(
   };
   for (const key of ["temaEscuro", "notificacoes"] as const)
     if (typeof value[key] !== "boolean") merged[key] = defaults[key];
+  if (typeof value.tutorialVisto !== "boolean") merged.tutorialVisto = false;
+  merged.dicasVistas = Array.isArray(value.dicasVistas)
+    ? value.dicasVistas.filter((item) => typeof item === "string")
+    : [];
   // Food preferences have several supported legacy formats. Leave them intact.
   if (value.alimentos === undefined || value.alimentos === null)
     merged.alimentos = defaults.alimentos;

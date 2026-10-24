@@ -1,8 +1,11 @@
+import { PortionInput } from "./PortionInput";
+import { ContextTip } from "./AppGuide";
+import { householdMeasure, lastMealPortions } from "../utils/easyMeals";
 import { fullCatalog } from "../utils/appFeatures";
 import { recipeForCatalog } from "../utils/appFeatures";
 import { FoodLibrary } from "./FoodLibrary";
 import { useBackLayer } from "../hooks/useBackLayer";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Alimento } from "../data/alimentos";
 import { calcularPorcoes, todosAlimentos } from "../data/alimentos";
 import { normalizeMealPreferences } from "../utils/mealPreferences";
@@ -27,14 +30,6 @@ const normalizar = (value: string) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
-function medida(item: Alimento): { nome: string; gramas: number } | undefined {
-  if (item.id === "pao") return { nome: "1 pão", gramas: 50 };
-  if (item.nome.includes("Ovo")) return { nome: "1 unidade", gramas: 50 };
-  if (item.nome === "Banana") return { nome: "1 unidade", gramas: 80 };
-  if (item.nome === "Maçã") return { nome: "1 unidade", gramas: 130 };
-  if (item.nome === "Arroz") return { nome: "1 colher de sopa", gramas: 25 };
-  if (item.nome === "Aveia") return { nome: "1 colher de sopa", gramas: 15 };
-}
 export function MealComposer({
   alimentos: suppliedFoods,
   initialPorcoes = {},
@@ -84,11 +79,9 @@ export function MealComposer({
     todosAlimentos.find((a) => a.nome === item.nome)?.id || item.id;
   const isFavorite = (item: Alimento) =>
     favorites.includes(favoriteId(item)) || favorites.includes(item.id);
-  const repeat = Object.fromEntries(
-    Object.entries(dados.ultimasPorcoes?.[memoriaKey] || {}).filter(
-      ([id, g]) =>
-        alimentos.some((a) => a.id === id) && Number.isFinite(g) && g > 0,
-    ),
+  const repeat = useMemo(
+    () => lastMealPortions(dados, memoriaKey),
+    [dados, memoriaKey],
   );
   const filtered = alimentos
     .filter(
@@ -112,7 +105,7 @@ export function MealComposer({
     setPorcoes((previous) => {
       const next = { ...previous };
       if (next[item.id] !== undefined) delete next[item.id];
-      else next[item.id] = medida(item)?.gramas || 100;
+      else next[item.id] = householdMeasure(item)?.grams || 100;
       return next;
     });
   const quantity = (id: string, value: number) =>
@@ -215,7 +208,14 @@ export function MealComposer({
             {Object.keys(repeat).length > 0 && (
               <button
                 className="app-repeat-button"
-                onClick={() => setPorcoes(repeat)}
+                onClick={() => {
+                  setPorcoes(repeat);
+                  setBusca("");
+                  setFavoritesOnly(false);
+                  setNotice(
+                    "Última combinação preenchida. Confira os alimentos e as quantidades; só será registrada quando você salvar.",
+                  );
+                }}
               >
                 <Icon name="reset" size={14} /> Repetir última
               </button>
@@ -296,13 +296,16 @@ export function MealComposer({
               {!swapSearch && <p>Busque por nome para ver outras opções.</p>}
             </section>
           )}
+          <ContextTip id="meal-portions">
+            Toque no alimento para escolher. Depois ajuste a quantidade. Nos
+            alimentos com medida caseira, você pode usar unidades ou colheres.
+          </ContextTip>
           <p className="app-composer-helper">
             Escolha os alimentos e ajuste as quantidades.
           </p>
           <div className="app-food-list">
             {filtered.map((item) => {
               const selected = porcoes[item.id] !== undefined;
-              const shortcut = medida(item);
               return (
                 <article
                   key={item.id}
@@ -367,52 +370,11 @@ export function MealComposer({
                       >
                         <Icon name="reset" size={14} /> Trocar alimento
                       </button>
-                      <div>
-                        <label htmlFor={`quantity-${item.id}`}>
-                          Quantidade
-                        </label>
-                        <div className="app-quantity-control">
-                          <button
-                            aria-label={`Diminuir quantidade de ${item.nome}`}
-                            onClick={() =>
-                              quantity(item.id, porcoes[item.id] - 25)
-                            }
-                          >
-                            −
-                          </button>
-                          <div>
-                            <input
-                              id={`quantity-${item.id}`}
-                              aria-label={`Gramas de ${item.nome}`}
-                              type="number"
-                              inputMode="decimal"
-                              min="0"
-                              max="9999"
-                              value={porcoes[item.id] || ""}
-                              onChange={(e) =>
-                                quantity(item.id, Number(e.target.value))
-                              }
-                            />
-                            <span>g</span>
-                          </div>
-                          <button
-                            aria-label={`Aumentar quantidade de ${item.nome}`}
-                            onClick={() =>
-                              quantity(item.id, porcoes[item.id] + 25)
-                            }
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                      {shortcut && (
-                        <button
-                          className="app-portion-shortcut"
-                          onClick={() => quantity(item.id, shortcut.gramas)}
-                        >
-                          ≈ {shortcut.nome} ({shortcut.gramas} g)
-                        </button>
-                      )}
+                      <PortionInput
+                        food={item}
+                        grams={porcoes[item.id]}
+                        onChange={(grams) => quantity(item.id, grams)}
+                      />
                     </div>
                   )}
                 </article>

@@ -13,6 +13,7 @@ import type { IconName } from "./ui/AppUI";
 import "../app-ui.css";
 import "../app-motion.css";
 import "../app-mobile.css";
+import "../app-easy.css";
 const links: { path: string; label: string; icon: IconName }[] = [
   { path: "/", label: "Início", icon: "home" },
   { path: "/plano", label: "Plano", icon: "plan" },

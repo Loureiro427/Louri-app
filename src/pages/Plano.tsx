@@ -1,10 +1,16 @@
+import { ContextTip } from "../components/AppGuide";
 import { PlanTools } from "../components/PlanTools";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
 import { getCronograma, getRotina } from "../utils/nutritionMath";
 import { getPlanTargets } from "../utils/planTargets";
-import { Icon, PageHeader, SectionHeading, Sheet } from "../components/ui/AppUI";
+import {
+  Icon,
+  PageHeader,
+  SectionHeading,
+  Sheet,
+} from "../components/ui/AppUI";
 import { litersText, numberText, toneStyle } from "../components/ui/format";
 const sources = {
   proteina: [
@@ -36,7 +42,7 @@ export function Plano() {
   const targets = getPlanTargets(dados);
   const schedule = getCronograma(dados);
   const [macro, setMacro] = useState<"proteina" | "carbo" | "gordura" | null>(
-    null
+    null,
   );
   return (
     <div className="app-page custom-scrollbar">
@@ -53,6 +59,10 @@ export function Plano() {
           </button>
         }
       />
+      <ContextTip id="plan-vs-record">
+        Esta tela organiza seu plano. Para contar o que você comeu de verdade,
+        use Registrar na tela Início.
+      </ContextTip>
       <section className="app-card app-plan-overview">
         <div className="app-card-topline">
           <span>

@@ -40,8 +40,10 @@ public final class ReminderEngine {
         return PendingIntent.getBroadcast(c, test?TEST:ALARM, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
     private static void arm(Context c, long at, boolean test) {
+        armPending(c,at,alarmIntent(c,test));
+    }
+    private static void armPending(Context c, long at, PendingIntent pending) {
         AlarmManager alarm = c.getSystemService(AlarmManager.class);
-        PendingIntent pending=alarmIntent(c,test);
         if (Build.VERSION.SDK_INT < 31 || alarm.canScheduleExactAlarms()) {
             try { alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,pending);return; }
             catch(SecurityException ignored) { /* permission may change between check and call */ }
@@ -68,6 +70,7 @@ public final class ReminderEngine {
     public static synchronized void reschedule(Context c) {
         AlarmManager alarm=c.getSystemService(AlarmManager.class);
         JSONObject p=plan(c);
+        restoreSnooze(c,p);
         if(!p.optBoolean("enabled") || !allowed(c)) {
             alarm.cancel(alarmIntent(c,false));
             alarm.cancel(alarmIntent(c,true));
@@ -140,11 +143,60 @@ public final class ReminderEngine {
         channel(c);if(!allowed(c))return false;
         Intent open=new Intent(c,MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("louriRoute",route).putExtra("louriMeal",meal).putExtra("louriKind",kind);
         PendingIntent tap=PendingIntent.getActivity(c,id,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        android.app.Notification notification=new NotificationCompat.Builder(c,CHANNEL).setSmallIcon(R.drawable.ic_louri_notification).setColor(0xff00d563).setContentTitle(title).setContentText(body).setStyle(new NotificationCompat.BigTextStyle().bigText(body)).setContentIntent(tap).setAutoCancel(true).setOnlyAlertOnce(false).build();
+        NotificationCompat.Builder builder=new NotificationCompat.Builder(c,CHANNEL).setSmallIcon(R.drawable.ic_louri_notification).setColor(0xff00d563).setContentTitle(title).setContentText(body).setStyle(new NotificationCompat.BigTextStyle().bigText(body)).setContentIntent(tap).setAutoCancel(true).setOnlyAlertOnce(false);
+        if(!"test".equals(kind)) {
+            Intent later=new Intent(c,ReminderReceiver.class).setAction("com.loureiro.louri.SNOOZE").putExtra("title",title).putExtra("body",body).putExtra("route",route).putExtra("key",meal).putExtra("kind",kind).putExtra("day",day());
+            PendingIntent action=PendingIntent.getBroadcast(c,6103,later,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+            builder.addAction(R.drawable.ic_louri_notification,"Adiar 15 min",action);
+        }
+        android.app.Notification notification=builder.build();
         try { c.getSystemService(NotificationManager.class).notify(id,notification); }
         catch(SecurityException permissionChanged) {return false;}
         prefs(c).edit().putLong("lastShown",System.currentTimeMillis()).apply();
         return true;
+    }
+    private static PendingIntent snoozeIntent(Context c) {
+        return PendingIntent.getBroadcast(c,6102,new Intent(c,ReminderReceiver.class).setAction("com.loureiro.louri.SNOOZE_DELIVER"),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+    }
+    private static JSONObject snoozed(Context c) {
+        try { return new JSONObject(prefs(c).getString("snoozed","{}")); }
+        catch(JSONException e) { return new JSONObject(); }
+    }
+    private static boolean snoozeEnabled(JSONObject p,JSONObject s) {
+        if(!p.optBoolean("enabled") || !day().equals(s.optString("day")) || done(p,s))return false;
+        JSONArray slots=p.optJSONArray("slots");
+        if(slots!=null)for(int i=0;i<slots.length();i++) {
+            JSONObject slot=slots.optJSONObject(i);
+            if(slot!=null&&slot.optString("kind").equals(s.optString("kind"))&&slot.optString("key").equals(s.optString("key")))return true;
+        }
+        return false;
+    }
+    private static void clearSnooze(Context c) {
+        c.getSystemService(AlarmManager.class).cancel(snoozeIntent(c));
+        prefs(c).edit().remove("snoozed").commit();
+    }
+    private static void restoreSnooze(Context c,JSONObject p) {
+        JSONObject s=snoozed(c);long at=s.optLong("at",0),now=System.currentTimeMillis();
+        if(at<=0)return;
+        if(!allowed(c)||!snoozeEnabled(p,s)||now-at>=90*60*1000L){clearSnooze(c);return;}
+        armPending(c,Math.max(at,now+1000),snoozeIntent(c));
+    }
+    public static synchronized void snooze(Context c,Intent intent) {
+        try {
+            JSONObject s=new JSONObject().put("title",intent.getStringExtra("title")).put("body",intent.getStringExtra("body")).put("route",intent.getStringExtra("route")).put("kind",intent.getStringExtra("kind")).put("key",intent.getStringExtra("key")).put("day",intent.getStringExtra("day")).put("at",ReminderClock.snoozeAt(System.currentTimeMillis()));
+            if(!snoozeEnabled(plan(c),s))return;
+            prefs(c).edit().putString("snoozed",s.toString()).commit();
+            c.getSystemService(NotificationManager.class).cancel(6200);
+            restoreSnooze(c,plan(c));
+        } catch(JSONException ignored) { /* invalid action must not affect the normal schedule */ }
+    }
+    public static synchronized void deliverSnooze(Context c) {
+        JSONObject s=snoozed(c),p=plan(c);long at=s.optLong("at",0),now=System.currentTimeMillis();
+        if(now<at){restoreSnooze(c,p);return;}
+        clearSnooze(c);
+        Calendar clock=Calendar.getInstance();int minute=clock.get(Calendar.HOUR_OF_DAY)*60+clock.get(Calendar.MINUTE);
+        if(ReminderClock.freshSnooze(at,now)&&snoozeEnabled(p,s)&&!ReminderClock.silent(minute,p.optInt("quietStart",1320),p.optInt("quietEnd",420)))
+            show(c,s.optString("title"),s.optString("body"),s.optString("route","/"),s.optString("key"),s.optString("kind"),6200);
     }
     public static void test(Context c,boolean delayed) {
         if(delayed) {

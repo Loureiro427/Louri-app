@@ -27,6 +27,8 @@ export interface DayRecord {
 }
 
 export interface UserData {
+  tutorialVisto?: boolean;
+  dicasVistas?: string[];
   listaCompras?: ShoppingListData;
   alimentosPersonalizados?: Alimento[];
   refeicoesSalvas?: {

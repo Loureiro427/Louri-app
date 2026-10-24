@@ -5,6 +5,8 @@ import java.util.Calendar;
 /** Local calendar arithmetic keeps daily reminders aligned across DST changes. */
 public final class ReminderClock {
     private ReminderClock() {}
+    public static long snoozeAt(long now) { return now + 15 * 60 * 1000L; }
+    public static boolean freshSnooze(long at, long now) { return at > 0 && now >= at && now - at < 90 * 60 * 1000L; }
     /** Resume/background transitions must not move a still-valid occurrence to tomorrow. */
     public static boolean preserveOccurrence(long expected, long now) {
         return expected > 0 && now - expected < 90 * 60 * 1000L && expected - now <= 26 * 60 * 60 * 1000L;

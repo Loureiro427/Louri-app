@@ -1,10 +1,16 @@
+import { ContextTip } from "../components/AppGuide";
 import { WeightHistory } from "../components/WeightHistory";
 import { WeeklySummary } from "../components/WeeklySummary";
 import { useState } from "react";
 import { useUserStore } from "../store/useUserStore";
 import CalendarHistory from "../components/CalendarHistory";
 import { dailyGoals, localDayKey, previousDay } from "../utils/dailyStreak";
-import { Icon, PageHeader, SectionHeading, Sheet } from "../components/ui/AppUI";
+import {
+  Icon,
+  PageHeader,
+  SectionHeading,
+  Sheet,
+} from "../components/ui/AppUI";
 import { litersText, numberText } from "../components/ui/format";
 export function Evolucao() {
   const dados = useUserStore((state) => state.dados);
@@ -32,6 +38,10 @@ export function Evolucao() {
           </button>
         }
       />
+      <ContextTip id="history-edit">
+        Esqueceu ou registrou algo errado? Toque em um dia do calendário para
+        ver e corrigir os registros. Você não precisa apagar tudo.
+      </ContextTip>
       <div className="app-stat-pair">
         <button className="app-card app-stat-card" onClick={openWeight}>
           <span>
@@ -69,8 +79,8 @@ export function Evolucao() {
             {goals.complete
               ? "Dia completo!"
               : streak > 0
-              ? "Mais um dia no seu ritmo"
-              : "Um cuidado de cada vez"}
+                ? "Mais um dia no seu ritmo"
+                : "Um cuidado de cada vez"}
           </h2>
           <Icon name={goals.complete ? "check" : "flame"} size={20} />
         </div>
@@ -78,8 +88,8 @@ export function Evolucao() {
           {goals.complete
             ? "Mais um dia de cuidado registrado."
             : streak > 0
-            ? "Seu progresso de hoje fica aqui. Continue quando fizer sentido."
-            : "Água e refeições ajudam a acompanhar sua rotina. Cada registro conta."}
+              ? "Seu progresso de hoje fica aqui. Continue quando fizer sentido."
+              : "Água e refeições ajudam a acompanhar sua rotina. Cada registro conta."}
         </p>
         <div className="app-streak-week" aria-label="Últimos sete dias">
           {week.map((key) => {
@@ -95,8 +105,8 @@ export function Evolucao() {
                   completed
                     ? "metas completas"
                     : key === today
-                    ? "em andamento"
-                    : "sem dia completo"
+                      ? "em andamento"
+                      : "sem dia completo"
                 }`}
               >
                 <span>

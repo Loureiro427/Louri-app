@@ -1,3 +1,4 @@
+import { AppGuide } from "../components/AppGuide";
 import { mealCatalog } from "../utils/appFeatures";
 import { dailyGoals } from "../utils/dailyStreak";
 import { nextDailyAction } from "../utils/dailyExperience";
@@ -15,7 +16,13 @@ import {
 } from "../utils/nutritionMath";
 import { normalizeMealPreferences } from "../utils/mealPreferences";
 import { getPlanTargets } from "../utils/planTargets";
-import { Icon, PageHeader, Progress, SectionHeading, Sheet } from "../components/ui/AppUI";
+import {
+  Icon,
+  PageHeader,
+  Progress,
+  SectionHeading,
+  Sheet,
+} from "../components/ui/AppUI";
 import { litersText, numberText } from "../components/ui/format";
 
 type Meal = ReturnType<typeof getCronograma>[number];
@@ -125,11 +132,11 @@ export function Home() {
       meal.icone,
       total.calorias,
       Object.keys(porcoes).map(
-        (id) => foods.find((food) => food.id === id)?.nome || id
+        (id) => foods.find((food) => food.id === id)?.nome || id,
       ),
       total.macros,
       porcoes,
-      editing
+      editing,
     );
     setEditing(false);
     setMeal(null);
@@ -158,7 +165,7 @@ export function Home() {
             previous.alimentos,
             previous.macros,
             previous.porcoes,
-            true
+            true,
           );
         else state.desfazerRefeicao(mealKey);
       },
@@ -181,6 +188,7 @@ export function Home() {
           </button>
         }
       />
+      <AppGuide />
       <button
         className="app-card app-energy-card"
         onClick={() => setSummary(true)}
@@ -227,19 +235,19 @@ export function Home() {
             {goals.complete
               ? "Tudo certo por hoje"
               : next
-              ? upcoming
-                ? "Mais tarde, no seu ritmo"
-                : "Já fez esta refeição?"
-              : !goals.waterDone
-              ? "Uma pausa para se cuidar"
-              : "Seu acompanhamento"}
+                ? upcoming
+                  ? "Mais tarde, no seu ritmo"
+                  : "Já fez esta refeição?"
+                : !goals.waterDone
+                  ? "Uma pausa para se cuidar"
+                  : "Seu acompanhamento"}
           </small>
           <strong>
             {next
               ? next.titulo + " · " + next.horario
               : goals.complete
-              ? "Dia completo!"
-              : "Registrar um copo de água"}
+                ? "Dia completo!"
+                : "Registrar um copo de água"}
           </strong>
         </span>
         <Icon name="chevron" size={16} />
@@ -314,10 +322,10 @@ export function Home() {
                     : "refeições registradas"
                 } · ${litersText(water)} L de água`
               : water > 0
-              ? `${litersText(
-                  water
-                )} L de água registrados. Cada cuidado conta.`
-              : "Comece por um copo ou pela sua primeira refeição."}
+                ? `${litersText(
+                    water,
+                  )} L de água registrados. Cada cuidado conta.`
+                : "Comece por um copo ou pela sua primeira refeição."}
           </small>
         </span>
         <Icon name="chevron" size={16} />
@@ -343,7 +351,7 @@ export function Home() {
                 : preferences[ref.key] || []
             )
               .map((id) =>
-                mealCatalog(dados, ref.key).find((food) => food.id === id)
+                mealCatalog(dados, ref.key).find((food) => food.id === id),
               )
               .filter((food) => Boolean(food));
             return (
@@ -380,19 +388,19 @@ export function Home() {
                       {isDone
                         ? "Concluída"
                         : future
-                        ? "Mais tarde"
-                        : "Registrar"}
+                          ? "Mais tarde"
+                          : "Registrar"}
                       {!isDone && !future && <Icon name="plus" size={12} />}
                     </span>
                   </div>
                   <p>
                     {isDone
                       ? `${numberText(
-                          dados.caloriasPorRefeicao[ref.key] || 0
+                          dados.caloriasPorRefeicao[ref.key] || 0,
                         )} kcal registradas`
                       : foods.length
-                      ? foods.map((food) => food!.nome).join(" · ")
-                      : "Escolha os alimentos na hora de registrar"}
+                        ? foods.map((food) => food!.nome).join(" · ")
+                        : "Escolha os alimentos na hora de registrar"}
                   </p>
                 </button>
               </div>
@@ -477,7 +485,7 @@ export function Home() {
               ? `Você registrou ${entries.length} ${
                   entries.length === 1 ? "refeição" : "refeições"
                 } e ${litersText(
-                  water
+                  water,
                 )} L de água hoje. O que ficou sem registrar pode ser ajustado com calma.`
               : "Seu dia ainda está começando por aqui. Registre o que fizer sentido na sua rotina; não precisa preencher tudo de uma vez."}
           </p>
@@ -548,7 +556,7 @@ export function Home() {
               {numberText(
                 selectedDetail?.calorias ||
                   dados.caloriasPorRefeicao[detail] ||
-                  0
+                  0,
               )}
             </strong>
             <span>kcal registradas</span>
@@ -625,7 +633,7 @@ export function Home() {
         createPortal(
           <div
             className={`app-themed app-meal-overlay ${
-              dados.temaEscuro ?? true ? "" : "app-light"
+              (dados.temaEscuro ?? true) ? "" : "app-light"
             }`}
             role="dialog"
             aria-modal="true"
@@ -641,7 +649,7 @@ export function Home() {
                 alimentos={mealCatalog(
                   dados,
                   meal.key,
-                  editing ? Object.keys(today[meal.key]?.porcoes || {}) : []
+                  editing ? Object.keys(today[meal.key]?.porcoes || {}) : [],
                 )}
                 initialPorcoes={
                   editing
@@ -661,7 +669,7 @@ export function Home() {
               />
             </div>
           </div>,
-          document.body
+          document.body,
         )}
       {feedback && (
         <div className="app-feedback" role="status">

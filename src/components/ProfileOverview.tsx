@@ -1,3 +1,4 @@
+import { AppGuide } from "./AppGuide";
 import { ReminderSettings } from "./ReminderSettings";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
@@ -29,10 +30,10 @@ export function ProfileOverview({
     imc < 18.5
       ? "Abaixo do peso"
       : imc < 25
-      ? "Normal"
-      : imc < 30
-      ? "Sobrepeso"
-      : "Obesidade";
+        ? "Normal"
+        : imc < 30
+          ? "Sobrepeso"
+          : "Obesidade";
   const edit = () => navigate("/onboarding");
   return (
     <>
@@ -153,6 +154,7 @@ export function ProfileOverview({
       <section>
         <SectionHeading title="Ajuda e informação" />
         <div className="app-card app-settings-list">
+          <AppGuide replay />
           <ActionRow icon="idea" title="Deixe sua ideia" onClick={openIdea} />
           <ActionRow
             icon="star"

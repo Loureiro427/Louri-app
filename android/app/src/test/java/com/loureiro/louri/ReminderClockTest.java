@@ -3,6 +3,18 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import java.util.*;
 public class ReminderClockTest {
+    @Test public void snoozeIsFifteenMinutesAndExpiresWithoutAnEarlyDelivery() {
+        long now=100000000L,at=ReminderClock.snoozeAt(now);
+        assertEquals(15*60*1000L,at-now);
+        assertFalse(ReminderClock.freshSnooze(at,at-1));
+        assertTrue(ReminderClock.freshSnooze(at,at));
+        assertTrue(ReminderClock.freshSnooze(at,at+89*60*1000L));
+        assertFalse(ReminderClock.freshSnooze(at,at+90*60*1000L));
+        assertFalse(ReminderClock.freshSnooze(0,now));
+        Calendar clock=date("America/Sao_Paulo",2026,10,23,21,50);
+        clock.setTimeInMillis(ReminderClock.snoozeAt(clock.getTimeInMillis()));
+        assertTrue(ReminderClock.silent(clock.get(Calendar.HOUR_OF_DAY)*60+clock.get(Calendar.MINUTE),1320,420));
+    }
     @Test public void leavingAppPreservesAnAlarmWaitingForAndroidDelivery() {
         long scheduled=100000000L;
         assertTrue(ReminderClock.preserveOccurrence(scheduled,scheduled-1000));

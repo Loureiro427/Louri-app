@@ -14,7 +14,7 @@ export function ReminderSettings() {
       : {
           ...defaultReminders,
           refeicoes: dados.refeicoesAtivas || [],
-        }
+        },
   );
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
@@ -32,7 +32,7 @@ export function ReminderSettings() {
               : {
                   ...defaultReminders,
                   refeicoes: dados.refeicoesAtivas || [],
-                }
+                },
           );
           setStatus("");
           setOpen(true);
@@ -52,10 +52,10 @@ export function ReminderSettings() {
               const updated = {
                 ...draft,
                 silencioInicio: String(
-                  fields.get("silencioInicio") || draft.silencioInicio
+                  fields.get("silencioInicio") || draft.silencioInicio,
                 ),
                 silencioFim: String(
-                  fields.get("silencioFim") || draft.silencioFim
+                  fields.get("silencioFim") || draft.silencioFim,
                 ),
               };
               setDraft(updated);
@@ -67,16 +67,16 @@ export function ReminderSettings() {
                   result === "web"
                     ? "Preferências salvas. Os lembretes em segundo plano funcionam na versão Android instalada."
                     : result === "denied"
-                    ? "Preferências salvas. Permita notificações nas configurações do aparelho para recebê-las."
-                    : result === "update"
-                    ? "Instale o novo APK Android para ativar o agendador corrigido."
-                    : result === "disabled"
-                    ? "Preferências salvas. Ative as notificações no Perfil para receber os lembretes."
-                    : "Lembretes atualizados."
+                      ? "Preferências salvas. Permita notificações nas configurações do aparelho para recebê-las."
+                      : result === "update"
+                        ? "Instale o novo APK Android para ativar o agendador corrigido."
+                        : result === "disabled"
+                          ? "Preferências salvas. Ative as notificações no Perfil para receber os lembretes."
+                          : "Lembretes atualizados.",
                 );
               } catch {
                 setStatus(
-                  "Preferências salvas, mas não foi possível agendar. Tente novamente."
+                  "Preferências salvas, mas não foi possível agendar. Tente novamente.",
                 );
               } finally {
                 setSaving(false);
@@ -112,6 +112,11 @@ export function ReminderSettings() {
               </p>
             </div>
             <h3 className="app-sheet-section-title">Refeições</h3>
+            <p className="app-helper">
+              Marque só as refeições para as quais quer receber um aviso. No
+              Android, expanda a notificação e toque em “Adiar 15 min” se
+              estiver ocupado. O adiamento respeita o horário de silêncio.
+            </p>
             {getCronograma(dados).map((r) => (
               <label key={r.key} className="app-shopping-row">
                 <input
