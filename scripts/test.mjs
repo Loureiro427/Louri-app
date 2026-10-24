@@ -2000,6 +2000,56 @@ try {
       116,
     );
   });
+  test("Bebidas do catálogo usam ml sem trocar IDs ou alterar registros salvos", () => {
+    const ids = [
+      "leite",
+      "cafe",
+      "cafe_tarde",
+      "cha",
+      "chapa_noite",
+      "vitamina",
+      "iogurte_noite",
+    ];
+    const catalog = features.fullCatalog(initial);
+    for (const id of ids) {
+      const drink = catalog.find((f) => f.id === id);
+      assert.equal(drink.unidade, "ml", id);
+      assert.ok(drink.preparo.includes("100 ml"), id);
+      assert.equal(easyMeals.householdMeasure(drink), undefined);
+      const data = {
+        ...initial,
+        refeicoesAtivas: ["cafeManha"],
+        alimentos: { cafeManha: [id] },
+        porcoesPlano: { cafeManha: { [id]: 200 } },
+      };
+      const item = grocery.buildShoppingList(data, 1)[0];
+      assert.equal(item.unidade, "ml");
+      assert.equal(item.quantidade, "200");
+      assert.equal(
+        features.mealCatalog(data, "cafeManha").find((f) => f.id === id)
+          .unidade,
+        "ml",
+      );
+    }
+    assert.equal(catalog.find((f) => f.id === "iogurte").unidade, undefined);
+    assert.equal(catalog.find((f) => f.id === "ovo").unidade, undefined);
+    reset();
+    store
+      .getState()
+      .registrarRefeicao(
+        "cafeManha",
+        "Café",
+        "☕",
+        120,
+        ["Leite integral"],
+        { proteina: 6, carbo: 10, gordura: 6 },
+        { leite: 200 },
+      );
+    const saved = structuredClone(store.getState().dados);
+    assert.equal(food.calcularPorcoes({ leite: 200 }, catalog).calorias, 120);
+    features.mealCatalog(saved, "cafeManha", ["leite"]);
+    assert.deepEqual(store.getState().dados, saved);
+  });
   console.log(`${passed} verificações passaram.`);
 } finally {
   await server.close();

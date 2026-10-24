@@ -40,7 +40,8 @@ export function reviewCatalog(catalog: Record<string, Alimento[]>) {
     },
     leite: {
       nome: "Leite integral",
-      preparo: "Líquido · estimativa por 100 g",
+      preparo: "Líquido · estimativa por 100 ml",
+      unidade: "ml",
       aliases: ["leite"],
       fonte: "Estimativa do catálogo",
     },
@@ -55,10 +56,31 @@ export function reviewCatalog(catalog: Record<string, Alimento[]>) {
     frango_janta: { preparo: "Peito sem pele, grelhado · estimativa" },
     ovo: { preparo: "Cozido, sem óleo · estimativa" },
     ovo_almoco: { preparo: "Cozido, sem óleo · estimativa" },
-    cafe: { preparo: "Sem açúcar · estimativa" },
-    cafe_tarde: { nome: "Café sem açúcar", preparo: "Infusão · estimativa" },
-    cha: { preparo: "Infusão, sem açúcar · estimativa" },
-    chapa_noite: { preparo: "Infusão, sem açúcar · estimativa" },
+    cafe: {
+      preparo: "Pronto, sem açúcar · estimativa por 100 ml",
+      unidade: "ml",
+    },
+    cafe_tarde: {
+      nome: "Café sem açúcar",
+      preparo: "Infusão · estimativa por 100 ml",
+      unidade: "ml",
+    },
+    cha: {
+      preparo: "Infusão, sem açúcar · estimativa por 100 ml",
+      unidade: "ml",
+    },
+    chapa_noite: {
+      preparo: "Infusão, sem açúcar · estimativa por 100 ml",
+      unidade: "ml",
+    },
+    vitamina: {
+      preparo: "Bebida pronta · receita variável · estimativa por 100 ml",
+      unidade: "ml",
+    },
+    iogurte_noite: {
+      preparo: "Iogurte de beber · marca variável · estimativa por 100 ml",
+      unidade: "ml",
+    },
     tapioca: {
       preparo: "Pronta, sem manteiga e sem recheio",
       fonte: "TBCA · BRC0906B",

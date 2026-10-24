@@ -50,3 +50,9 @@ Validar no aparelho, na próxima versão Android: toque com app fechado, refeiç
 - Editar um personalizado cria uma nova definição e arquiva a anterior, preservando ícone/foto. Favoritos, plano e combinações passam à nova definição; históricos mantêm a unidade e os valores anteriores. Ao repetir uma refeição antiga, a seleção usa a versão atual.
 - Mantendo a unidade, as quantidades planejadas permanecem iguais. Ao trocar g/ml, mantém-se o número de porções de referência (ex.: duas porções de 30 g passam a duas porções de 200 ml). O formulário informa esse comportamento e pede conferir as quantidades.
 - Fechar um formulário alterado pede confirmação para não perder o preenchimento.
+
+### Bebidas do catálogo em ml
+
+- Leite integral, café, café sem açúcar, chá, chá relaxante, vitamina e iogurte proteico de beber usam ml, mantendo seus IDs. Registro, combinações e compras reutilizam a unidade do catálogo.
+- Essas entradas genéricas continuam sendo estimativas, agora identificadas por 100 ml. Os valores numéricos do catálogo foram mantidos; não se trata de uma conversão exata de densidade ou de valores de uma marca específica. Refeições já salvas não são regravadas nem recalculadas.
+- Iogurte natural continua em g, com sua referência TACO por massa; a opção de beber está explicitamente identificada no preparo do iogurte proteico.
