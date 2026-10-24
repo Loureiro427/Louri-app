@@ -1,3 +1,5 @@
+import { CustomFoodActions } from "./CustomFoodActions";
+import { FoodVisual } from "./FoodVisual";
 import { useEffect, useState } from "react";
 import { useUserStore } from "../store/useUserStore";
 import { Icon, Sheet } from "./ui/AppUI";
@@ -43,7 +45,9 @@ export function FoodLibrary({
     return () => window.removeEventListener("beforeunload", prevent);
   }, [dirty]);
   const close = () => (dirty ? setDiscard(true) : onClose());
-  const foods = dados.alimentosPersonalizados || [];
+  const foods = (dados.alimentosPersonalizados || []).filter(
+    (f) => !f.arquivado,
+  );
   return (
     <>
       <Sheet
@@ -113,7 +117,12 @@ export function FoodLibrary({
                   }
                   useUserStore
                     .getState()
-                    .setDados({ alimentosPersonalizados: [...foods, result] });
+                    .setDados({
+                      alimentosPersonalizados: [
+                        ...(dados.alimentosPersonalizados || []),
+                        result,
+                      ],
+                    });
                   setFoodName("");
                   setBase("100");
                   setValues(["", "", "", ""]);
@@ -124,7 +133,7 @@ export function FoodLibrary({
                     onClose();
                   } else
                     setMessage(
-                      "Alimento salvo. Ele já está disponível na busca de qualquer refeição.",
+                      "Alimento salvo. Use ‘Ícone ou foto’ para personalizá-lo. Ele já está disponível na busca de qualquer refeição.",
                     );
                 }}
               >
@@ -220,13 +229,16 @@ export function FoodLibrary({
                     .filter((f) => foodMatches(f, query))
                     .map((f) => (
                       <article className="app-personal-food" key={f.id}>
-                        <span aria-hidden="true">{f.emoji}</span>
+                        <span aria-hidden="true">
+                          <FoodVisual food={f} />
+                        </span>
                         <div>
                           <strong>{f.nome}</strong>
                           <small>
                             {numberText(f.kcal100g, 1)} kcal por 100 g
                           </small>
                         </div>
+                        <CustomFoodActions food={f} />
                         {onSelect && (
                           <button
                             className="app-text-button"

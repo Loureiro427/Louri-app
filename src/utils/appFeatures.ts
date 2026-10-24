@@ -15,7 +15,7 @@ export function mealCatalog(
       .filter((f): f is (typeof source)[number] => Boolean(f)),
     ...(key ? DICIONARIO_ALIMENTOS[key] || [] : []),
     ...todosAlimentos,
-    ...(dados.alimentosPersonalizados || []),
+    ...(dados.alimentosPersonalizados || []).filter((f) => !f.arquivado),
   ].filter(
     (a, i, all) =>
       all.findIndex(

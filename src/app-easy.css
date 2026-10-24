@@ -247,3 +247,82 @@ html[data-keyboard-open="true"] .app-composer .app-context-tip {
 .app-personal-tabs ~ .app-search {
   margin-top: 16px;
 }
+.app-food-photo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.app-food-visual-preview {
+  display: flex;
+  justify-content: center;
+  font-size: 52px;
+  margin: 16px 0;
+}
+.app-food-visual-preview .app-food-photo {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+}
+.app-food-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+}
+.app-food-icon-grid button {
+  min-height: 48px;
+  font-size: 25px;
+  background: var(--app-soft);
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+}
+.app-food-icon-grid button[aria-pressed="true"] {
+  border-color: var(--app-green);
+  background: var(--app-green-soft);
+}
+.app-photo-picker {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  width: 100%;
+}
+.app-photo-picker input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.app-personal-food {
+  flex-wrap: wrap;
+}
+.app-personal-food > div {
+  min-width: 95px;
+}
+.app-photo-picker:focus-within {
+  outline: 2px solid var(--app-green);
+  outline-offset: 3px;
+}
+.app-custom-food-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px 8px;
+}
+.app-custom-food-tools button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-size: 12px;
+}
+.app-custom-food-tools button:last-child {
+  color: var(--app-muted);
+}
+.app-personal-food > .app-custom-food-tools {
+  flex-basis: 100%;
+  padding: 0;
+}

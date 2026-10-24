@@ -3,6 +3,8 @@ export interface Alimento {
   id: string;
   nome: string;
   emoji: string;
+  imagem?: string;
+  arquivado?: boolean;
   kcal100g: number;
   prot: number;
   carbo: number;

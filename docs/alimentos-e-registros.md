@@ -32,3 +32,11 @@ Testes JS cobrem regressões, busca, recentes, comparação de alterações, ró
 No navegador a 360 px foram conferidos busca por cacetinho, confirmação de saída, continuidade com valores mantidos, cadastro de cereal no perfil de teste e seleção da porção de 30 g sem registrar consumo.
 
 Validar no aparelho, na próxima versão Android: toque com app fechado, refeição já registrada, aviso de ontem e Voltar com teclado aberto. Não houve geração de APK.
+
+### Alimentos personalizados: apagar e personalizar
+
+- Cada alimento tem as ações “Ícone ou foto” e “Apagar”, no registro e na biblioteca.
+- Fotos JPG, PNG e WebP de até 15 MB são recortadas no centro e convertidas localmente para JPEG de 160 × 160 pixels; não há envio para servidor.
+- Apagar exige confirmação, retira o alimento dos favoritos, preferências, porções do plano, memória de repetição e combinações. Combinações vazias são retiradas.
+- A definição nutricional fica arquivada para permitir consultar e corrigir refeições anteriores sem alterar seus valores. Ela não aparece como uma opção nova do catálogo.
+- As alterações de imagem e ícone são salvas automaticamente. Escolher um ícone substitui a foto.

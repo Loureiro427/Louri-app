@@ -1796,6 +1796,47 @@ try {
     assert.ok(catalog.some((f) => f.id === own.id));
     assert.equal(food.calcularPorcoes({ [own.id]: 50 }, catalog).calorias, 100);
   });
+  const removal = await server.ssrLoadModule("/src/utils/removeCustomFood.ts");
+  test("Apagar personalizado limpa o plano e preserva histórico e valores", () => {
+    const item = custom.createCustomFood(
+      "Teste remoção",
+      "100",
+      ["100", "2", "10", "4"],
+      "custom_remove",
+    );
+    const data = {
+      ...initial,
+      alimentosPersonalizados: [item],
+      favoritos: [item.id, "ovo"],
+      alimentos: { cafeManha: [item.id, "ovo"] },
+      porcoesPlano: { cafeManha: { [item.id]: 40, ovo: 50 } },
+      ultimasPorcoes: { cafeManha: { [item.id]: 40 } },
+      refeicoesSalvas: [{ id: "r", nome: "Teste", porcoes: { [item.id]: 40 } }],
+    };
+    const changed = { ...data, ...removal.removeCustomFood(data, item.id) };
+    assert.equal(changed.alimentosPersonalizados[0].arquivado, true);
+    assert.equal(data.alimentosPersonalizados[0].arquivado, undefined);
+    assert.deepEqual(changed.favoritos, ["ovo"]);
+    assert.deepEqual(changed.alimentos.cafeManha, ["ovo"]);
+    assert.deepEqual(changed.porcoesPlano.cafeManha, { ovo: 50 });
+    assert.deepEqual(changed.ultimasPorcoes.cafeManha, {});
+    assert.deepEqual(changed.refeicoesSalvas, []);
+    assert.equal(changed.historico, data.historico);
+    assert.ok(
+      !features.mealCatalog(changed, "cafeManha").some((f) => f.id === item.id),
+    );
+    assert.ok(
+      features
+        .mealCatalog(changed, "cafeManha", [item.id])
+        .some((f) => f.id === item.id),
+    );
+    assert.equal(
+      food.calcularPorcoes({ [item.id]: 40 }, features.fullCatalog(changed))
+        .calorias,
+      40,
+    );
+    assert.deepEqual(removal.removeCustomFood(data, "ovo"), {});
+  });
   console.log(`${passed} verificações passaram.`);
 } finally {
   await server.close();

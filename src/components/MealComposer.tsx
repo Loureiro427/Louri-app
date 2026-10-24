@@ -1,3 +1,5 @@
+import { CustomFoodActions } from "./CustomFoodActions";
+import { FoodVisual } from "./FoodVisual";
 import { DiscardChanges } from "./DiscardChanges";
 import {
   foodMatches,
@@ -102,7 +104,7 @@ export function MealComposer({
   const alimentos = [
     ...fullCatalog(dados).filter((f) => Object.keys(porcoes).includes(f.id)),
     ...suppliedFoods,
-    ...(dados.alimentosPersonalizados || []),
+    ...(dados.alimentosPersonalizados || []).filter((f) => !f.arquivado),
   ].filter(
     (f, i, all) =>
       all.findIndex(
@@ -136,6 +138,7 @@ export function MealComposer({
   const filtered = alimentos
     .filter(
       (item) =>
+        (!item.arquivado || porcoes[item.id] !== undefined) &&
         foodMatches(item, busca) &&
         (foodFilter === "all" ||
           (foodFilter === "favorites"
@@ -346,7 +349,9 @@ export function MealComposer({
                         setSwap(null);
                       }}
                     >
-                      <span aria-hidden="true">{f.emoji}</span>
+                      <span aria-hidden="true">
+                        <FoodVisual food={f} />
+                      </span>
                       <span>
                         <strong>{f.nome}</strong>
                         <small>
@@ -390,7 +395,7 @@ export function MealComposer({
                       onClick={() => toggle(item)}
                     >
                       <span className="app-food-list-emoji" aria-hidden="true">
-                        {item.emoji}
+                        <FoodVisual food={item} />
                       </span>
                       <span className="app-food-list-copy">
                         <strong>{item.nome}</strong>
@@ -426,6 +431,18 @@ export function MealComposer({
                       <Icon name="star" size={18} />
                     </button>
                   </div>
+                  {item.id.startsWith("custom_") && !item.arquivado && (
+                    <CustomFoodActions
+                      food={item}
+                      onDeleted={() =>
+                        setPorcoes((previous) => {
+                          const next = { ...previous };
+                          delete next[item.id];
+                          return next;
+                        })
+                      }
+                    />
+                  )}
                   {selected && (
                     <div className="app-quantity-panel">
                       <button
