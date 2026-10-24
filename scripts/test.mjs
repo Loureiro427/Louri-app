@@ -1053,6 +1053,155 @@ try {
     store.getState().salvarPesoNaData("2020-01-01", "90");
     assert.equal(store.getState().dados.peso, "80");
   });
+
+  const weightValidation = await server.ssrLoadModule(
+    "/src/utils/weightValidation.ts"
+  );
+  test("Todos os caminhos de peso respeitam os mesmos limites e aceitam vírgula", () => {
+    for (const value of ["29.9", "300.1", "", "NaN", "-80", "Infinity"]) {
+      reset();
+      store.getState().setDados({ peso: "80", historicoPeso: {} });
+      assert.equal(weightValidation.parseWeight(value), null);
+      assert.equal(store.getState().salvarPesoNaData(today(), value), false);
+      store.getState().atualizarPeso(value);
+      assert.equal(store.getState().dados.peso, "80");
+      assert.deepEqual(store.getState().dados.historicoPeso, {});
+    }
+    assert.equal(weightValidation.parseWeight("30"), 30);
+    assert.equal(weightValidation.parseWeight("300"), 300);
+    assert.equal(weightValidation.parseWeight("80,5"), 80.5);
+    store.getState().atualizarPeso("80,5");
+    assert.equal(store.getState().dados.historicoPeso[today()], "80.5");
+  });
+
+  const support = await server.ssrLoadModule("/src/services/supportService.ts");
+  test("Suporte envia somente mensagem e contato informado, sem dados do perfil", () => {
+    const payload = support.supportPayload({
+      kind: "support",
+      message: "Preciso de ajuda",
+      contact: "teste@example.com",
+      peso: "80",
+      altura: "180",
+      nome: "Privado",
+      historico: { privado: true },
+    });
+    assert.deepEqual(
+      payload.embeds[0].fields.map((f) => f.name),
+      ["Mensagem", "Contato informado"]
+    );
+    assert.deepEqual(payload.allowed_mentions, { parse: [] });
+    assert.equal(JSON.stringify(payload).includes("Privado"), false);
+    assert.equal(JSON.stringify(payload).includes("historico"), false);
+    assert.equal(
+      support.supportPayload({
+        kind: "idea",
+        message: "Sugestão",
+        contact: "teste@example.com",
+      }).embeds[0].fields.length,
+      1
+    );
+    assert.throws(() =>
+      support.supportPayload({
+        kind: "support",
+        message: "Olá",
+        contact: "........",
+      })
+    );
+    assert.throws(() =>
+      support.supportPayload({ kind: "idea", message: " ".repeat(20) })
+    );
+  });
+  const testSupport = support.createSupportClient({
+    support: "https://discord.com/api/webhooks/test-only/test-only",
+    idea: "https://discord.com/api/webhooks/test-only/test-only",
+  });
+  const asyncTest = async (name, run) => {
+    await run();
+    passed++;
+    console.log("✓ " + name);
+  };
+  await asyncTest(
+    "Envio exige confirmação e só registra sucesso após resposta do Discord",
+    async () => {
+      const originalFetch = globalThis.fetch;
+      const key = "louri_support_support";
+      storage.delete(key);
+      let requests = 0;
+      globalThis.fetch = async (url, options) => {
+        requests++;
+        assert.equal(new URL(url).searchParams.get("wait"), "true");
+        assert.equal(
+          JSON.parse(options.body).embeds[0].fields[0].value,
+          "Teste local"
+        );
+        return { ok: false, status: 500 };
+      };
+      try {
+        await assert.rejects(
+          testSupport.send({ kind: "support", message: "Teste local" }, false),
+          /Confirme/
+        );
+        assert.equal(requests, 0);
+        await assert.rejects(
+          testSupport.send({ kind: "support", message: "Teste local" }, true),
+          /Não foi possível/
+        );
+        assert.equal(storage.has(key), false);
+        globalThis.fetch = async () => ({ ok: true, status: 200 });
+        await testSupport.send(
+          { kind: "support", message: "Teste local" },
+          true
+        );
+        assert.equal(storage.has(key), true);
+        await assert.rejects(
+          testSupport.send({ kind: "support", message: "Teste local" }, true),
+          /Aguarde/
+        );
+      } finally {
+        globalThis.fetch = originalFetch;
+        storage.delete(key);
+      }
+    }
+  );
+
+  await asyncTest(
+    "Suporte evita envios simultâneos e preserva nova tentativa após limite do Discord",
+    async () => {
+      const originalFetch = globalThis.fetch;
+      storage.delete("louri_support_idea");
+      let release,
+        requests = 0;
+      const client = support.createSupportClient({
+        support: undefined,
+        idea: "https://discord.com/api/webhooks/test-only/test-only",
+      });
+      globalThis.fetch = () => {
+        requests++;
+        return new Promise((resolve) => {
+          release = resolve;
+        });
+      };
+      try {
+        const first = client.send(
+          { kind: "idea", message: "Sugestão de teste" },
+          true
+        );
+        await assert.rejects(
+          client.send({ kind: "idea", message: "Outra sugestão" }, true),
+          /ainda está sendo enviada/
+        );
+        assert.equal(requests, 1);
+        release({ ok: false, status: 429 });
+        await assert.rejects(first, /Muitas mensagens/);
+        assert.equal(storage.has("louri_support_idea"), false);
+        globalThis.fetch = async () => ({ ok: true, status: 200 });
+        await client.send({ kind: "idea", message: "Sugestão de teste" }, true);
+      } finally {
+        globalThis.fetch = originalFetch;
+        storage.delete("louri_support_idea");
+      }
+    }
+  );
   console.log(`${passed} verificações passaram.`);
 } finally {
   await server.close();

@@ -6,7 +6,8 @@ import type { Alimento } from "../data/alimentos";
 import { calcularPorcoes, todosAlimentos } from "../data/alimentos";
 import { normalizeMealPreferences } from "../utils/mealPreferences";
 import { useUserStore } from "../store/useUserStore";
-import { Icon, numberText } from "./ui/AppUI";
+import { Icon } from "./ui/AppUI";
+import { numberText } from "./ui/format";
 import {
   replacementCandidates,
   replacementPortion,

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useUserStore } from "../store/useUserStore";
 import { weeklySummary } from "../utils/appFeatures";
 import { localDayKey } from "../utils/dailyStreak";
-import { Icon, litersText, numberText, SectionHeading } from "./ui/AppUI";
+import { Icon, SectionHeading } from "./ui/AppUI";
+import { litersText, numberText } from "./ui/format";
 export function WeeklySummary() {
   const dados = useUserStore((s) => s.dados);
   const [offset, setOffset] = useState(0);

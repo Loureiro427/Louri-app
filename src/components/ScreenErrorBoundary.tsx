@@ -2,7 +2,7 @@ import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import logo from "../assets/logo.png";
 
-type Props = { children: ReactNode };
+type Props = { children: ReactNode; resetKey?: string };
 type State = { message: string | null };
 
 export class ScreenErrorBoundary extends Component<Props, State> {
@@ -11,11 +11,14 @@ export class ScreenErrorBoundary extends Component<Props, State> {
     return { message: error instanceof Error ? error.message : String(error) };
   }
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error(
-      "[Louri] Erro ao abrir cadastro:",
-      error,
-      info.componentStack
-    );
+    console.error("[Louri] Erro de interface:", error, info.componentStack);
+  }
+  componentDidUpdate(previous: Props) {
+    if (
+      previous.resetKey !== this.props.resetKey &&
+      this.state.message !== null
+    )
+      this.setState({ message: null });
   }
   render() {
     if (this.state.message === null) return this.props.children;
@@ -28,7 +31,7 @@ export class ScreenErrorBoundary extends Component<Props, State> {
             className="w-14 h-14 object-contain mb-5"
           />
           <h1 className="text-2xl font-bold tracking-tight">
-            Não foi possível abrir o cadastro.
+            Esta tela não abriu como esperado.
           </h1>
           <p className="text-sm text-zinc-400 leading-relaxed mt-3">
             Tente abrir novamente. Seus dados não serão apagados.
@@ -43,6 +46,7 @@ export class ScreenErrorBoundary extends Component<Props, State> {
           <button
             type="button"
             onClick={() => {
+              this.setState({ message: null });
               window.location.hash = "/";
             }}
             className="w-full mt-2 py-3 text-sm text-zinc-300"

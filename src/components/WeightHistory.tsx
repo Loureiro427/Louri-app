@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useUserStore } from "../store/useUserStore";
 import { localDayKey } from "../utils/dailyStreak";
 import { weightSeries } from "../utils/dailyExperience";
-import { Icon, numberText, Sheet } from "./ui/AppUI";
+import {
+  WEIGHT_MIN,
+  WEIGHT_MAX,
+  WEIGHT_ERROR,
+} from "../utils/weightValidation";
+import { Icon, Sheet } from "./ui/AppUI";
+import { numberText } from "./ui/format";
 
 const shortDate = (date: string) =>
   new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR", {
@@ -171,7 +177,7 @@ export function WeightHistory() {
               setMessage(
                 saved
                   ? "Peso salvo. Seu gráfico já foi atualizado."
-                  : "Confira a data e o peso informado."
+                  : `Confira a data. ${WEIGHT_ERROR}`
               );
             }}
           >
@@ -196,8 +202,8 @@ export function WeightHistory() {
                 type="number"
                 inputMode="decimal"
                 required
-                min="0.1"
-                max="500"
+                min={WEIGHT_MIN}
+                max={WEIGHT_MAX}
                 step="0.1"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}

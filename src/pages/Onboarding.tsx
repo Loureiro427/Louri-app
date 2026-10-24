@@ -1,3 +1,4 @@
+import { WEIGHT_MIN, WEIGHT_MAX } from "../utils/weightValidation";
 import { fullCatalog } from "../utils/appFeatures";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -210,7 +211,14 @@ export function Onboarding() {
       return "Digite como você prefere ser chamado.";
     for (const [s, value, min, max, label, integer] of [
       [2, draft.idade, 14, 100, "uma idade entre 14 e 100 anos", true],
-      [3, draft.peso, 30, 300, "um peso entre 30 e 300 kg", false],
+      [
+        3,
+        draft.peso,
+        WEIGHT_MIN,
+        WEIGHT_MAX,
+        `um peso entre ${WEIGHT_MIN} e ${WEIGHT_MAX} kg`,
+        false,
+      ],
       [4, draft.altura, 100, 250, "uma altura entre 100 e 250 cm", false],
     ] as const) {
       if (
@@ -494,8 +502,8 @@ export function Onboarding() {
                     label="Seu peso"
                     value={draft.peso}
                     onChange={(v) => update("peso", v)}
-                    min={30}
-                    max={300}
+                    min={WEIGHT_MIN}
+                    max={WEIGHT_MAX}
                     step={0.1}
                     unit="kg"
                     detail="Cada avanço conta"

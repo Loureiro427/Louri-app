@@ -1,23 +1,22 @@
 import { ShoppingList } from "./ShoppingList";
 import { useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useUserStore } from "../store/useUserStore";
 import { getCronograma } from "../utils/nutritionMath";
 import { mealCatalog } from "../utils/appFeatures";
 import { MealComposer } from "./MealComposer";
 import { Icon, Sheet } from "./ui/AppUI";
 export function PlanTools() {
+  const { pathname } = useLocation();
+  return pathname === "/plano" ? <PlanToolsContent /> : null;
+}
+function PlanToolsContent() {
   const dados = useUserStore((s) => s.dados);
   const [panel, setPanel] = useState<"times" | "shopping" | null>(null);
   const [meal, setMeal] = useState<string | null>(null);
   const [times, setTimes] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
-  const { pathname } = useLocation();
-  useEffect(() => {
-    setMeal(null);
-    setPanel(null);
-  }, [pathname]);
   const schedule = getCronograma(dados);
   return (
     <>

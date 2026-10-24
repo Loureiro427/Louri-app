@@ -15,15 +15,8 @@ import {
 } from "../utils/nutritionMath";
 import { normalizeMealPreferences } from "../utils/mealPreferences";
 import { getPlanTargets } from "../utils/planTargets";
-import {
-  Icon,
-  PageHeader,
-  Progress,
-  SectionHeading,
-  Sheet,
-  litersText,
-  numberText,
-} from "../components/ui/AppUI";
+import { Icon, PageHeader, Progress, SectionHeading, Sheet } from "../components/ui/AppUI";
+import { litersText, numberText } from "../components/ui/format";
 
 type Meal = ReturnType<typeof getCronograma>[number];
 export function Home() {

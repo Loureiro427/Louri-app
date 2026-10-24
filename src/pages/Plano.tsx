@@ -4,15 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
 import { getCronograma, getRotina } from "../utils/nutritionMath";
 import { getPlanTargets } from "../utils/planTargets";
-import {
-  Icon,
-  PageHeader,
-  SectionHeading,
-  Sheet,
-  litersText,
-  numberText,
-  toneStyle,
-} from "../components/ui/AppUI";
+import { Icon, PageHeader, SectionHeading, Sheet } from "../components/ui/AppUI";
+import { litersText, numberText, toneStyle } from "../components/ui/format";
 const sources = {
   proteina: [
     ["🍗", "Frango"],

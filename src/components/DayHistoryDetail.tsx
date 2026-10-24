@@ -8,7 +8,8 @@ import { localDayKey } from "../utils/dailyStreak";
 import { mealCatalog } from "../utils/appFeatures";
 import { calcularPorcoes } from "../data/alimentos";
 import { MealComposer } from "./MealComposer";
-import { Icon, Sheet, litersText, numberText } from "./ui/AppUI";
+import { Icon, Sheet } from "./ui/AppUI";
+import { litersText, numberText } from "./ui/format";
 
 export function DayHistoryDetail({
   date,

@@ -4,14 +4,8 @@ import { useState } from "react";
 import { useUserStore } from "../store/useUserStore";
 import CalendarHistory from "../components/CalendarHistory";
 import { dailyGoals, localDayKey, previousDay } from "../utils/dailyStreak";
-import {
-  Icon,
-  PageHeader,
-  SectionHeading,
-  Sheet,
-  litersText,
-  numberText,
-} from "../components/ui/AppUI";
+import { Icon, PageHeader, SectionHeading, Sheet } from "../components/ui/AppUI";
+import { litersText, numberText } from "../components/ui/format";
 export function Evolucao() {
   const dados = useUserStore((state) => state.dados);
   const [streakInfo, setStreakInfo] = useState(false);

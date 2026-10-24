@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useUserStore } from "../../store/useUserStore";
 
@@ -238,8 +238,6 @@ export function Sheet({
   const dark = useUserStore((state) => state.dados.temaEscuro ?? true);
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     panel.current?.focus({ preventScroll: true });
@@ -264,7 +262,7 @@ export function Sheet({
         onKeyDown={(e) => {
           if (e.key === "Escape") {
             e.preventDefault();
-            closeRef.current();
+            onClose();
           }
           if (e.key !== "Tab") return;
           const items = Array.from(
@@ -350,12 +348,3 @@ export function ActionRow({
     <div className="app-action-row">{content}</div>
   );
 }
-export const toneStyle = (color: string) =>
-  ({ "--item-color": color } as CSSProperties);
-export const numberText = (value: number, digits = 0) =>
-  value.toLocaleString("pt-BR", { maximumFractionDigits: digits });
-export const litersText = (ml: number) =>
-  (ml / 1000).toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });

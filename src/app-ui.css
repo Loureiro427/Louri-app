@@ -2190,6 +2190,7 @@
   color: var(--app-muted);
 }
 .app-feature-form input:not([type="checkbox"]),
+.app-feature-form textarea,
 .app-feature-form select {
   width: 100%;
   min-width: 0;

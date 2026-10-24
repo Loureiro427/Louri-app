@@ -1,5 +1,6 @@
 import type { ShoppingListData } from "../utils/shoppingList";
 import type { Alimento } from "../data/alimentos";
+import { parseWeight } from "../utils/weightValidation";
 import { reconcileDailyStreak } from "../utils/dailyStreak";
 import {
   replaceHistoricalMeal,
@@ -154,14 +155,8 @@ export const useUserStore = create<UserStore>()(
       setMostrarNavbar: (visivel) => set({ mostrarNavbar: visivel }),
       setModalPesoAberto: (aberto) => set({ modalPesoAberto: aberto }),
       salvarPesoNaData: (date, peso) => {
-        const value = Number(peso.replace(",", "."));
-        if (
-          !validPastOrToday(date) ||
-          !Number.isFinite(value) ||
-          value <= 0 ||
-          value > 500
-        )
-          return false;
+        const value = parseWeight(peso);
+        if (!validPastOrToday(date) || value === null) return false;
         get().verificarViradaDeDia();
         set((state) => {
           const historicoPeso = {
@@ -246,21 +241,7 @@ export const useUserStore = create<UserStore>()(
       },
 
       atualizarPeso: (novoPeso) => {
-        get().verificarViradaDeDia();
-        set((state) => {
-          const hojeStr = getHojeStr();
-          return {
-            dados: {
-              ...state.dados,
-              peso: novoPeso,
-              historicoPeso: {
-                ...state.dados.historicoPeso,
-                [hojeStr]: novoPeso,
-              },
-            },
-          };
-        });
-        get().verificarStreak();
+        get().salvarPesoNaData(getHojeStr(), novoPeso);
       },
 
       adicionarAgua: (quantidade, metaMax) => {

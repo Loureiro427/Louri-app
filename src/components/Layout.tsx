@@ -5,7 +5,8 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
-import { Icon, Sheet } from "./ui/AppUI";
+import { Icon } from "./ui/AppUI";
+import { WeightEntry } from "./WeightEntry";
 import type { IconName } from "./ui/AppUI";
 import "../app-ui.css";
 const links: { path: string; label: string; icon: IconName }[] = [
@@ -57,10 +58,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       }),
     [navigate]
   );
-  const [fab, setFab] = useState(false);
+  const [fabPath, setFabPath] = useState<string | null>(null);
+  const fab = fabPath === pathname;
   const [toast, setToast] = useState("");
-  const [weight, setWeight] = useState("");
-  const [weightError, setWeightError] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined
   );
@@ -76,15 +76,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
       document.removeEventListener("visibilitychange", refresh);
     };
   }, []);
-  useEffect(() => {
-    setFab(false);
-  }, [pathname]);
-  useEffect(() => {
-    if (weightOpen) {
-      setWeight(String(dados.peso || ""));
-      setWeightError("");
-    }
-  }, [weightOpen, dados.peso]);
   useEffect(
     () => () => {
       clearTimeout(toastTimer.current);
@@ -97,23 +88,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     toastTimer.current = setTimeout(() => setToast(""), 3000);
   };
   const openWeight = () => {
-    setFab(false);
+    setFabPath(null);
     useUserStore.getState().setModalPesoAberto(true);
-  };
-  const saveWeight = () => {
-    const value = Number(weight.replace(",", "."));
-    if (
-      !weight.trim() ||
-      !Number.isFinite(value) ||
-      value < 30 ||
-      value > 300
-    ) {
-      setWeightError("Informe um peso entre 30 e 300 kg.");
-      return;
-    }
-    useUserStore.getState().atualizarPeso(String(value));
-    useUserStore.getState().setModalPesoAberto(false);
-    notify("Peso atualizado");
   };
   const showMenu =
     Boolean(dados.nome?.trim()) &&
@@ -125,7 +101,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       aria-label={item.label}
       aria-current={pathname === item.path ? "page" : undefined}
       className={`app-nav-link ${pathname === item.path ? "is-active" : ""}`}
-      onClick={() => setFab(false)}
+      onClick={() => setFabPath(null)}
     >
       <Icon name={item.icon} size={23} />
       <span>{item.label}</span>
@@ -147,7 +123,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <button
                 className="app-fab-scrim"
                 aria-label="Fechar ações rápidas"
-                onClick={() => setFab(false)}
+                onClick={() => setFabPath(null)}
               />
               <div
                 className="app-fab-menu"
@@ -166,7 +142,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </button>
                 <button
                   onClick={() => {
-                    setFab(false);
+                    setFabPath(null);
                     navigate("/refeicao-livre");
                   }}
                 >
@@ -181,7 +157,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </button>
                 <button
                   onClick={() => {
-                    setFab(false);
+                    setFabPath(null);
                     useUserStore.getState().adicionarAgua(250, 99999);
                     notify("+250 ml de água registrados");
                   }}
@@ -208,7 +184,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     fab ? "Fechar ações rápidas" : "Abrir ações rápidas"
                   }
                   aria-expanded={fab}
-                  onClick={() => setFab(!fab)}
+                  onClick={() => setFabPath(fab ? null : pathname)}
                 >
                   <Icon name="plus" size={27} />
                 </button>
@@ -219,55 +195,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </>
       )}
       {weightOpen && (
-        <Sheet
-          title="Atualizar peso"
-          description="Registre seu peso atual para acompanhar a evolução."
+        <WeightEntry
+          initial={dados.peso || ""}
           onClose={() => useUserStore.getState().setModalPesoAberto(false)}
-        >
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              saveWeight();
-            }}
-          >
-            <label className="app-weight-input">
-              <span>Peso atual</span>
-              <div>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  aria-label="Peso em quilos"
-                  value={weight}
-                  maxLength={6}
-                  onChange={(e) => {
-                    setWeight(e.target.value);
-                    setWeightError("");
-                  }}
-                />
-                <span>kg</span>
-              </div>
-            </label>
-            {weightError && (
-              <p className="app-field-error" role="alert">
-                {weightError}
-              </p>
-            )}
-            <div className="app-button-row">
-              <button
-                type="button"
-                className="app-button app-button--secondary"
-                onClick={() =>
-                  useUserStore.getState().setModalPesoAberto(false)
-                }
-              >
-                Cancelar
-              </button>
-              <button type="submit" className="app-button app-button--primary">
-                Salvar peso
-              </button>
-            </div>
-          </form>
-        </Sheet>
+          onSaved={() => {
+            useUserStore.getState().setModalPesoAberto(false);
+            notify("Peso atualizado");
+          }}
+        />
       )}
     </div>
   );

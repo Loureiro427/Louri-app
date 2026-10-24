@@ -4,13 +4,8 @@ import { useUserStore } from "../store/useUserStore";
 import { calculateIMC } from "../utils/nutritionMath";
 import { getPlanTargets } from "../utils/planTargets";
 import { configurarNotificacoesNativas } from "../services/notificationService";
-import {
-  ActionRow,
-  Icon,
-  PageHeader,
-  SectionHeading,
-  numberText,
-} from "./ui/AppUI";
+import { ActionRow, Icon, PageHeader, SectionHeading } from "./ui/AppUI";
+import { numberText } from "./ui/format";
 export function ProfileOverview({
   openIdea,
   openSupport,
