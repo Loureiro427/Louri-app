@@ -1837,6 +1837,169 @@ try {
     );
     assert.deepEqual(removal.removeCustomFood(data, "ovo"), {});
   });
+  const editing = await server.ssrLoadModule("/src/utils/editCustomFood.ts");
+  test("Bebida calcula por ml sem converter volume em massa", () => {
+    const drink = custom.createCustomFood(
+      "Bebida",
+      "200",
+      ["120", "6", "20", "2"],
+      "custom_drink",
+      "ml",
+    );
+    assert.equal(drink.unidade, "ml");
+    assert.equal(drink.porcaoReferencia, 200);
+    assert.equal(drink.kcal100g, 60);
+    assert.deepEqual(food.calcularPorcoes({ [drink.id]: 300 }, [drink]), {
+      calorias: 180,
+      macros: { proteina: 9, carbo: 30, gordura: 3 },
+    });
+    const dense = custom.createCustomFood(
+      "Concentrado",
+      "100",
+      ["500", "0", "120", "0"],
+      "custom_dense",
+      "ml",
+    );
+    assert.equal(typeof dense, "object");
+    assert.equal(
+      typeof custom.createCustomFood(
+        "Inválido",
+        "100",
+        ["500", "0", "120", "0"],
+        "custom_dense_g",
+      ),
+      "string",
+    );
+  });
+  test("Compras de bebida usa ml e litros e mantém massa separada", () => {
+    const drink = custom.createCustomFood(
+      "Bebida teste",
+      "200",
+      ["120", "6", "20", "2"],
+      "custom_drink",
+      "ml",
+    );
+    const data = {
+      ...initial,
+      refeicoesAtivas: ["cafeManha"],
+      alimentosPersonalizados: [drink],
+      alimentos: { cafeManha: [drink.id] },
+      porcoesPlano: { cafeManha: { [drink.id]: 200 } },
+    };
+    assert.equal(grocery.buildShoppingList(data, 1)[0].unidade, "ml");
+    const week = grocery.buildShoppingList(data, 7)[0];
+    assert.equal(week.unidade, "L");
+    assert.equal(week.quantidade, "1.4");
+    const legacy = {
+      ...week,
+      id: "antigo",
+      unidade: "g",
+      quantidade: "500",
+      quantidadeEditada: true,
+    };
+    assert.equal(grocery.buildShoppingList(data, 7, [legacy]).length, 2);
+  });
+  test("Editar alimento preserva definição antiga, imagens e histórico", () => {
+    const original = {
+      ...custom.createCustomFood(
+        "Original",
+        "30",
+        ["90", "3", "18", "1"],
+        "custom_before",
+      ),
+      emoji: "🥣",
+      imagem: "data:image/jpeg;base64,test",
+    };
+    const replacement = custom.createCustomFood(
+      "Editado",
+      "50",
+      ["100", "2", "20", "1"],
+      "custom_after",
+    );
+    const data = {
+      ...initial,
+      alimentosPersonalizados: [original],
+      favoritos: [original.id],
+      alimentos: { cafeManha: [original.id] },
+      porcoesPlano: { cafeManha: { [original.id]: 60 } },
+      ultimasPorcoes: { cafeManha: { [original.id]: 30 } },
+      refeicoesSalvas: [
+        { id: "r", nome: "Combinacao", porcoes: { [original.id]: 60 } },
+      ],
+    };
+    const changed = {
+      ...data,
+      ...editing.editCustomFood(data, original.id, replacement),
+    };
+    assert.equal(changed.historico, data.historico);
+    assert.equal(changed.caloriasConsumidas, data.caloriasConsumidas);
+    assert.equal(changed.alimentosPersonalizados[0].arquivado, true);
+    assert.equal(data.alimentosPersonalizados[0].arquivado, undefined);
+    assert.equal(changed.alimentosPersonalizados[1].emoji, original.emoji);
+    assert.equal(changed.alimentosPersonalizados[1].imagem, original.imagem);
+    assert.deepEqual(changed.favoritos, [replacement.id]);
+    assert.deepEqual(changed.alimentos.cafeManha, [replacement.id]);
+    assert.deepEqual(changed.porcoesPlano.cafeManha, { [replacement.id]: 60 });
+    assert.deepEqual(changed.refeicoesSalvas[0].porcoes, {
+      [replacement.id]: 60,
+    });
+    assert.deepEqual(
+      features.recipeForCatalog(changed, { [original.id]: 60 }, "cafeManha"),
+      { [replacement.id]: 60 },
+    );
+    assert.equal(
+      food.calcularPorcoes({ [original.id]: 60 }, features.fullCatalog(changed))
+        .calorias,
+      180,
+    );
+    assert.equal(
+      food.calcularPorcoes(
+        { [replacement.id]: 60 },
+        features.fullCatalog(changed),
+      ).calorias,
+      120,
+    );
+    assert.deepEqual(editing.editCustomFood(data, original.id, original), {});
+    const drink = { ...replacement, unidade: "ml", porcaoReferencia: 200 };
+    const converted = editing.editCustomFood(data, original.id, drink);
+    assert.equal(converted.porcoesPlano.cafeManha[drink.id], 400);
+    assert.deepEqual(
+      features.recipeForCatalog(
+        { ...data, ...converted },
+        { [original.id]: 60 },
+        "cafeManha",
+      ),
+      { [drink.id]: 400 },
+    );
+    const removed = {
+      ...changed,
+      ...removal.removeCustomFood(changed, replacement.id),
+    };
+    assert.deepEqual(
+      features.recipeForCatalog(removed, { [original.id]: 60 }, "cafeManha"),
+      {},
+    );
+  });
+  test("Ovo usa unidades e açúcar tem colheres com cálculo proporcional", () => {
+    const egg = food.todosAlimentos.find((f) => f.id === "ovo");
+    const sugar = food.todosAlimentos.find((f) => f.id === "acucar_refinado");
+    assert.equal(easyMeals.householdMeasure(egg).choice, "Unidades");
+    assert.equal(
+      food.calcularPorcoes(
+        { [egg.id]: 2 * easyMeals.householdMeasure(egg).grams },
+        [egg],
+      ).calorias,
+      155,
+    );
+    assert.equal(easyMeals.householdMeasure(sugar).choice, "Colheres");
+    assert.equal(
+      food.calcularPorcoes(
+        { [sugar.id]: easyMeals.householdMeasure(sugar).grams },
+        [sugar],
+      ).calorias,
+      116,
+    );
+  });
   console.log(`${passed} verificações passaram.`);
 } finally {
   await server.close();

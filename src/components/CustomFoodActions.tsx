@@ -1,5 +1,8 @@
 import { removeCustomFood } from "../utils/removeCustomFood";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { editCustomFood } from "../utils/editCustomFood";
+import { CustomFoodForm } from "./CustomFoodForm";
+import type { CustomFoodFormHandle } from "./CustomFoodForm";
 import type { Alimento } from "../data/alimentos";
 import { useUserStore } from "../store/useUserStore";
 import { Sheet, Icon } from "./ui/AppUI";
@@ -8,11 +11,14 @@ import { FoodVisual } from "./FoodVisual";
 export function CustomFoodActions({
   food,
   onDeleted,
+  onEdited,
 }: {
   food: Alimento;
   onDeleted?: () => void;
+  onEdited?: (before: Alimento, after: Alimento) => void;
 }) {
-  const [mode, setMode] = useState<"visual" | "delete" | null>(null);
+  const [mode, setMode] = useState<"visual" | "delete" | "edit" | null>(null);
+  const form = useRef<CustomFoodFormHandle>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const update = (visual: Partial<Alimento>) => {
@@ -28,13 +34,20 @@ export function CustomFoodActions({
       <div className="app-custom-food-tools">
         <button
           className="app-text-button"
+          aria-label={`Editar ${food.nome}`}
+          onClick={() => setMode("edit")}
+        >
+          <Icon name="edit" size={16} /> Editar
+        </button>
+        <button
+          className="app-text-button"
           aria-label={`Alterar ícone ou foto de ${food.nome}`}
           onClick={() => {
             setError("");
             setMode("visual");
           }}
         >
-          <Icon name="edit" size={16} /> Ícone ou foto
+          <Icon name="file" size={16} /> Ícone ou foto
         </button>
         <button
           className="app-text-button"
@@ -44,6 +57,25 @@ export function CustomFoodActions({
           <Icon name="close" size={17} /> Apagar
         </button>
       </div>
+      {mode === "edit" && (
+        <Sheet
+          title="Editar alimento"
+          description={food.nome}
+          onClose={() => form.current?.requestClose()}
+        >
+          <CustomFoodForm
+            ref={form}
+            initialFood={food}
+            onCancel={() => setMode(null)}
+            onSave={(replacement) => {
+              const state = useUserStore.getState();
+              state.setDados(editCustomFood(state.dados, food.id, replacement));
+              onEdited?.(food, replacement);
+              setMode(null);
+            }}
+          />
+        </Sheet>
+      )}
       {mode === "visual" && (
         <Sheet
           title="Ícone ou foto"

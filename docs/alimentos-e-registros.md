@@ -40,3 +40,13 @@ Validar no aparelho, na próxima versão Android: toque com app fechado, refeiç
 - Apagar exige confirmação, retira o alimento dos favoritos, preferências, porções do plano, memória de repetição e combinações. Combinações vazias são retiradas.
 - A definição nutricional fica arquivada para permitir consultar e corrigir refeições anteriores sem alterar seus valores. Ela não aparece como uma opção nova do catálogo.
 - As alterações de imagem e ícone são salvas automaticamente. Escolher um ícone substitui a foto.
+
+### Unidades, medidas caseiras e edição
+
+- Novos personalizados permitem escolher g ou ml. O campo legado `kcal100g` guarda energia por 100 da unidade declarada em `unidade`; os macros continuam em gramas por 100 dessa unidade. Ausência de unidade significa g, preservando os dados antigos. Não existe conversão automática de densidade entre g e ml.
+- O registro, as combinações e a lista de compras exibem a unidade declarada. Bebidas geram ml/L nas compras.
+- Ovos, pão francês, banana e maçã abrem em unidades; arroz e aveia em colheres; feijão em conchas. É possível voltar a gramas sem alterar a quantidade representada. As medidas caseiras são aproximações exibidas ao usuário.
+- Açúcar refinado foi incluído com composição da [TACO 4, item 494](https://nepa.unicamp.br/wp-content/uploads/sites/27/2023/10/taco_4_edicao_ampliada_e_revisada.pdf). A colher de sopa cheia de 30 g usa a referência do [Manual de Contagem de Carboidratos da SBD, p. 46](https://www.sbp.com.br/fileadmin/user_upload/pdfs/Manual_Oficial_de_Contagem_decarboidratos.pdf); a estimativa fica visível e pode ser substituída por gramas.
+- Editar um personalizado cria uma nova definição e arquiva a anterior, preservando ícone/foto. Favoritos, plano e combinações passam à nova definição; históricos mantêm a unidade e os valores anteriores. Ao repetir uma refeição antiga, a seleção usa a versão atual.
+- Mantendo a unidade, as quantidades planejadas permanecem iguais. Ao trocar g/ml, mantém-se o número de porções de referência (ex.: duas porções de 30 g passam a duas porções de 200 ml). O formulário informa esse comportamento e pede conferir as quantidades.
+- Fechar um formulário alterado pede confirmação para não perder o preenchimento.

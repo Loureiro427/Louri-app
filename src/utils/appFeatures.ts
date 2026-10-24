@@ -1,6 +1,7 @@
 import { DICIONARIO_ALIMENTOS, todosAlimentos } from "../data/alimentos";
 import type { UserData } from "../store/useUserStore";
 import { localDayKey, previousDay } from "./dailyStreak";
+import { editedPortionFactor } from "./editCustomFood";
 export function mealCatalog(
   dados: UserData,
   key?: string,
@@ -42,12 +43,26 @@ export function recipeForCatalog(
     target = mealCatalog(dados, key, Object.keys(portions));
   const result: Record<string, number> = {};
   for (const [id, grams] of Object.entries(portions)) {
-    const original = source.find((f) => f.id === id);
+    let original = source.find((f) => f.id === id);
+    let amount = grams;
+    const visited = new Set<string>();
+    while (
+      original?.arquivado &&
+      original.substituidoPor &&
+      !visited.has(original.id)
+    ) {
+      visited.add(original.id);
+      const replacement = source.find((f) => f.id === original!.substituidoPor);
+      if (!replacement) break;
+      amount *= editedPortionFactor(original, replacement);
+      original = replacement;
+    }
+    if (original?.arquivado) continue;
     const food =
-      target.find((f) => f.id === id) ||
-      target.find((f) => f.nome === original?.nome);
-    if (food && Number.isFinite(grams) && grams > 0)
-      result[food.id] = (result[food.id] || 0) + grams;
+      target.find((f) => f.id === (original?.id || id)) ||
+      target.find((f) => !f.arquivado && f.nome === original?.nome);
+    if (food && Number.isFinite(amount) && amount > 0)
+      result[food.id] = Math.min(9999, (result[food.id] || 0) + amount);
   }
   return result;
 }

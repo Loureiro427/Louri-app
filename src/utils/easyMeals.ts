@@ -7,15 +7,23 @@ import { localDayKey } from "./dailyStreak";
 // Spoons refer to the prepared food; oats use a full tablespoon.
 export function householdMeasure(food: Alimento) {
   if (food.id.startsWith("custom_")) return undefined;
-  const measures: Record<string, { label: string; grams: number }> = {
-    "Pão Francês": { label: "pão de 50 g", grams: 50 },
-    Ovo: { label: "unidade de 50 g", grams: 50 },
-    "Ovo Cozido": { label: "unidade de 50 g", grams: 50 },
-    Banana: { label: "unidade de 80 g", grams: 80 },
-    Maçã: { label: "unidade de 130 g", grams: 130 },
-    Arroz: { label: "colher de sopa cheia", grams: 25 },
-    Feijão: { label: "concha média", grams: 120 },
-    Aveia: { label: "colher de sopa cheia", grams: 15 },
+  const measures: Record<
+    string,
+    { label: string; grams: number; choice?: string }
+  > = {
+    "Pão Francês": { label: "pão de 50 g", grams: 50, choice: "Unidades" },
+    Ovo: { label: "unidade de 50 g", grams: 50, choice: "Unidades" },
+    "Ovo Cozido": { label: "unidade de 50 g", grams: 50, choice: "Unidades" },
+    Banana: { label: "unidade de 80 g", grams: 80, choice: "Unidades" },
+    Maçã: { label: "unidade de 130 g", grams: 130, choice: "Unidades" },
+    Arroz: { label: "colher de sopa cheia", grams: 25, choice: "Colheres" },
+    Feijão: { label: "concha média", grams: 120, choice: "Conchas" },
+    Aveia: { label: "colher de sopa cheia", grams: 15, choice: "Colheres" },
+    "Açúcar refinado": {
+      label: "colher de sopa cheia",
+      grams: 30,
+      choice: "Colheres",
+    },
   };
   return measures[food.nome];
 }

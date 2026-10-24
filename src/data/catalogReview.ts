@@ -105,4 +105,11 @@ export function reviewCatalog(catalog: Record<string, Alimento[]>) {
       aliases: ["aipim", "macaxeira"],
     },
   );
+  catalog.cafeManha.push({
+    id: "acucar_refinado",
+    nome: "Açúcar refinado",
+    emoji: "🥄",
+    ...reference(494, "Refinado, branco", 387, 0.3, 99.5, 0),
+    aliases: ["açúcar", "açúcar branco"],
+  });
 }

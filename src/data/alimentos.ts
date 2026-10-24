@@ -5,6 +5,7 @@ export interface Alimento {
   emoji: string;
   imagem?: string;
   arquivado?: boolean;
+  substituidoPor?: string;
   kcal100g: number;
   prot: number;
   carbo: number;
@@ -13,6 +14,8 @@ export interface Alimento {
   fonte?: string;
   aliases?: string[];
   porcaoReferencia?: number;
+  /** Nutrients are per 100 of this unit. Missing means grams (legacy catalog). */
+  unidade?: "g" | "ml";
 }
 export const DICIONARIO_ALIMENTOS: Record<string, Alimento[]> = {
   cafeManha: [

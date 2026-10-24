@@ -1,5 +1,6 @@
 import { CustomFoodActions } from "./CustomFoodActions";
 import { FoodVisual } from "./FoodVisual";
+import { editedPortionFactor } from "../utils/editCustomFood";
 import { DiscardChanges } from "./DiscardChanges";
 import {
   foodMatches,
@@ -163,7 +164,9 @@ export function MealComposer({
     setPorcoes((previous) => {
       const next = { ...previous };
       if (next[item.id] !== undefined) delete next[item.id];
-      else next[item.id] = householdMeasure(item)?.grams || 100;
+      else
+        next[item.id] =
+          householdMeasure(item)?.grams || item.porcaoReferencia || 100;
       return next;
     });
   const quantity = (id: string, value: number) =>
@@ -171,6 +174,19 @@ export function MealComposer({
       ...previous,
       [id]: Math.min(9999, Math.max(0, Number.isFinite(value) ? value : 0)),
     }));
+  const handleEdited = (before: Alimento, after: Alimento) => {
+    setPorcoes((previous) => {
+      if (previous[before.id] === undefined) return previous;
+      const next = { ...previous };
+      next[after.id] = Math.min(
+        9999,
+        next[before.id] * editedPortionFactor(before, after),
+      );
+      delete next[before.id];
+      return next;
+    });
+    setNotice("Alimento atualizado. Confira a quantidade antes de registrar.");
+  };
   return (
     <>
       <section
@@ -355,7 +371,7 @@ export function MealComposer({
                       <span>
                         <strong>{f.nome}</strong>
                         <small>
-                          {numberText(amount)} g ·{" "}
+                          {numberText(amount)} {f.unidade || "g"} ·{" "}
                           {numberText((f.kcal100g * amount) / 100)} kcal
                         </small>
                       </span>
@@ -405,7 +421,7 @@ export function MealComposer({
                             ? `${Math.round(
                                 (item.kcal100g * porcoes[item.id]) / 100,
                               )} kcal nesta porção`
-                            : `${numberText(item.kcal100g, 1)} kcal por 100 g`}
+                            : `${numberText(item.kcal100g, 1)} kcal por 100 ${item.unidade || "g"}`}
                         </small>
                       </span>
                       <span className="app-food-select-state">
@@ -434,6 +450,7 @@ export function MealComposer({
                   {item.id.startsWith("custom_") && !item.arquivado && (
                     <CustomFoodActions
                       food={item}
+                      onEdited={handleEdited}
                       onDeleted={() =>
                         setPorcoes((previous) => {
                           const next = { ...previous };
@@ -507,7 +524,7 @@ export function MealComposer({
               : "Não achei meu alimento · adicionar"}
           </button>
           <p className="app-helper">
-            Porções e valores aproximados. Você pode ajustar os gramas.
+            Porções e valores aproximados. Você pode ajustar as quantidades.
           </p>
         </div>
         <footer className="app-composer-footer">
@@ -557,6 +574,7 @@ export function MealComposer({
       )}
       {library && (
         <FoodLibrary
+          onEdited={handleEdited}
           porcoes={porcoes}
           initialName={newFoodName}
           onSelect={(id, grams) => {

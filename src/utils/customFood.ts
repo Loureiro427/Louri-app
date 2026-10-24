@@ -4,12 +4,13 @@ export function createCustomFood(
   base: string,
   values: string[],
   id: string,
+  unit: "g" | "ml" = "g",
 ): Alimento | string {
   const grams = Number(base.replace(",", "."));
   const numbers = values.map((v) => Number(v.replace(",", ".")));
   if (!name.trim()) return "Dê um nome ao alimento, como aparece na embalagem.";
   if (!Number.isFinite(grams) || grams <= 0 || grams > 9999)
-    return "Informe o peso da porção do rótulo, em gramas.";
+    return `Informe a quantidade da porção do rótulo, em ${unit}.`;
   if (
     values.length !== 4 ||
     values.some((v) => !v.trim()) ||
@@ -18,7 +19,7 @@ export function createCustomFood(
     return "Preencha os quatro valores do rótulo. Se aparecer zero, digite 0.";
   if (
     (numbers[0] / grams) * 100 > 1000 ||
-    numbers.slice(1).reduce((a, b) => a + b, 0) > grams + 1
+    (unit === "g" && numbers.slice(1).reduce((a, b) => a + b, 0) > grams + 1)
   )
     return "Os valores parecem maiores que a porção. Confira se todos pertencem à mesma coluna do rótulo.";
   return {
@@ -30,6 +31,7 @@ export function createCustomFood(
     carbo: (numbers[2] / grams) * 100,
     gord: (numbers[3] / grams) * 100,
     porcaoReferencia: grams,
+    unidade: unit,
     preparo: "Personalizado · valores do seu rótulo",
     fonte: "Informado por você",
   };

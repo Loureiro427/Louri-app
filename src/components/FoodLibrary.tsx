@@ -1,23 +1,27 @@
 import { CustomFoodActions } from "./CustomFoodActions";
 import { FoodVisual } from "./FoodVisual";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUserStore } from "../store/useUserStore";
 import { Icon, Sheet } from "./ui/AppUI";
 import { fullCatalog } from "../utils/appFeatures";
-import { createCustomFood } from "../utils/customFood";
-import { foodMatches, normalizeFoodText } from "../utils/foodSearch";
+import { CustomFoodForm } from "./CustomFoodForm";
+import type { CustomFoodFormHandle } from "./CustomFoodForm";
+import type { Alimento } from "../data/alimentos";
+import { foodMatches } from "../utils/foodSearch";
 import { numberText } from "./ui/format";
 import { DiscardChanges } from "./DiscardChanges";
 export function FoodLibrary({
   porcoes = {},
   onApply,
   onSelect,
+  onEdited,
   onClose,
   initialName = "",
 }: {
   porcoes?: Record<string, number>;
   onApply?: (p: Record<string, number>) => void;
   onSelect?: (id: string, grams: number) => void;
+  onEdited?: (before: Alimento, after: Alimento) => void;
   onClose: () => void;
   initialName?: string;
 }) {
@@ -25,16 +29,12 @@ export function FoodLibrary({
   const [tab, setTab] = useState<"recipes" | "food">("food");
   const [adding, setAdding] = useState(Boolean(initialName));
   const [name, setName] = useState("");
-  const [foodName, setFoodName] = useState(initialName);
-  const [base, setBase] = useState("100");
-  const [values, setValues] = useState(["", "", "", ""]);
+  const form = useRef<CustomFoodFormHandle>(null);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [discard, setDiscard] = useState(false);
-  const dirty = Boolean(
-    foodName.trim() || values.some((v) => v.trim()) || name.trim(),
-  );
+  const dirty = Boolean(name.trim());
   useEffect(() => {
     if (!dirty) return;
     const prevent = (event: BeforeUnloadEvent) => {
@@ -44,7 +44,12 @@ export function FoodLibrary({
     window.addEventListener("beforeunload", prevent);
     return () => window.removeEventListener("beforeunload", prevent);
   }, [dirty]);
-  const close = () => (dirty ? setDiscard(true) : onClose());
+  const close = () =>
+    adding && tab === "food"
+      ? form.current?.requestClose(() => (dirty ? setDiscard(true) : onClose()))
+      : dirty
+        ? setDiscard(true)
+        : onClose();
   const foods = (dados.alimentosPersonalizados || []).filter(
     (f) => !f.arquivado,
   );
@@ -68,6 +73,7 @@ export function FoodLibrary({
           </button>
           <button
             aria-pressed={tab === "recipes"}
+            disabled={adding}
             className={tab === "recipes" ? "is-active" : ""}
             onClick={() => setTab("recipes")}
           >
@@ -89,127 +95,28 @@ export function FoodLibrary({
               </button>
             )}
             {adding && (
-              <form
-                className="app-feature-form app-personal-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const result = createCustomFood(
-                    foodName,
-                    base,
-                    values,
-                    `custom_${crypto.randomUUID()}`,
-                  );
-                  if (typeof result === "string") {
-                    setError(result);
-                    return;
-                  }
-                  if (
-                    foods.some(
-                      (f) =>
-                        normalizeFoodText(f.nome) ===
-                        normalizeFoodText(result.nome),
-                    )
-                  ) {
-                    setError(
-                      "Você já tem um alimento com esse nome. Use o item salvo ou acrescente a marca ao nome.",
-                    );
-                    return;
-                  }
-                  useUserStore
-                    .getState()
-                    .setDados({
-                      alimentosPersonalizados: [
-                        ...(dados.alimentosPersonalizados || []),
-                        result,
-                      ],
-                    });
-                  setFoodName("");
-                  setBase("100");
-                  setValues(["", "", "", ""]);
-                  setError("");
+              <CustomFoodForm
+                ref={form}
+                initialName={initialName}
+                onCancel={() => setAdding(false)}
+                onSave={(result) => {
+                  const state = useUserStore.getState();
+                  state.setDados({
+                    alimentosPersonalizados: [
+                      ...(state.dados.alimentosPersonalizados || []),
+                      result,
+                    ],
+                  });
                   setAdding(false);
                   if (onSelect) {
                     onSelect(result.id, result.porcaoReferencia || 100);
                     onClose();
                   } else
                     setMessage(
-                      "Alimento salvo. Use ‘Ícone ou foto’ para personalizá-lo. Ele já está disponível na busca de qualquer refeição.",
+                      "Alimento salvo. Use ‘Ícone ou foto’ para personalizá-lo.",
                     );
                 }}
-              >
-                <h3 className="app-sheet-section-title">
-                  O que você vai comer?
-                </h3>
-                <p className="app-helper">
-                  Tenha a tabela nutricional da embalagem por perto. Copie tudo
-                  da mesma coluna: o peso da porção e os valores abaixo.
-                </p>
-                <label>
-                  Nome do alimento
-                  <input
-                    required
-                    maxLength={70}
-                    value={foodName}
-                    placeholder="Ex.: meu iogurte de morango"
-                    onChange={(e) => setFoodName(e.target.value)}
-                  />
-                </label>
-                <label>
-                  Essa porção pesa quantos gramas?
-                  <input
-                    required
-                    inputMode="decimal"
-                    value={base}
-                    onChange={(e) => setBase(e.target.value)}
-                  />
-                </label>
-                <p className="app-helper">
-                  Exemplo: se a coluna diz “porção de 30 g”, digite 30 e copie
-                  os valores daquela coluna. Use gramas; ml não são convertidos
-                  automaticamente.
-                </p>
-                {[
-                  "Calorias (kcal)",
-                  "Proteínas (g)",
-                  "Carboidratos (g)",
-                  "Gorduras totais (g)",
-                ].map((label, i) => (
-                  <label key={label}>
-                    {label}
-                    <input
-                      required
-                      inputMode="decimal"
-                      value={values[i]}
-                      placeholder="Digite 0 se o rótulo indicar zero"
-                      onChange={(e) =>
-                        setValues(
-                          values.map((v, j) => (i === j ? e.target.value : v)),
-                        )
-                      }
-                    />
-                  </label>
-                ))}
-                {error && (
-                  <p className="app-field-error" role="alert">
-                    {error}
-                  </p>
-                )}
-                <button
-                  className="app-button app-button--primary"
-                  type="submit"
-                >
-                  {onSelect
-                    ? "Salvar e usar nesta refeição"
-                    : "Salvar alimento"}
-                </button>
-                <button
-                  className="app-text-button"
-                  type="button"
-                  onClick={() => setAdding(false)}
-                >
-                  Voltar à minha lista
-                </button>
-              </form>
+              />
             )}
             {!adding && (
               <>
@@ -235,10 +142,11 @@ export function FoodLibrary({
                         <div>
                           <strong>{f.nome}</strong>
                           <small>
-                            {numberText(f.kcal100g, 1)} kcal por 100 g
+                            {numberText(f.kcal100g, 1)} kcal por 100{" "}
+                            {f.unidade || "g"}
                           </small>
                         </div>
-                        <CustomFoodActions food={f} />
+                        <CustomFoodActions food={f} onEdited={onEdited} />
                         {onSelect && (
                           <button
                             className="app-text-button"
@@ -343,7 +251,7 @@ export function FoodLibrary({
                     {Object.entries(recipe.porcoes)
                       .map(
                         ([id, g]) =>
-                          `${fullCatalog(dados).find((f) => f.id === id)?.nome || id} (${numberText(g, 1)} g)`,
+                          `${fullCatalog(dados).find((f) => f.id === id)?.nome || id} (${numberText(g, 1)} ${fullCatalog(dados).find((f) => f.id === id)?.unidade || "g"})`,
                       )
                       .join(" · ")}
                   </small>

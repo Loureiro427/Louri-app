@@ -13,9 +13,10 @@ export function PortionInput({
   onChange: (grams: number) => void;
 }) {
   const measure = householdMeasure(food);
-  const [household, setHousehold] = useState(false);
+  const [household, setHousehold] = useState(Boolean(measure));
+  const unit = food.unidade || "g";
   const factor = household && measure ? measure.grams : 1;
-  const step = household ? 0.5 : 25;
+  const step = household ? (measure?.choice === "Unidades" ? 1 : 0.5) : 25;
   const amount = grams / factor;
   return (
     <div className="app-easy-portion">
@@ -27,7 +28,7 @@ export function PortionInput({
             className={!household ? "is-active" : ""}
             onClick={() => setHousehold(false)}
           >
-            Gramas
+            {unit === "ml" ? "Mililitros" : "Gramas"}
           </button>
           <button
             type="button"
@@ -35,14 +36,16 @@ export function PortionInput({
             className={household ? "is-active" : ""}
             onClick={() => setHousehold(true)}
           >
-            Medida caseira
+            {measure.choice || "Medida caseira"}
           </button>
         </div>
       )}
       <label htmlFor={`quantity-${food.id}`}>
         {household && measure
           ? `Quantidade · ${measure.label}`
-          : "Quantidade em gramas"}
+          : unit === "ml"
+            ? "Quantidade em mililitros"
+            : "Quantidade em gramas"}
       </label>
       <div className="app-quantity-control">
         <button
@@ -55,7 +58,7 @@ export function PortionInput({
         <div>
           <input
             id={`quantity-${food.id}`}
-            aria-label={`${household ? "Medidas caseiras" : "Gramas"} de ${food.nome}`}
+            aria-label={`${household ? measure?.choice || "Medidas caseiras" : unit === "ml" ? "Mililitros" : "Gramas"} de ${food.nome}`}
             type="number"
             inputMode="decimal"
             min="0"
@@ -64,7 +67,9 @@ export function PortionInput({
             value={grams ? Number(amount.toFixed(3)) : ""}
             onChange={(e) => onChange(Number(e.target.value) * factor)}
           />
-          <span>{household ? "×" : "g"}</span>
+          <span>
+            {household ? (measure?.choice === "Unidades" ? "un" : "×") : unit}
+          </span>
         </div>
         <button
           type="button"

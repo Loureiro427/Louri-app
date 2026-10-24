@@ -25,6 +25,7 @@ export function buildShoppingList(
   const matched = new Set<string>();
   const period = Math.max(1, Math.min(30, Math.round(days) || 7));
   const generated = shoppingItems(dados).map((food) => {
+    const volume = food.unidade === "ml";
     const id = `plano:${food.id}`;
     const grams = Math.round(food.grams * period);
     const existing =
@@ -32,6 +33,9 @@ export function buildShoppingList(
       previous.find(
         (item) =>
           normalizeFoodText(item.nome) === normalizeFoodText(food.nome) &&
+          (volume
+            ? ["ml", "L"].includes(item.unidade)
+            : !["ml", "L"].includes(item.unidade)) &&
           (!item.preparo || item.preparo === food.preparo),
       );
     if (existing) matched.add(existing.id);
@@ -49,8 +53,12 @@ export function buildShoppingList(
       unidade: existing?.quantidadeEditada
         ? existing.unidade
         : grams >= 1000
-          ? "kg"
-          : "g",
+          ? volume
+            ? "L"
+            : "kg"
+          : volume
+            ? "ml"
+            : "g",
       comprado:
         existing?.comprado ?? (dados.comprasMarcadas || []).includes(food.id),
       emCasa: existing?.emCasa ?? false,
