@@ -60,7 +60,9 @@ export function MealComposer({
   const [swap, setSwap] = useState<Alimento | null>(null);
   const [swapSearch, setSwapSearch] = useState("");
   const [notice, setNotice] = useState("");
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [foodFilter, setFoodFilter] = useState<"all" | "favorites" | "custom">(
+    "all",
+  );
   const [porcoes, setPorcoes] =
     useState<Record<string, number>>(initialPorcoes);
   const [initial] = useState(() => ({ ...initialPorcoes }));
@@ -134,7 +136,11 @@ export function MealComposer({
   const filtered = alimentos
     .filter(
       (item) =>
-        foodMatches(item, busca) && (!favoritesOnly || isFavorite(item)),
+        foodMatches(item, busca) &&
+        (foodFilter === "all" ||
+          (foodFilter === "favorites"
+            ? isFavorite(item)
+            : item.id.startsWith("custom_"))),
     )
     .sort(
       (a, b) =>
@@ -237,24 +243,35 @@ export function MealComposer({
               setLibrary(true);
             }}
           >
-            <Icon name="star" size={14} />
-            Meus alimentos
+            <Icon name="plus" size={14} />
+            Adicionar alimento ou usar combinação
           </button>
           <div className="app-composer-toolbar">
-            <div className="app-segmented">
+            <div
+              className="app-segmented"
+              role="group"
+              aria-label="Filtrar alimentos"
+            >
               <button
-                aria-pressed={!favoritesOnly}
-                className={!favoritesOnly ? "is-active" : ""}
-                onClick={() => setFavoritesOnly(false)}
+                aria-pressed={foodFilter === "all"}
+                className={foodFilter === "all" ? "is-active" : ""}
+                onClick={() => setFoodFilter("all")}
               >
                 Todos
               </button>
               <button
-                aria-pressed={favoritesOnly}
-                className={favoritesOnly ? "is-active" : ""}
-                onClick={() => setFavoritesOnly(true)}
+                aria-pressed={foodFilter === "favorites"}
+                className={foodFilter === "favorites" ? "is-active" : ""}
+                onClick={() => setFoodFilter("favorites")}
               >
                 <Icon name="star" size={12} /> Favoritos
+              </button>
+              <button
+                aria-pressed={foodFilter === "custom"}
+                className={foodFilter === "custom" ? "is-active" : ""}
+                onClick={() => setFoodFilter("custom")}
+              >
+                Meus alimentos
               </button>
             </div>
             {Object.keys(repeat).length > 0 && (
@@ -263,7 +280,7 @@ export function MealComposer({
                 onClick={() => {
                   setPorcoes(repeat);
                   setBusca("");
-                  setFavoritesOnly(false);
+                  setFoodFilter("all");
                   setNotice(
                     "Última combinação preenchida. Confira os alimentos e as quantidades; só será registrada quando você salvar.",
                   );
@@ -436,16 +453,27 @@ export function MealComposer({
           </div>
           {!filtered.length && (
             <div className="app-empty-state">
-              <Icon name={favoritesOnly ? "star" : "search"} size={26} />
+              <Icon
+                name={foodFilter === "favorites" ? "star" : "search"}
+                size={26}
+              />
               <h3>
-                {favoritesOnly
-                  ? "Seus favoritos ficam aqui"
-                  : "Nenhum alimento encontrado"}
+                {busca
+                  ? "Nenhum alimento encontrado"
+                  : foodFilter === "custom"
+                    ? "Seus alimentos ficam aqui"
+                    : foodFilter === "favorites"
+                      ? "Seus favoritos ficam aqui"
+                      : "Nenhum alimento encontrado"}
               </h3>
               <p>
-                {favoritesOnly
-                  ? "Toque na estrela ao lado de um alimento para salvar."
-                  : "Tente um nome popular ou adicione seu próprio alimento."}
+                {busca
+                  ? "Tente outro nome ou adicione seu próprio alimento."
+                  : foodFilter === "custom"
+                    ? "Adicione um alimento pelo rótulo para encontrá-lo facilmente aqui."
+                    : foodFilter === "favorites"
+                      ? "Toque na estrela ao lado de um alimento para salvar."
+                      : "Tente um nome popular ou adicione seu próprio alimento."}
               </p>
             </div>
           )}
@@ -457,7 +485,9 @@ export function MealComposer({
             }}
           >
             <Icon name="plus" size={16} />
-            Não achei meu alimento · adicionar
+            {foodFilter === "custom"
+              ? "Adicionar alimento"
+              : "Não achei meu alimento · adicionar"}
           </button>
           <p className="app-helper">
             Porções e valores aproximados. Você pode ajustar os gramas.
@@ -515,7 +545,7 @@ export function MealComposer({
           onSelect={(id, grams) => {
             setPorcoes((previous) => ({ ...previous, [id]: grams }));
             setBusca("");
-            setFavoritesOnly(false);
+            setFoodFilter("custom");
             setNotice(
               "Alimento selecionado. Confira a quantidade antes de registrar.",
             );
