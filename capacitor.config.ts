@@ -1,4 +1,5 @@
-import { CapacitorConfig } from '@capacitor/cli';
+import { CapacitorConfig } from "@capacitor/cli";
+import { KeyboardResize, KeyboardStyle } from "@capacitor/keyboard";
 
 const config: CapacitorConfig = {
   appId: "com.loureiro.louri",
@@ -6,10 +7,11 @@ const config: CapacitorConfig = {
   webDir: "dist",
   plugins: {
     Keyboard: {
-      resize: 'None', // Desliga o sistema automático falho do Android
-      style: 'DARK',
-    }
-  }
+      resize: KeyboardResize.Native,
+      resizeOnFullScreen: true,
+      style: KeyboardStyle.Dark,
+    },
+  },
 };
 
 export default config;

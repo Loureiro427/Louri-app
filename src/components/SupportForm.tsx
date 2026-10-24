@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { Sheet } from "./ui/AppUI";
 import { sendSupport, supportConfigured } from "../services/supportService";
+import { supportDraft } from "../utils/supportDraft";
+import { useOnline } from "../hooks/useOnline";
 export function SupportForm({
   kind,
   onClose,
@@ -8,7 +10,8 @@ export function SupportForm({
   kind: "support" | "idea";
   onClose: () => void;
 }) {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(() => supportDraft.get(kind));
+  const online = useOnline();
   const [contact, setContact] = useState("");
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -45,12 +48,13 @@ export function SupportForm({
             setError("");
             try {
               await sendSupport({ kind, message, contact }, consent);
+              supportDraft.clear(kind);
               setSent(true);
             } catch (error) {
               setError(
                 error instanceof Error
                   ? error.message
-                  : "Não foi possível confirmar o envio. Tente novamente."
+                  : "Não foi possível confirmar o envio. Tente novamente.",
               );
             } finally {
               submitting.current = false;
@@ -80,7 +84,10 @@ export function SupportForm({
               required
               maxLength={1000}
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                supportDraft.set(kind, e.target.value);
+              }}
               disabled={busy}
               placeholder={
                 kind === "support"
@@ -114,6 +121,12 @@ export function SupportForm({
           {error && (
             <p role="alert" className="app-field-error">
               {error}
+            </p>
+          )}
+          {!online && (
+            <p className="app-helper" role="status">
+              Você está sem internet. Seu texto fica disponível nesta sessão
+              para tentar novamente quando a conexão voltar.
             </p>
           )}
           <button

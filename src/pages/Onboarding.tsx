@@ -1,4 +1,5 @@
 import { WEIGHT_MIN, WEIGHT_MAX } from "../utils/weightValidation";
+import { useBackLayer } from "../hooks/useBackLayer";
 import { fullCatalog } from "../utils/appFeatures";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -137,7 +138,7 @@ export function Onboarding() {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const savedRef = useRef(false);
   const selecionadas = Object.keys(CONFIG_REFEICOES).filter((key) =>
-    draft.refeicoesAtivas.includes(key)
+    draft.refeicoesAtivas.includes(key),
   );
   const reviewStep = 9 + selecionadas.length;
   const isReview = step === reviewStep;
@@ -146,8 +147,8 @@ export function Onboarding() {
   const meal = mealKey ? CONFIG_REFEICOES[mealKey] : undefined;
   const mealFoods = mealKey ? draft.alimentos[mealKey] || [] : [];
   const horario = mealKey
-    ? draft.horariosRefeicoes[mealKey] ??
-      getHorarioSugerido(mealKey, draft.horaAcorda)
+    ? (draft.horariosRefeicoes[mealKey] ??
+      getHorarioSugerido(mealKey, draft.horaAcorda))
     : "";
   const schedule = getCronograma(draft);
   const group = step <= 6 ? 0 : step <= 8 ? 1 : 2;
@@ -156,15 +157,15 @@ export function Onboarding() {
     step === 0
       ? "Sua rotina,\nmais leve."
       : isReview
-      ? "Tudo pronto para começar."
-      : mealKey
-      ? perguntas[mealKey]
-      : meta?.title || "";
+        ? "Tudo pronto para começar."
+        : mealKey
+          ? perguntas[mealKey]
+          : meta?.title || "";
   const description = isReview
     ? "Confira suas escolhas. Você pode voltar e ajustar qualquer detalhe."
     : mealKey
-    ? "Marque o que você come ou comeria nesta refeição. Vale escolher mais de um."
-    : meta?.description;
+      ? "Marque o que você come ou comeria nesta refeição. Vale escolher mais de um."
+      : meta?.description;
   useEffect(() => {
     contentRef.current?.scrollTo({ top: 0 });
     headingRef.current?.focus({ preventScroll: true });
@@ -180,6 +181,7 @@ export function Onboarding() {
     else if (step === 1 && dados.nome) navigate("/perfil");
     else setStep(step - 1);
   }
+  useBackLayer(true, back);
   function toggleMeal(key: string) {
     if (
       draft.refeicoesAtivas.includes(key) &&
@@ -192,7 +194,7 @@ export function Onboarding() {
       "refeicoesAtivas",
       draft.refeicoesAtivas.includes(key)
         ? draft.refeicoesAtivas.filter((item) => item !== key)
-        : [...draft.refeicoesAtivas, key]
+        : [...draft.refeicoesAtivas, key],
     );
   }
   function toggleFood(id: string) {
@@ -275,35 +277,37 @@ export function Onboarding() {
     step === 0
       ? "Começar meu plano"
       : isReview
-      ? dados.nome
-        ? "Salvar meu plano"
-        : "Criar meu plano"
-      : mealKey
-      ? mealIndex === selecionadas.length - 1
-        ? "Revisar meu plano"
-        : "Próxima refeição"
-      : "Continuar";
+        ? dados.nome
+          ? "Salvar meu plano"
+          : "Criar meu plano"
+        : mealKey
+          ? mealIndex === selecionadas.length - 1
+            ? "Revisar meu plano"
+            : "Próxima refeição"
+          : "Continuar";
   const footerText =
     step === 0
       ? "No seu ritmo. Do seu jeito."
       : isReview
-      ? "Seu próximo passo começa aqui."
-      : mealKey
-      ? `${mealFoods.length} ${
-          mealFoods.length === 1
-            ? "alimento selecionado"
-            : "alimentos selecionados"
-        }`
-      : step === 8
-      ? `${selecionadas.length} ${
-          selecionadas.length === 1
-            ? "refeição no seu dia"
-            : "refeições no seu dia"
-        }`
-      : "Um passo de cada vez.";
+        ? "Seu próximo passo começa aqui."
+        : mealKey
+          ? `${mealFoods.length} ${
+              mealFoods.length === 1
+                ? "alimento selecionado"
+                : "alimentos selecionados"
+            }`
+          : step === 8
+            ? `${selecionadas.length} ${
+                selecionadas.length === 1
+                  ? "refeição no seu dia"
+                  : "refeições no seu dia"
+              }`
+            : "Um passo de cada vez.";
 
   return (
-    <div className={`ob-screen ${dados.temaEscuro ?? true ? "" : "ob-light"}`}>
+    <div
+      className={`ob-screen ${(dados.temaEscuro ?? true) ? "" : "ob-light"}`}
+    >
       <form
         className="ob-shell"
         onSubmit={(e) => {
@@ -356,12 +360,13 @@ export function Onboarding() {
                           i < group
                             ? 100
                             : i > group
-                            ? 0
-                            : group === 0
-                            ? (step / 6) * 100
-                            : group === 1
-                            ? ((step - 6) / 2) * 100
-                            : ((step - 8) / (selecionadas.length + 1)) * 100
+                              ? 0
+                              : group === 0
+                                ? (step / 6) * 100
+                                : group === 1
+                                  ? ((step - 6) / 2) * 100
+                                  : ((step - 8) / (selecionadas.length + 1)) *
+                                    100
                         }%`,
                       }}
                     />
@@ -441,8 +446,8 @@ export function Onboarding() {
                     {isReview
                       ? "SEU PLANO, DO SEU JEITO"
                       : mealKey
-                      ? `REFEIÇÃO ${mealIndex + 1} DE ${selecionadas.length}`
-                      : meta?.eyebrow}
+                        ? `REFEIÇÃO ${mealIndex + 1} DE ${selecionadas.length}`
+                        : meta?.eyebrow}
                   </span>
                   <h1 ref={headingRef} tabIndex={-1}>
                     {title}
@@ -666,9 +671,9 @@ export function Onboarding() {
                         .filter(
                           (food) =>
                             (DICIONARIO_ALIMENTOS[mealKey] || []).some(
-                              (f) => f.id === food.id
+                              (f) => f.id === food.id,
                             ) ||
-                            (draft.alimentos[mealKey] || []).includes(food.id)
+                            (draft.alimentos[mealKey] || []).includes(food.id),
                         )
                         .map((food) => (
                           <button
@@ -758,7 +763,7 @@ export function Onboarding() {
                                 .map(
                                   (id) =>
                                     fullCatalog(dados).find((a) => a.id === id)
-                                      ?.nome
+                                      ?.nome,
                                 )
                                 .filter(Boolean)
                                 .join(" · ")}

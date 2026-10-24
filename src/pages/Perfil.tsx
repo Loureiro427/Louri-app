@@ -1,4 +1,5 @@
 import { SupportForm } from "../components/SupportForm";
+import { useBackLayer } from "../hooks/useBackLayer";
 import { ProfileOverview } from "../components/ProfileOverview";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -17,6 +18,8 @@ export function Perfil() {
   const [modalIdeia, setModalIdeia] = useState(false);
   const [modalFeedback, setModalFeedback] = useState(false);
   const [modalTermos, setModalTermos] = useState(false);
+  useBackLayer(mostrarModalSair, () => setMostrarModalSair(false));
+  useBackLayer(modalTermos, () => setModalTermos(false));
 
   const [estrelas, setEstrelas] = useState(0);
   const [enviouFeedback, setEnviouFeedback] = useState(false);
@@ -25,6 +28,7 @@ export function Perfil() {
     setEstrelas(0);
     setEnviouFeedback(false);
   };
+  useBackLayer(modalFeedback, fecharFeedback);
 
   const confirmarSaida = () => {
     setDados({ nome: "" });
@@ -55,6 +59,9 @@ export function Perfil() {
       {modalTermos &&
         createPortal(
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Termos e privacidade"
             className={`app-themed app-legacy-dialog ${
               temaEscuro ? "" : "app-light"
             } fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4 py-10 animate-in fade-in overscroll-none`}
@@ -78,6 +85,7 @@ export function Perfil() {
                 </h3>
                 <button
                   onClick={() => setModalTermos(false)}
+                  aria-label="Fechar termos"
                   className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
                     temaEscuro
                       ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
@@ -124,8 +132,9 @@ export function Perfil() {
                   </p>
                   <p>
                     Limpar os dados do aplicativo ou remover o app pode apagar
-                    seus registros. Os rascunhos de suporte são descartados ao
-                    fechar.
+                    seus registros. O texto de suporte fica disponível enquanto
+                    esta sessão do app estiver aberta; contato e confirmação não
+                    são guardados ao fechar o formulário.
                   </p>
                 </div>
                 <div>
@@ -153,6 +162,7 @@ export function Perfil() {
               >
                 <button
                   onClick={() => setModalTermos(false)}
+                  aria-label="Fechar termos"
                   className="w-full bg-green-500 hover:bg-green-400 text-zinc-950 font-black uppercase tracking-widest py-4 rounded-2xl text-sm transition-all active:scale-95 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
                 >
                   Fechar
@@ -167,6 +177,9 @@ export function Perfil() {
       {modalFeedback &&
         createPortal(
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Avaliação do Louri"
             className={`app-themed app-legacy-dialog ${
               temaEscuro ? "" : "app-light"
             } fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none`}
@@ -209,8 +222,8 @@ export function Perfil() {
                           estrela <= estrelas
                             ? "text-yellow-400"
                             : temaEscuro
-                            ? "text-zinc-700"
-                            : "text-zinc-300"
+                              ? "text-zinc-700"
+                              : "text-zinc-300"
                         }`}
                       >
                         ★
@@ -253,6 +266,9 @@ export function Perfil() {
       {mostrarModalSair &&
         createPortal(
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Sair do perfil"
             className={`app-themed app-legacy-dialog ${
               temaEscuro ? "" : "app-light"
             } fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none`}

@@ -20,7 +20,7 @@ export function supportPayload(input: SupportMessage) {
       ))
   )
     throw new Error(
-      "Confira seu email ou telefone, ou deixe o contato em branco."
+      "Confira seu email ou telefone, ou deixe o contato em branco.",
     );
   return {
     username: "Louri",
@@ -42,21 +42,25 @@ export function supportPayload(input: SupportMessage) {
   };
 }
 export function createSupportClient(
-  endpoints: Record<SupportMessage["kind"], string | undefined>
+  endpoints: Record<SupportMessage["kind"], string | undefined>,
 ) {
   const pending = new Set<SupportMessage["kind"]>();
   const configured = (kind: SupportMessage["kind"]) => Boolean(endpoints[kind]);
   async function send(input: SupportMessage, consent: boolean) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false)
+      throw new Error(
+        "Você está sem internet. Sua mensagem continua aqui para tentar novamente quando a conexão voltar.",
+      );
     if (pending.has(input.kind))
       throw new Error(
-        "Uma mensagem ainda está sendo enviada. Aguarde a confirmação."
+        "Uma mensagem ainda está sendo enviada. Aguarde a confirmação.",
       );
     if (!consent) throw new Error("Confirme os dados que deseja enviar.");
     const payload = supportPayload(input);
     const url = endpoints[input.kind];
     if (!url || !/^https:\/\/discord\.com\/api\/webhooks\//.test(url))
       throw new Error(
-        "O canal está indisponível nesta instalação. Tente novamente mais tarde."
+        "O canal está indisponível nesta instalação. Tente novamente mais tarde.",
       );
     const key = `louri_support_${input.kind}`;
     let last = 0;
@@ -69,8 +73,8 @@ export function createSupportClient(
     if (wait > 0)
       throw new Error(
         `Aguarde ${Math.ceil(
-          wait / 60000
-        )} minutos antes de enviar outra mensagem.`
+          wait / 60000,
+        )} minutos antes de enviar outra mensagem.`,
       );
     const controller = new AbortController();
     const endpoint = new URL(url);
@@ -86,11 +90,11 @@ export function createSupportClient(
       });
       if (response.status === 429)
         throw new Error(
-          "Muitas mensagens no momento. Aguarde um pouco e tente novamente."
+          "Muitas mensagens no momento. Aguarde um pouco e tente novamente.",
         );
       if (!response.ok)
         throw new Error(
-          "Não foi possível enviar. Seu texto continua aqui para tentar novamente."
+          "Não foi possível enviar. Seu texto continua aqui para tentar novamente.",
         );
       try {
         localStorage.setItem(key, String(Date.now()));
@@ -101,12 +105,12 @@ export function createSupportClient(
       if (error instanceof DOMException && error.name === "AbortError")
         throw new Error(
           "O envio demorou mais que o esperado e não foi confirmado. Confira sua conexão antes de tentar novamente.",
-          { cause: error }
+          { cause: error },
         );
       if (error instanceof TypeError)
         throw new Error(
           "Não foi possível confirmar o envio. Confira sua conexão; seu texto continua aqui.",
-          { cause: error }
+          { cause: error },
         );
       throw error;
     } finally {

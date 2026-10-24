@@ -9,15 +9,16 @@ import {
 import { lazy, Suspense } from "react";
 import { Layout } from "./components/Layout";
 import { SwipeNavigator } from "./components/SwipeNavigator";
+import { DeviceNavigation } from "./components/DeviceNavigation";
 const Onboarding = lazy(() =>
   import("./pages/Onboarding").then((module) => ({
     default: module.Onboarding,
-  }))
+  })),
 );
 const RefeicaoLivre = lazy(() =>
   import("./pages/RefeicaoLivre").then((module) => ({
     default: module.RefeicaoLivre,
-  }))
+  })),
 );
 export function App() {
   return (
@@ -30,6 +31,7 @@ function AppScreens() {
   const { pathname } = useLocation();
   return (
     <ScreenErrorBoundary resetKey={pathname}>
+      <DeviceNavigation />
       <Layout>
         <SwipeNavigator>
           <Suspense

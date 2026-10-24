@@ -1,6 +1,7 @@
 import { fullCatalog } from "../utils/appFeatures";
 import { recipeForCatalog } from "../utils/appFeatures";
 import { FoodLibrary } from "./FoodLibrary";
+import { useBackLayer } from "../hooks/useBackLayer";
 import { useEffect, useRef, useState } from "react";
 import type { Alimento } from "../data/alimentos";
 import { calcularPorcoes, todosAlimentos } from "../data/alimentos";
@@ -50,6 +51,11 @@ export function MealComposer({
   const [swap, setSwap] = useState<Alimento | null>(null);
   const [swapSearch, setSwapSearch] = useState("");
   const [notice, setNotice] = useState("");
+  useBackLayer(true, () => {
+    if (library) setLibrary(false);
+    else if (swap) setSwap(null);
+    else onClose();
+  });
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [porcoes, setPorcoes] =
     useState<Record<string, number>>(initialPorcoes);
@@ -61,8 +67,8 @@ export function MealComposer({
     (f, i, all) =>
       all.findIndex(
         (a) =>
-          a.id === f.id || (!f.id.startsWith("custom_") && a.nome === f.nome)
-      ) === i
+          a.id === f.id || (!f.id.startsWith("custom_") && a.nome === f.nome),
+      ) === i,
   );
   const [saving, setSaving] = useState(false);
   const submitted = useRef(false);
@@ -81,19 +87,19 @@ export function MealComposer({
   const repeat = Object.fromEntries(
     Object.entries(dados.ultimasPorcoes?.[memoriaKey] || {}).filter(
       ([id, g]) =>
-        alimentos.some((a) => a.id === id) && Number.isFinite(g) && g > 0
-    )
+        alimentos.some((a) => a.id === id) && Number.isFinite(g) && g > 0,
+    ),
   );
   const filtered = alimentos
     .filter(
       (item) =>
         normalizar(item.nome).includes(normalizar(busca)) &&
-        (!favoritesOnly || isFavorite(item))
+        (!favoritesOnly || isFavorite(item)),
     )
     .sort(
       (a, b) =>
         Number(isFavorite(b)) - Number(isFavorite(a)) ||
-        Number(preferences.includes(b.id)) - Number(preferences.includes(a.id))
+        Number(preferences.includes(b.id)) - Number(preferences.includes(a.id)),
     );
   const total = calcularPorcoes(porcoes, alimentos);
   const alternatives = swap
@@ -120,7 +126,7 @@ export function MealComposer({
         ref={section}
         tabIndex={-1}
         className={`app-themed app-composer ${
-          dados.temaEscuro ?? true ? "" : "app-light"
+          (dados.temaEscuro ?? true) ? "" : "app-light"
         }`}
         aria-label={titulo}
         onKeyDown={(e) => {
@@ -132,8 +138,8 @@ export function MealComposer({
           if (e.key !== "Tab") return;
           const items = Array.from(
             section.current?.querySelectorAll<HTMLElement>(
-              "button:not(:disabled),input:not(:disabled)"
-            ) || []
+              "button:not(:disabled),input:not(:disabled)",
+            ) || [],
           );
           const first = items[0],
             last = items.at(-1);
@@ -266,7 +272,7 @@ export function MealComposer({
                           return next;
                         });
                         setNotice(
-                          `${swap.nome} trocado por ${f.nome}. Confira a quantidade antes de salvar.`
+                          `${swap.nome} trocado por ${f.nome}. Confira a quantidade antes de salvar.`,
                         );
                         setSwap(null);
                       }}
@@ -319,7 +325,7 @@ export function MealComposer({
                         <small>
                           {selected
                             ? `${Math.round(
-                                (item.kcal100g * porcoes[item.id]) / 100
+                                (item.kcal100g * porcoes[item.id]) / 100,
                               )} kcal nesta porção`
                             : `${numberText(item.kcal100g, 1)} kcal por 100 g`}
                         </small>
@@ -463,8 +469,8 @@ export function MealComposer({
                 setSaving(true);
                 onConfirm(
                   Object.fromEntries(
-                    Object.entries(porcoes).filter(([, g]) => g > 0)
-                  )
+                    Object.entries(porcoes).filter(([, g]) => g > 0),
+                  ),
                 );
               }}
             >

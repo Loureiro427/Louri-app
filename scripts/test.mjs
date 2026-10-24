@@ -1,3 +1,5 @@
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
 import assert from "node:assert/strict";
 import { createServer } from "vite";
 const storage = new Map();
@@ -1202,6 +1204,196 @@ try {
       }
     }
   );
+
+  const back = await server.ssrLoadModule("/src/utils/backNavigation.ts");
+  const viewport = await server.ssrLoadModule("/src/utils/viewport.ts");
+  const persisted = await server.ssrLoadModule("/src/utils/persistedUser.ts");
+  const drafts = await server.ssrLoadModule("/src/utils/supportDraft.ts");
+  test("Voltar fecha primeiro a janela interna e remove apenas o próprio registro", () => {
+    const stack = back.createBackStack(),
+      closed = [];
+    const removePage = stack.register(() => closed.push("página"));
+    const removeModal = stack.register(() => closed.push("janela"));
+    assert.equal(stack.dismiss(), true);
+    assert.deepEqual(closed, ["janela"]);
+    removeModal();
+    stack.dismiss();
+    assert.deepEqual(closed, ["janela", "página"]);
+    removePage();
+    removePage();
+    assert.equal(stack.dismiss(), false);
+  });
+  test("Teclado sobreposto e WebView já redimensionada usam a mesma altura sem desconto duplo", () => {
+    assert.equal(viewport.visibleAppHeight(800, 800, 800, 300), 500);
+    assert.equal(viewport.visibleAppHeight(500, 500, 800, 300), 500);
+    assert.equal(viewport.visibleAppHeight(800, 500, 800, 0), 500);
+    assert.equal(viewport.visibleAppHeight(800, 800, 800, 0), 800);
+  });
+  test("Dados parciais antigos recebem somente os campos ausentes, sem apagar histórico", () => {
+    const history = {
+      "2020-01-01": {
+        aguaConsumida: 900,
+        caloriasConsumidas: 100,
+        refeicoesDetalhadas: {},
+      },
+    };
+    const result = persisted.mergePersistedUser(
+      {
+        nome: "Antigo",
+        peso: 83,
+        historico: history,
+        favoritos: null,
+        macrosConsumidos: { proteina: 20 },
+        alimentos: ["pao"],
+      },
+      initial
+    );
+    assert.equal(result.peso, "83");
+    assert.deepEqual(result.historico, history);
+    assert.deepEqual(result.alimentos, ["pao"]);
+    assert.deepEqual(result.favoritos, []);
+    assert.deepEqual(result.macrosConsumidos, {
+      proteina: 20,
+      carbo: 0,
+      gordura: 0,
+    });
+  });
+  await asyncTest(
+    "Atualização reidrata a versão antiga e preserva plano, histórico, alimentos e sequência",
+    async () => {
+      reset();
+      const legacy = {
+        ...structuredClone(initial),
+        nome: "Perfil existente",
+        peso: "83.7",
+        ultimaData: today(),
+        aguaConsumida: 900,
+        favoritos: ["pao"],
+        alimentos: { cafeManha: ["pao"] },
+        historicoPeso: { "2020-01-01": "84" },
+        ultimasPorcoes: { cafeManha: { pao: 50 } },
+        porcoesPlano: { cafeManha: { pao: 75 } },
+        horariosRefeicoes: { cafeManha: "07:30" },
+        diasMetasConcluidas: { "2020-01-01": true },
+        historico: {
+          "2020-01-01": {
+            aguaConsumida: 900,
+            caloriasConsumidas: 140,
+            refeicoesDetalhadas: {
+              cafeManha: {
+                titulo: "Café",
+                icone: "☕",
+                calorias: 140,
+                alimentos: ["Pão"],
+                porcoes: { pao: 50 },
+                macros: { proteina: 4, carbo: 20, gordura: 1 },
+              },
+            },
+          },
+        },
+        refeicoesSalvas: [{ id: "r1", nome: "Meu café", porcoes: { pao: 50 } }],
+        alimentosPersonalizados: [
+          {
+            id: "custom_teste",
+            nome: "Alimento",
+            emoji: "🍽️",
+            kcal100g: 100,
+            prot: 4,
+            carbo: 10,
+            gord: 2,
+          },
+        ],
+      };
+      storage.set(
+        "nutri-app-storage",
+        JSON.stringify({ state: { dados: legacy }, version: 0 })
+      );
+      await store.persist.rehydrate();
+      for (const key of Object.keys(legacy))
+        assert.deepEqual(store.getState().dados[key], legacy[key], key);
+      assert.equal(JSON.parse(storage.get("nutri-app-storage")).version, 1);
+    }
+  );
+  test("Rascunho do suporte sobrevive ao fechamento na sessão, sem misturar canais", () => {
+    drafts.supportDraft.set("support", "Minha mensagem offline");
+    assert.equal(drafts.supportDraft.get("support"), "Minha mensagem offline");
+    assert.equal(drafts.supportDraft.get("idea"), "");
+    drafts.supportDraft.clear("support");
+    assert.equal(drafts.supportDraft.get("support"), "");
+  });
+
+  await asyncTest(
+    "Sem internet, água e refeições persistem e o suporte não tenta enviar",
+    async () => {
+      const descriptor = Object.getOwnPropertyDescriptor(
+        globalThis,
+        "navigator"
+      );
+      const originalFetch = globalThis.fetch;
+      let requests = 0;
+      Object.defineProperty(globalThis, "navigator", {
+        value: { onLine: false },
+        configurable: true,
+      });
+      globalThis.fetch = async () => {
+        requests++;
+        throw Error("Rede não deveria ser usada");
+      };
+      try {
+        reset();
+        store.getState().setDados({ ultimaData: today() });
+        store.getState().adicionarAgua(300, 99999);
+        store
+          .getState()
+          .registrarRefeicao(
+            "cafeManha",
+            "Café",
+            "☕",
+            140,
+            ["Pão"],
+            { proteina: 4, carbo: 20, gordura: 1 },
+            { pao: 50 }
+          );
+        await store.persist.rehydrate();
+        assert.equal(store.getState().dados.aguaConsumida, 300);
+        assert.equal(store.getState().dados.caloriasConsumidas, 140);
+        assert.equal(
+          store.getState().dados.historico[today()].refeicoesDetalhadas
+            .cafeManha.porcoes.pao,
+          50
+        );
+        drafts.supportDraft.set("support", "Não consigo enviar agora");
+        await assert.rejects(
+          testSupport.send(
+            { kind: "support", message: drafts.supportDraft.get("support") },
+            true
+          ),
+          /sem internet/
+        );
+        assert.equal(requests, 0);
+        assert.equal(
+          drafts.supportDraft.get("support"),
+          "Não consigo enviar agora"
+        );
+      } finally {
+        if (descriptor)
+          Object.defineProperty(globalThis, "navigator", descriptor);
+        else delete globalThis.navigator;
+        globalThis.fetch = originalFetch;
+        drafts.supportDraft.clear("support");
+      }
+    }
+  );
+
+  test("Override de uuid mantém a geração de IDs utilizada pelo xcode", () => {
+    const project = require("xcode").project("nao-executado.pbxproj");
+    project.hash = {
+      project: { objects: { PBXProject: {}, PBXNativeTarget: {} } },
+    };
+    const ids = Array.from({ length: 100 }, () => project.generateUuid());
+    assert.equal(new Set(ids).size, 100);
+    assert.ok(ids.every((id) => /^[A-F0-9]{24}$/.test(id)));
+  });
   console.log(`${passed} verificações passaram.`);
 } finally {
   await server.close();

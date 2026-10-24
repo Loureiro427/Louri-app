@@ -1,6 +1,7 @@
 import type { ShoppingListData } from "../utils/shoppingList";
 import type { Alimento } from "../data/alimentos";
 import { parseWeight } from "../utils/weightValidation";
+import { mergePersistedUser } from "../utils/persistedUser";
 import { reconcileDailyStreak } from "../utils/dailyStreak";
 import {
   replaceHistoricalMeal,
@@ -95,7 +96,7 @@ interface UserStore {
     alimentosConsumidos: string[],
     macros: { proteina: number; carbo: number; gordura: number },
     porcoes?: Record<string, number>,
-    editar?: boolean
+    editar?: boolean,
   ) => void;
   desfazerRefeicao: (refeicaoKey: string) => void;
   zerarDieta: () => void;
@@ -105,7 +106,7 @@ interface UserStore {
   salvarPesoNaData: (date: string, peso: string) => boolean;
   corrigirDia: (
     date: string,
-    change: { agua?: number; key?: string; refeicao?: RefeicaoDetalhe }
+    change: { agua?: number; key?: string; refeicao?: RefeicaoDetalhe },
   ) => boolean;
 }
 
@@ -116,7 +117,7 @@ const getHojeStr = () => {
   const hoje = new Date();
   return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(
     2,
-    "0"
+    "0",
   )}-${String(hoje.getDate()).padStart(2, "0")}`;
 };
 
@@ -168,7 +169,7 @@ export const useUserStore = create<UserStore>()(
               (d) =>
                 validPastOrToday(d) &&
                 Number.isFinite(Number(historicoPeso[d])) &&
-                Number(historicoPeso[d]) > 0
+                Number(historicoPeso[d]) > 0,
             )
             .sort()
             .at(-1)!;
@@ -201,7 +202,7 @@ export const useUserStore = create<UserStore>()(
             !Number.isFinite(meal.calorias) ||
             meal.calorias <= 0 ||
             Object.values(meal.macros).some(
-              (v) => !Number.isFinite(v) || v < 0
+              (v) => !Number.isFinite(v) || v < 0,
             ))
         )
           return false;
@@ -331,7 +332,7 @@ export const useUserStore = create<UserStore>()(
         alimentosConsumidos,
         macros,
         porcoes,
-        editar = false
+        editar = false,
       ) => {
         get().verificarViradaDeDia();
         if (
@@ -360,7 +361,7 @@ export const useUserStore = create<UserStore>()(
             : macrosZerados;
           const novasCalorias = Math.max(
             0,
-            caloriasAtuais - previousCalories + calorias
+            caloriasAtuais - previousCalories + calorias,
           );
           const novasRefeicoesConcluidas = [
             ...new Set([...refeicoesAtuais, refeicaoKey]),
@@ -403,15 +404,17 @@ export const useUserStore = create<UserStore>()(
                   0,
                   macrosAtuais.proteina -
                     previousMacros.proteina +
-                    macros.proteina
+                    macros.proteina,
                 ),
                 carbo: Math.max(
                   0,
-                  macrosAtuais.carbo - previousMacros.carbo + macros.carbo
+                  macrosAtuais.carbo - previousMacros.carbo + macros.carbo,
                 ),
                 gordura: Math.max(
                   0,
-                  macrosAtuais.gordura - previousMacros.gordura + macros.gordura
+                  macrosAtuais.gordura -
+                    previousMacros.gordura +
+                    macros.gordura,
                 ),
               },
               macrosPorRefeicao: {
@@ -460,10 +463,10 @@ export const useUserStore = create<UserStore>()(
 
           const novasCalorias = Math.max(
             0,
-            caloriasAtuais - caloriasParaSubtrair
+            caloriasAtuais - caloriasParaSubtrair,
           );
           const novasRefeicoesConcluidas = refeicoesAtuais.filter(
-            (r) => r !== refeicaoKey
+            (r) => r !== refeicaoKey,
           );
 
           const historicoAtual = state.dados.historico || {};
@@ -486,15 +489,15 @@ export const useUserStore = create<UserStore>()(
               macrosConsumidos: {
                 proteina: Math.max(
                   0,
-                  macrosAtuais.proteina - macrosParaSubtrair.proteina
+                  macrosAtuais.proteina - macrosParaSubtrair.proteina,
                 ),
                 carbo: Math.max(
                   0,
-                  macrosAtuais.carbo - macrosParaSubtrair.carbo
+                  macrosAtuais.carbo - macrosParaSubtrair.carbo,
                 ),
                 gordura: Math.max(
                   0,
-                  macrosAtuais.gordura - macrosParaSubtrair.gordura
+                  macrosAtuais.gordura - macrosParaSubtrair.gordura,
                 ),
               },
               macrosPorRefeicao: novoHistMacros,
@@ -583,14 +586,16 @@ export const useUserStore = create<UserStore>()(
     }),
     {
       name: "nutri-app-storage",
+      version: 1,
+      migrate: (persisted) => persisted as { dados: UserData },
       partialize: (state) => ({ dados: state.dados }),
       merge: (persisted, current) => {
         const saved = persisted as { dados?: Partial<UserData> } | undefined;
         return {
           ...current,
-          dados: { ...current.dados, ...(saved?.dados || {}) },
+          dados: mergePersistedUser(saved?.dados, current.dados),
         };
       },
-    }
-  )
+    },
+  ),
 );

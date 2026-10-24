@@ -2,6 +2,7 @@ import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useUserStore } from "../../store/useUserStore";
+import { useBackLayer } from "../../hooks/useBackLayer";
 
 export type IconName =
   | "home"
@@ -207,7 +208,7 @@ export function Progress({
 }) {
   const percentage = Math.max(
     0,
-    Math.min(100, max > 0 ? (value / max) * 100 : 0)
+    Math.min(100, max > 0 ? (value / max) * 100 : 0),
   );
   return (
     <div
@@ -238,6 +239,7 @@ export function Sheet({
   const dark = useUserStore((state) => state.dados.temaEscuro ?? true);
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
+  useBackLayer(true, onClose);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     panel.current?.focus({ preventScroll: true });
@@ -267,8 +269,8 @@ export function Sheet({
           if (e.key !== "Tab") return;
           const items = Array.from(
             panel.current?.querySelectorAll<HTMLElement>(
-              "button:not(:disabled),input:not(:disabled),textarea,select,a[href]"
-            ) || []
+              "button:not(:disabled),input:not(:disabled),textarea,select,a[href]",
+            ) || [],
           );
           const first = items[0],
             last = items.at(-1);
@@ -303,7 +305,7 @@ export function Sheet({
         <div className="app-sheet-content custom-scrollbar">{children}</div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
 export function ActionRow({

@@ -7,9 +7,12 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
 import { Icon } from "./ui/AppUI";
 import { WeightEntry } from "./WeightEntry";
+import { useBackLayer } from "../hooks/useBackLayer";
+import { useOnline } from "../hooks/useOnline";
 import type { IconName } from "./ui/AppUI";
 import "../app-ui.css";
 import "../app-motion.css";
+import "../app-mobile.css";
 const links: { path: string; label: string; icon: IconName }[] = [
   { path: "/", label: "Início", icon: "home" },
   { path: "/plano", label: "Plano", icon: "plan" },
@@ -17,6 +20,7 @@ const links: { path: string; label: string; icon: IconName }[] = [
   { path: "/perfil", label: "Perfil", icon: "user" },
 ];
 export function Layout({ children }: { children: React.ReactNode }) {
+  const online = useOnline();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const dados = useUserStore((state) => state.dados);
@@ -52,18 +56,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   meal: target.meal,
                   water: target.kind === "water",
                 },
-              })
+              }),
             ),
-          100
+          100,
         );
       }),
-    [navigate]
+    [navigate],
   );
   const [fabPath, setFabPath] = useState<string | null>(null);
   const fab = fabPath === pathname;
+  useBackLayer(fab, () => setFabPath(null));
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined
+    undefined,
   );
   useEffect(() => {
     const refresh = () => useUserStore.getState().verificarViradaDeDia();
@@ -81,7 +86,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     () => () => {
       clearTimeout(toastTimer.current);
     },
-    []
+    [],
   );
   const notify = (message: string) => {
     clearTimeout(toastTimer.current);
@@ -109,7 +114,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
     </Link>
   );
   return (
-    <div className={`louri-app ${dados.temaEscuro ?? true ? "" : "app-light"}`}>
+    <div
+      className={`louri-app ${(dados.temaEscuro ?? true) ? "" : "app-light"}`}
+    >
+      {!online && (
+        <p className="app-network-note" role="status">
+          Sem internet. Seus registros continuam funcionando e ficam salvos
+          neste aparelho.
+        </p>
+      )}
       <main className="app-main">{children}</main>
       {toast && (
         <div className="app-toast" role="status">

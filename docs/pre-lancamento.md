@@ -22,7 +22,7 @@ npm audit --omit=dev
 
 Os testes de suporte simulam a rede e não enviam mensagens reais ao Discord.
 
-A atualização compatível das dependências corrigiu os alertas que tinham solução automática. A auditoria de produção ficou sem alertas. A auditoria completa ainda identifica 7 vulnerabilidades na cadeia de ferramentas de desenvolvimento do Capacitor (`@capacitor/assets`, `sharp`, `tar`, `xcode`, `uuid` e dependentes), sem solução automática compatível. Não foram forçadas versões incompatíveis dessas ferramentas; elas não devem ser tratadas como uma auditoria completamente limpa.
+A revisão posterior removeu o gerador antigo `@capacitor/assets` (os ícones existentes foram preservados) e atualizou a dependência `uuid` usada por `xcode` para 11.1.1 por override restrito. A API CommonJS utilizada por `xcode` foi verificada gerando 100 identificadores válidos em memória, sem compilar projetos nativos. A auditoria completa, incluindo desenvolvimento, passou sem vulnerabilidades conhecidas nesta verificação.
 
 Não houve geração, instalação nem execução de APK nesta etapa. Testes no aparelho e a distribuição continuam dependendo de autorização explícita.
 
