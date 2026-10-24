@@ -1,307 +1,214 @@
-import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useUserStore } from '../store/useUserStore';
-import { motion, AnimatePresence } from 'framer-motion';
-
+import { reminderInbox } from "../utils/reminderNavigation";
+import {
+  configurarNotificacoesNativas,
+  watchReminderTap,
+} from "../services/notificationService";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useUserStore } from "../store/useUserStore";
+import { Icon } from "./ui/AppUI";
+import { WeightEntry } from "./WeightEntry";
+import { useBackLayer } from "../hooks/useBackLayer";
+import { useOnline } from "../hooks/useOnline";
+import type { IconName } from "./ui/AppUI";
+import "../app-ui.css";
+import "../app-motion.css";
+import "../app-mobile.css";
+import "../app-easy.css";
+const links: { path: string; label: string; icon: IconName }[] = [
+  { path: "/", label: "Início", icon: "home" },
+  { path: "/plano", label: "Plano", icon: "plan" },
+  { path: "/evolucao", label: "Evolução", icon: "chart" },
+  { path: "/perfil", label: "Perfil", icon: "user" },
+];
 export function Layout({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
+  const online = useOnline();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
-  
   const dados = useUserStore((state) => state.dados);
-  const adicionarAgua = useUserStore((state) => state.adicionarAgua);
-  const atualizarPeso = useUserStore((state) => state.atualizarPeso);
-  
-  // Controle Global do Modal de Peso
-  const modalPesoAberto = useUserStore((state) => state.modalPesoAberto);
-  const setModalPesoAberto = useUserStore((state) => state.setModalPesoAberto);
-  
-  const temaEscuro = dados.temaEscuro ?? true;
-  
-  const [isFabOpen, setIsFabOpen] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
-  const [pesoInput, setPesoInput] = useState('');
-
-  const estaLogado = Boolean(dados.nome && dados.nome.trim() !== '');
-  const mostrarMenu = estaLogado && location.pathname !== '/onboarding' && location.pathname !== '/refeicao-livre';
-
-  const isActive = (path: string) => location.pathname === path;
-
-  const mostrarToast = (mensagem: string) => {
-    setToastMsg(mensagem);
-    setTimeout(() => setToastMsg(''), 3000);
+  const weightOpen = useUserStore((state) => state.modalPesoAberto);
+  const reminderSignature = JSON.stringify([
+    dados.nome,
+    dados.notificacoes,
+    dados.lembretes,
+    dados.horariosRefeicoes,
+    dados.refeicoesAtivas,
+    dados.horaAcorda,
+    dados.horaDorme,
+    dados.ultimaData,
+    dados.peso,
+    dados.aguaConsumida,
+    dados.refeicoesConcluidas,
+  ]);
+  useEffect(() => {
+    void configurarNotificacoesNativas().catch(() => {});
+  }, [reminderSignature]);
+  useEffect(
+    () =>
+      watchReminderTap((target) => {
+        const route = ["/", "/evolucao"].includes(target.route || "")
+          ? target.route!
+          : "/";
+        if (route === "/") reminderInbox.publish(target);
+        navigate(route);
+      }),
+    [navigate],
+  );
+  const [fabPath, setFabPath] = useState<string | null>(null);
+  const fab = fabPath === pathname;
+  useBackLayer(fab, () => setFabPath(null));
+  const [toast, setToast] = useState("");
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  useEffect(() => {
+    const refresh = () => useUserStore.getState().verificarViradaDeDia();
+    refresh();
+    const timer = setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, []);
+  useEffect(
+    () => () => {
+      clearTimeout(toastTimer.current);
+    },
+    [],
+  );
+  const notify = (message: string) => {
+    clearTimeout(toastTimer.current);
+    setToast(message);
+    toastTimer.current = setTimeout(() => setToast(""), 3000);
   };
-
-  const acaoRapida = (acao: string) => {
-    setIsFabOpen(false); 
-
-    if (acao === 'agua') {
-      adicionarAgua(250, 10000);
-      mostrarToast('💧 +250ml de Água registados!');
-    } else if (acao === 'peso') {
-      setPesoInput(''); 
-      setModalPesoAberto(true);
-    } else if (acao === 'refeicao') {
-      navigate('/refeicao-livre');
-    }
+  const openWeight = () => {
+    setFabPath(null);
+    useUserStore.getState().setModalPesoAberto(true);
   };
-
-  const guardarPeso = () => {
-    const pesoNum = Number(pesoInput);
-    
-    if (pesoInput && pesoNum >= 30 && pesoNum <= 300) {
-      atualizarPeso(pesoInput);
-      setModalPesoAberto(false); 
-      mostrarToast('⚖ Peso atualizado com sucesso!'); // ✅ Emoji normalizado sem conflito de bytes
-    } else if (pesoInput) {
-      mostrarToast('⚠️ O peso deve estar entre 30 e 300 kg.');
-    }
-  };
-
+  const showMenu =
+    Boolean(dados.nome?.trim()) &&
+    !["/onboarding", "/refeicao-livre"].includes(pathname);
+  const navLink = (item: (typeof links)[number]) => (
+    <Link
+      key={item.path}
+      to={item.path}
+      aria-label={item.label}
+      aria-current={pathname === item.path ? "page" : undefined}
+      className={`app-nav-link ${pathname === item.path ? "is-active" : ""}`}
+      onClick={() => setFabPath(null)}
+    >
+      <Icon name={item.icon} size={23} />
+      <span>{item.label}</span>
+    </Link>
+  );
   return (
-    <div className={`flex flex-col h-[100dvh] w-full overflow-hidden transition-colors duration-300 relative ${
-      temaEscuro ? 'bg-zinc-950 text-white' : 'bg-zinc-50 text-zinc-900'
-    }`}>
-      
-      {/* AVISO FLUTUANTE (TOAST) NO TOPO */}
-      <AnimatePresence>
-        {toastMsg && (
-          <motion.div
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50 }}
-            className={`fixed top-12 left-1/2 -translate-x-1/2 z-[70] px-6 py-3 rounded-full shadow-xl font-bold flex items-center gap-2 whitespace-nowrap ${
-              toastMsg.startsWith('⚖') || toastMsg.startsWith('💧') || toastMsg.includes('sucesso')
-                ? 'bg-green-500 text-zinc-950' 
-                : 'bg-red-500 text-white'
-            }`}
-          >
-            {toastMsg}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <main className="flex-1 flex flex-col relative w-full h-full"> 
-        {children}
-      </main>
-
-      {/* MODAL GLOBAL PARA REGISTO DE PESO */}
-      <AnimatePresence>
-        {modalPesoAberto && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setModalPesoAberto(false)}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            />
-            
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className={`relative w-full max-w-sm p-6 rounded-3xl shadow-2xl z-10 ${
-                temaEscuro ? 'bg-zinc-900 border border-zinc-800' : 'bg-white border border-zinc-200'
-              }`}
-            >
-              <h3 className="text-xl font-bold mb-2">Atualizar Peso</h3>
-              <p className="text-sm text-zinc-400 mb-6">Regista o teu peso atual em jejum.</p>
-              
-              <div className="relative mb-6">
-                <input 
-                  type="number" 
-                  placeholder={`Atual: ${dados.peso || '--'} kg`} 
-                  value={pesoInput}
-                  onChange={(e) => setPesoInput(e.target.value)}
-                  className={`w-full p-4 rounded-xl text-lg font-medium outline-none transition-all ${
-                    temaEscuro 
-                      ? 'bg-zinc-950 focus:ring-2 focus:ring-green-500 text-white' 
-                      : 'bg-zinc-100 focus:ring-2 focus:ring-green-500 text-zinc-900'
-                  }`} 
-                  autoFocus 
-                />
-                {pesoInput && (
-                  <span className={`absolute right-4 top-1/2 -translate-y-1/2 font-bold ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>kg</span>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setModalPesoAberto(false)} 
-                  className={`flex-1 p-4 rounded-xl font-bold transition-active active:scale-95 ${
-                    temaEscuro ? 'bg-zinc-800 hover:bg-zinc-700 text-white' : 'bg-zinc-200 hover:bg-zinc-300 text-zinc-900'
-                  }`}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={guardarPeso}
-                  disabled={!pesoInput}
-                  className={`flex-1 p-4 rounded-xl font-bold shadow-lg transition-active active:scale-95 ${
-                    pesoInput 
-                      ? 'bg-green-500 text-zinc-950 shadow-green-500/30 hover:bg-green-400' 
-                      : temaEscuro ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed' : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
-                  }`}
-                >
-                  Guardar
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* SÓ MOSTRA A BARRA INFERIOR E O BOTÃO FAB SE DEVER (mostrarMenu = true) */}
-      {mostrarMenu && (
+    <div
+      className={`louri-app ${(dados.temaEscuro ?? true) ? "" : "app-light"}`}
+    >
+      {!online && (
+        <p className="app-network-note" role="status">
+          Sem internet. Seus registros continuam funcionando e ficam salvos
+          neste aparelho.
+        </p>
+      )}
+      <main className="app-main">{children}</main>
+      {toast && (
+        <div className="app-toast" role="status">
+          <Icon name="check" size={17} />
+          {toast}
+        </div>
+      )}
+      {showMenu && (
         <>
-          {/* OVERLAY E MENU DE AÇÕES RÁPIDAS (FAB) */}
-          <AnimatePresence>
-            {isFabOpen && (
-              <>
-                <motion.div 
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  onClick={() => setIsFabOpen(false)}
-                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-                />
-                
-                <motion.div 
-                  initial={{ y: 200, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 200, opacity: 0 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                  className="fixed bottom-24 left-0 right-0 z-40 px-6 flex flex-col items-center gap-3 max-w-md mx-auto pointer-events-none"
+          {fab && (
+            <>
+              <button
+                className="app-fab-scrim"
+                aria-label="Fechar ações rápidas"
+                onClick={() => setFabPath(null)}
+              />
+              <div
+                className="app-fab-menu"
+                role="group"
+                aria-label="Ações rápidas"
+              >
+                <button onClick={openWeight}>
+                  <span className="app-icon-tile">
+                    <Icon name="scale" />
+                  </span>
+                  <span>
+                    <strong>Registrar peso</strong>
+                    <small>Atualize seu acompanhamento</small>
+                  </span>
+                  <Icon name="chevron" size={17} />
+                </button>
+                <button
+                  onClick={() => {
+                    setFabPath(null);
+                    navigate("/refeicao-livre");
+                  }}
                 >
-                  <FabButton texto="Registar Peso" icone="⚖️" onClick={() => acaoRapida('peso')} temaEscuro={temaEscuro} delay={0.1} />
-                  <FabButton texto="Refeição Livre" icone="🍔" onClick={() => acaoRapida('refeicao')} temaEscuro={temaEscuro} delay={0.05} />
-                  <FabButton texto="Beber Água (+250ml)" icone="💧" onClick={() => acaoRapida('agua')} temaEscuro={temaEscuro} delay={0} />
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-
-          {/* BARRA INFERIOR */}
-          <nav className={`fixed bottom-0 w-full z-50 transition-colors duration-300 ${
-            temaEscuro ? 'bg-zinc-950/60' : 'bg-white/60' 
-          }`}
-          style={{
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: 'none',
-            boxShadow: 'none'
-          }}>
-            <div className="pb-safe">
-              <div className="flex justify-between items-center h-16 max-w-md mx-auto px-6 relative">
-                
-                <Link to="/" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
-                  <HomeIcon active={isActive('/')} temaEscuro={temaEscuro} />
-                  {isActive('/') && <ActiveIndicator />}
-                </Link>
-
-                <Link to="/plano" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
-                  <FoodIcon active={isActive('/plano')} temaEscuro={temaEscuro} />
-                  {isActive('/plano') && <ActiveIndicator />}
-                </Link>
-
-                <div className="relative -top-6 flex justify-center items-center w-16 group cursor-pointer z-50">
-                  <motion.button 
-                    onClick={() => setIsFabOpen(!isFabOpen)}
-                    animate={{ rotate: isFabOpen ? 45 : 0 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                    className={`w-14 h-14 rounded-full flex items-center justify-center text-zinc-950 shadow-lg active:scale-90 transition-all duration-300 ${
-                      isFabOpen ? 'bg-zinc-200 shadow-zinc-500/40' : 'bg-gradient-to-tr from-green-500 to-green-400 shadow-green-500/40 group-hover:shadow-green-500/60 group-hover:-translate-y-1'
-                    }`}
-                    aria-label="Menu de Ações"
-                  >
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                  </motion.button>
-                </div>
-
-                <Link to="/evolucao" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
-                  <ChartIcon active={isActive('/evolucao')} temaEscuro={temaEscuro} />
-                  {isActive('/evolucao') && <ActiveIndicator />}
-                </Link>
-
-                <Link to="/perfil" onClick={() => setIsFabOpen(false)} className="relative flex flex-col items-center justify-center w-12 h-12 group">
-                  <ProfileIcon active={isActive('/perfil')} temaEscuro={temaEscuro} />
-                  {isActive('/perfil') && <ActiveIndicator />}
-                </Link>
-
+                  <span className="app-icon-tile">
+                    <Icon name="plan" />
+                  </span>
+                  <span>
+                    <strong>Refeição livre</strong>
+                    <small>Adicione algo fora do plano</small>
+                  </span>
+                  <Icon name="chevron" size={17} />
+                </button>
+                <button
+                  onClick={() => {
+                    setFabPath(null);
+                    useUserStore.getState().adicionarAgua(250, 99999);
+                    notify("+250 ml de água registrados");
+                  }}
+                >
+                  <span className="app-icon-tile app-tone-blue">
+                    <Icon name="water" />
+                  </span>
+                  <span>
+                    <strong>Beber água</strong>
+                    <small>Adicionar um copo de 250 ml</small>
+                  </span>
+                  <Icon name="plus" size={18} />
+                </button>
               </div>
+            </>
+          )}
+          <nav className="app-bottom-nav" aria-label="Navegação principal">
+            <div>
+              {links.slice(0, 2).map(navLink)}
+              <div className="app-nav-center">
+                <button
+                  className={`app-fab-button ${fab ? "is-open" : ""}`}
+                  aria-label={
+                    fab ? "Fechar ações rápidas" : "Abrir ações rápidas"
+                  }
+                  aria-expanded={fab}
+                  onClick={() => setFabPath(fab ? null : pathname)}
+                >
+                  <Icon name="plus" size={27} />
+                </button>
+              </div>
+              {links.slice(2).map(navLink)}
             </div>
           </nav>
         </>
       )}
+      {weightOpen && (
+        <WeightEntry
+          initial={dados.peso || ""}
+          onClose={() => useUserStore.getState().setModalPesoAberto(false)}
+          onSaved={() => {
+            useUserStore.getState().setModalPesoAberto(false);
+            notify("Peso atualizado");
+          }}
+        />
+      )}
     </div>
-  );
-}
-
-function FabButton({ texto, icone, onClick, temaEscuro, delay }: any) {
-  return (
-    <motion.button
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      transition={{ delay, type: 'spring', stiffness: 300, damping: 25 }}
-      onClick={onClick}
-      className={`pointer-events-auto flex items-center justify-between w-56 px-5 py-4 rounded-2xl shadow-xl active:scale-95 transition-transform ${
-        temaEscuro ? 'bg-zinc-800 border border-zinc-700 text-white' : 'bg-white border border-zinc-100 text-zinc-900'
-      }`}
-    >
-      <span className="font-semibold text-sm">{texto}</span>
-      <span className="text-xl">{icone}</span>
-    </motion.button>
-  );
-}
-
-function ActiveIndicator() {
-  return (
-    <motion.span 
-      layoutId="nav-indicator" 
-      className="absolute bottom-1 w-1 h-1 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.9)]"
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-    />
-  );
-}
-
-function HomeIcon({ active, temaEscuro }: any) {
-  const color = active ? 'text-green-500' : (temaEscuro ? 'text-zinc-500 group-hover:text-zinc-400' : 'text-zinc-400 group-hover:text-zinc-500');
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round" className={`transition-all duration-300 ${color} ${active ? '-translate-y-1' : ''}`}>
-      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
-  );
-}
-
-function FoodIcon({ active, temaEscuro }: any) {
-  const color = active ? 'text-green-500' : (temaEscuro ? 'text-zinc-500 group-hover:text-zinc-400' : 'text-zinc-400 group-hover:text-zinc-500');
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round" className={`transition-all duration-300 ${color} ${active ? '-translate-y-1' : ''}`}>
-      <path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z" />
-      <path d="M12 12v-3" />
-      <path d="M12 6a3 3 0 0 0-3 3" />
-      <path d="M15 9a3 3 0 0 0-3-3" />
-    </svg>
-  );
-}
-
-function ChartIcon({ active, temaEscuro }: any) {
-  const color = active ? 'text-green-500' : (temaEscuro ? 'text-zinc-500 group-hover:text-zinc-400' : 'text-zinc-400 group-hover:text-zinc-500');
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round" className={`transition-all duration-300 ${color} ${active ? '-translate-y-1' : ''}`}>
-      <line x1="18" y1="20" x2="18" y2="10" />
-      <line x1="12" y1="20" x2="12" y2="4" />
-      <line x1="6" y1="20" x2="6" y2="14" />
-    </svg>
-  );
-}
-
-function ProfileIcon({ active, temaEscuro }: any) {
-  const color = active ? 'text-green-500' : (temaEscuro ? 'text-zinc-500 group-hover:text-zinc-400' : 'text-zinc-400 group-hover:text-zinc-500');
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round" className={`transition-all duration-300 ${color} ${active ? '-translate-y-1' : ''}`}>
-      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
   );
 }

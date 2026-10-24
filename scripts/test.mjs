@@ -1,0 +1,2056 @@
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+import assert from "node:assert/strict";
+import { createServer } from "vite";
+const storage = new Map();
+globalThis.localStorage = {
+  getItem: (k) => storage.get(k) ?? null,
+  setItem: (k, v) => storage.set(k, v),
+  removeItem: (k) => storage.delete(k),
+};
+globalThis.window = { localStorage: globalThis.localStorage };
+const server = await createServer({
+  server: { middlewareMode: true },
+  appType: "custom",
+});
+let passed = 0;
+try {
+  const math = await server.ssrLoadModule("/src/utils/nutritionMath.ts");
+  const food = await server.ssrLoadModule("/src/data/alimentos.ts");
+  const { useUserStore: store } = await server.ssrLoadModule(
+    "/src/store/useUserStore.ts",
+  );
+  const test = (name, run) => {
+    run();
+    passed++;
+    console.log("✓ " + name);
+  };
+  const initial = structuredClone(store.getState().dados);
+  const reset = () => store.setState({ dados: structuredClone(initial) });
+  const today = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+  test("Água mantém os mililitros, sem arredondar para litros", () => {
+    assert.equal(math.calculateWaterGoal(70), 2450);
+    assert.equal(math.calculateWaterGoal(150), 5250);
+    assert.equal(math.calculateWaterGoal(-1), 0);
+  });
+  test("Metas usam a fórmula compartilhada e retornam números finitos", () => {
+    assert.equal(math.calculateCaloricGoal(150, 193, 27, "M", "perder"), 2949);
+    assert.equal(math.calculateCaloricGoal(0, 170, 25, "M", "manter"), 0);
+  });
+  test("Rotina que atravessa meia-noite mantém horários em ordem", () => {
+    const data = {
+      horaAcorda: "06:31",
+      horaDorme: "00:34",
+      refeicoesAtivas: ["janta", "cafeManha", "lancheTarde", "cafeTarde"],
+    };
+    const agenda = math.getCronograma(data);
+    assert.equal(agenda[0].horario, "07:01");
+    assert.equal(agenda.at(-1).horario, "19:30");
+    assert.ok(
+      agenda.every((r, i) => i === 0 || r.minutos >= agenda[i - 1].minutos),
+    );
+    assert.equal(
+      math.getCronograma({ ...data, refeicoesAtivas: ["almoco"] }).length,
+      1,
+    );
+  });
+  test("Jantar e ceia mantêm seus horários mesmo sem almoço", () => {
+    const dados = {
+      horaAcorda: "06:00",
+      horaDorme: "22:00",
+      refeicoesAtivas: ["cafeManha", "janta", "lancheNoite"],
+    };
+    const agenda = math.getCronograma(dados);
+    assert.deepEqual(
+      agenda.map((r) => r.horario),
+      ["06:30", "19:30", "21:30"],
+    );
+    assert.equal(
+      math.getCronograma({ ...dados, refeicoesAtivas: ["janta"] })[0].horario,
+      "19:30",
+    );
+    const keys = Object.keys(math.CONFIG_REFEICOES);
+    for (let mask = 1; mask < 2 ** keys.length; mask++) {
+      const ativas = keys.filter((_, i) => mask & (1 << i));
+      const plano = math.getCronograma({ ...dados, refeicoesAtivas: ativas });
+      if (ativas.includes("janta"))
+        assert.equal(plano.find((r) => r.key === "janta").horario, "19:30");
+      if (ativas.includes("almoco"))
+        assert.equal(plano.find((r) => r.key === "almoco").horario, "12:30");
+    }
+  });
+  test("Horários personalizados são preservados e ordenados após meia-noite", () => {
+    const dados = {
+      horaAcorda: "06:00",
+      horaDorme: "01:00",
+      refeicoesAtivas: ["janta", "lancheNoite"],
+      horariosRefeicoes: { janta: "20:00", lancheNoite: "00:30" },
+    };
+    const plano = math.getCronograma(dados);
+    assert.deepEqual(
+      plano.map((r) => r.horario),
+      ["20:00", "00:30"],
+    );
+    assert.equal(plano[1].minutos, 1470);
+    assert.equal(
+      math
+        .getCronograma({ ...dados, horariosRefeicoes: { janta: "99:99" } })
+        .find((r) => r.key === "janta").horario,
+      "19:30",
+    );
+  });
+  test("Porções contam calorias e macros proporcionais", () => {
+    const r = food.calcularPorcoes(
+      { pao: 50, ovo: 50 },
+      food.DICIONARIO_ALIMENTOS.cafeManha,
+    );
+    assert.equal(r.calorias, 218);
+    assert.equal(r.macros.proteina, 12);
+  });
+  test("Registro duplicado não soma calorias novamente e mantém preferências", () => {
+    reset();
+    store.getState().setDados({ alimentos: { cafeManha: ["pao"] } });
+    for (let i = 0; i < 2; i++)
+      store
+        .getState()
+        .registrarRefeicao(
+          "cafeManha",
+          "Café",
+          "☕",
+          140,
+          ["Pão Francês"],
+          { proteina: 5, carbo: 29, gordura: 2 },
+          { pao: 50 },
+        );
+    assert.equal(store.getState().dados.caloriasConsumidas, 140);
+    assert.deepEqual(store.getState().dados.alimentos.cafeManha, ["pao"]);
+    assert.deepEqual(store.getState().dados.ultimasPorcoes.cafeManha, {
+      pao: 50,
+    });
+    assert.equal(
+      store.getState().dados.historico[today()].refeicoesDetalhadas.cafeManha
+        .alimentos[0],
+      "Pão Francês",
+    );
+  });
+  test("Desfazer refeição reverte totais e preserva porções para repetir", () => {
+    store.getState().desfazerRefeicao("cafeManha");
+    assert.equal(store.getState().dados.caloriasConsumidas, 0);
+    assert.equal(store.getState().dados.macrosConsumidos.proteina, 0);
+    assert.equal(
+      Object.keys(store.getState().dados.historico[today()].refeicoesDetalhadas)
+        .length,
+      0,
+    );
+    assert.deepEqual(store.getState().dados.ultimasPorcoes.cafeManha, {
+      pao: 50,
+    });
+  });
+  test("Virada de dia antes de registrar água preserva o histórico anterior", () => {
+    reset();
+    store.getState().setDados({
+      ultimaData: "2020-01-01",
+      aguaConsumida: 1000,
+      caloriasConsumidas: 500,
+      historico: {
+        "2020-01-01": {
+          aguaConsumida: 1000,
+          caloriasConsumidas: 500,
+          refeicoesDetalhadas: {},
+        },
+      },
+    });
+    store.getState().adicionarAgua(250, 99999);
+    assert.equal(store.getState().dados.aguaConsumida, 250);
+    assert.equal(store.getState().dados.caloriasConsumidas, 0);
+    assert.equal(
+      store.getState().dados.historico["2020-01-01"].aguaConsumida,
+      1000,
+    );
+  });
+  test("Virada de dia antes de registrar refeição não carrega totais antigos", () => {
+    store
+      .getState()
+      .setDados({ ultimaData: "2020-01-01", caloriasConsumidas: 500 });
+    store
+      .getState()
+      .registrarRefeicao(
+        "refeicaoLivre_teste",
+        "Livre",
+        "🍔",
+        140,
+        ["Pão"],
+        { proteina: 5, carbo: 29, gordura: 2 },
+        { pao: 50 },
+      );
+    assert.equal(store.getState().dados.caloriasConsumidas, 140);
+    assert.deepEqual(store.getState().dados.ultimasPorcoes.livre, { pao: 50 });
+  });
+  test("Favoritos persistem e sobrevivem à virada de dia", () => {
+    store.getState().toggleFavorito("pao");
+    store.getState().setDados({ ultimaData: "2020-01-01" });
+    store.getState().verificarViradaDeDia();
+    assert.ok(store.getState().dados.favoritos.includes("pao"));
+    store.getState().toggleFavorito("pao");
+    assert.ok(!store.getState().dados.favoritos.includes("pao"));
+  });
+  test("Dados antigos recebem os novos campos sem perder histórico", () => {
+    const saved = JSON.parse(storage.get("nutri-app-storage"));
+    delete saved.state.dados.favoritos;
+    delete saved.state.dados.ultimasPorcoes;
+    saved.state.dados.nome = "Teste legado";
+    storage.set("nutri-app-storage", JSON.stringify(saved));
+    store.persist.rehydrate();
+    assert.equal(store.getState().dados.nome, "Teste legado");
+    assert.deepEqual(store.getState().dados.favoritos, []);
+  });
+
+  const { normalizeMealPreferences } = await server.ssrLoadModule(
+    "/src/utils/mealPreferences.ts",
+  );
+  test("Cadastro aceita uma preferência antiga como texto sem falhar em values.map", () => {
+    assert.deepEqual(normalizeMealPreferences({ cafeManha: "pao" }), {
+      cafeManha: ["pao"],
+    });
+    assert.deepEqual(normalizeMealPreferences({ cafeManha: "Pão Francês" }), {
+      cafeManha: ["pao"],
+    });
+  });
+  test("Cadastro aceita mapas de seleção e descarta valores inválidos sem apagar a origem", () => {
+    const legado = {
+      cafeManha: { pao: true, ovo: 50, banana: false },
+      almoco: null,
+      janta: 42,
+    };
+    const original = structuredClone(legado);
+    assert.deepEqual(normalizeMealPreferences(legado), {
+      cafeManha: ["pao", "ovo"],
+      almoco: [],
+      janta: [],
+    });
+    assert.deepEqual(legado, original);
+  });
+  test("Preferências atuais mantêm IDs válidos e não repetem alimentos", () => {
+    assert.deepEqual(
+      normalizeMealPreferences({
+        cafeManha: ["pao", "pao", "Ovo", null, "desconhecido"],
+      }),
+      { cafeManha: ["pao", "ovo"] },
+    );
+    assert.deepEqual(normalizeMealPreferences(undefined), {});
+    assert.deepEqual(normalizeMealPreferences(null), {});
+  });
+  test("Lista global legada é distribuída pelos catálogos das refeições", () => {
+    const result = normalizeMealPreferences(["pao", "frango", "iogurte_noite"]);
+    assert.deepEqual(result.cafeManha, ["pao"]);
+    assert.deepEqual(result.almoco, ["frango"]);
+    assert.deepEqual(result.lancheNoite, ["iogurte_noite"]);
+  });
+
+  const streakMath = await server.ssrLoadModule("/src/utils/dailyStreak.ts");
+  const streakDay = (day) => new Date(2026, 9, day, 12);
+  const completeDay = {
+    ...initial,
+    peso: "70",
+    ultimaData: "2026-10-23",
+    refeicoesAtivas: ["cafeManha", "janta"],
+    refeicoesConcluidas: ["cafeManha", "janta"],
+    aguaConsumida: 2450,
+  };
+  test("Sequência soma apenas uma vez e persiste ao reabrir", () => {
+    const earned = streakMath.reconcileDailyStreak(completeDay, streakDay(23));
+    assert.equal(earned.streak, 1);
+    assert.equal(earned.ultimoDiaPontuado, "2026-10-23");
+    assert.equal(
+      streakMath.reconcileDailyStreak(earned, streakDay(23)),
+      earned,
+    );
+    const restored = JSON.parse(JSON.stringify(earned));
+    assert.equal(
+      streakMath.reconcileDailyStreak(restored, streakDay(23)).streak,
+      1,
+    );
+  });
+  test("Água ou refeições incompletas e refeição livre não pontuam", () => {
+    assert.equal(
+      streakMath.reconcileDailyStreak(
+        { ...completeDay, aguaConsumida: 2449 },
+        streakDay(23),
+      ).streak,
+      0,
+    );
+    assert.equal(
+      streakMath.reconcileDailyStreak(
+        {
+          ...completeDay,
+          refeicoesConcluidas: ["cafeManha", "refeicaoLivre_1"],
+        },
+        streakDay(23),
+      ).streak,
+      0,
+    );
+    assert.equal(
+      streakMath.reconcileDailyStreak(
+        { ...completeDay, refeicoesAtivas: [] },
+        streakDay(23),
+      ).streak,
+      0,
+    );
+  });
+  test("Dias consecutivos somam e um dia perdido reinicia sem apagar histórico", () => {
+    const day1 = streakMath.reconcileDailyStreak(completeDay, streakDay(23));
+    const nextMorning = {
+      ...day1,
+      ultimaData: "2026-10-24",
+      aguaConsumida: 0,
+      refeicoesConcluidas: [],
+    };
+    assert.equal(
+      streakMath.reconcileDailyStreak(nextMorning, streakDay(24)).streak,
+      1,
+    );
+    const day2 = streakMath.reconcileDailyStreak(
+      { ...day1, ultimaData: "2026-10-24" },
+      streakDay(24),
+    );
+    assert.equal(day2.streak, 2);
+    const missed = streakMath.reconcileDailyStreak(
+      {
+        ...day2,
+        ultimaData: "2026-10-26",
+        aguaConsumida: 0,
+        refeicoesConcluidas: [],
+      },
+      streakDay(26),
+    );
+    assert.equal(missed.streak, 0);
+    assert.equal(missed.diasMetasConcluidas["2026-10-23"], true);
+    assert.equal(
+      streakMath.reconcileDailyStreak(
+        { ...missed, ...completeDay, ultimaData: "2026-10-26" },
+        streakDay(26),
+      ).streak,
+      1,
+    );
+  });
+  test("Desfazer o dia retira apenas o ponto de hoje e recompletar o devolve", () => {
+    const earned = streakMath.reconcileDailyStreak(
+      { ...completeDay, diasMetasConcluidas: { "2026-10-22": true } },
+      streakDay(23),
+    );
+    assert.equal(earned.streak, 2);
+    const undone = streakMath.reconcileDailyStreak(
+      { ...earned, aguaConsumida: 0 },
+      streakDay(23),
+    );
+    assert.equal(undone.streak, 1);
+    assert.equal(undone.ultimoDiaPontuado, "2026-10-22");
+    assert.equal(undone.diasMetasConcluidas["2026-10-23"], undefined);
+    assert.equal(
+      streakMath.reconcileDailyStreak(
+        { ...undone, aguaConsumida: 2450 },
+        streakDay(23),
+      ).streak,
+      2,
+    );
+  });
+  test("Datas antigas em pt-BR são migradas e metas atuais não alteram dias anteriores", () => {
+    const migrated = streakMath.reconcileDailyStreak(
+      {
+        ...completeDay,
+        aguaConsumida: 0,
+        streak: 3,
+        ultimoDiaPontuado: "22/10/2026",
+      },
+      streakDay(23),
+    );
+    assert.equal(migrated.streak, 3);
+    assert.equal(migrated.diasMetasConcluidas["2026-10-20"], true);
+    assert.equal(migrated.ultimoDiaPontuado, "2026-10-22");
+    assert.equal(
+      streakMath.reconcileDailyStreak(
+        { ...migrated, peso: "100" },
+        streakDay(23),
+      ).streak,
+      3,
+    );
+    assert.equal(streakMath.previousDay("2026-01-01"), "2025-12-31");
+    assert.equal(streakMath.previousDay("2024-03-01"), "2024-02-29");
+  });
+  test("Ações reais da loja recalculam sequência ao registrar, desfazer e zerar", () => {
+    reset();
+    store.getState().setDados({ peso: "70", refeicoesAtivas: ["cafeManha"] });
+    store.getState().adicionarAgua(2450, 99999);
+    store
+      .getState()
+      .registrarRefeicao("cafeManha", "Café", "☕", 100, ["Pão"], {
+        proteina: 2,
+        carbo: 20,
+        gordura: 1,
+      });
+    assert.equal(store.getState().dados.streak, 1);
+    store.getState().desfazerRefeicao("cafeManha");
+    assert.equal(store.getState().dados.streak, 0);
+    store
+      .getState()
+      .registrarRefeicao("cafeManha", "Café", "☕", 100, ["Pão"], {
+        proteina: 2,
+        carbo: 20,
+        gordura: 1,
+      });
+    assert.equal(store.getState().dados.streak, 1);
+    store.getState().zerarAgua();
+    assert.equal(store.getState().dados.streak, 0);
+    store.getState().adicionarAgua(2450, 99999);
+    assert.equal(store.getState().dados.streak, 1);
+    store.getState().zerarDieta();
+    assert.equal(store.getState().dados.streak, 0);
+  });
+
+  test("Virada real da loja preserva sequência ontem e zera após um dia perdido", () => {
+    const NativeDate = globalThis.Date;
+    let timestamp = new NativeDate(2026, 9, 23, 23, 59).getTime();
+    class ClockDate extends NativeDate {
+      constructor(...args) {
+        if (args.length) super(...args);
+        else super(timestamp);
+      }
+      static now() {
+        return timestamp;
+      }
+    }
+    try {
+      globalThis.Date = ClockDate;
+      reset();
+      store.getState().setDados({ peso: "70", refeicoesAtivas: ["cafeManha"] });
+      store
+        .getState()
+        .registrarRefeicao("cafeManha", "Café", "☕", 100, ["Pão"], {
+          proteina: 2,
+          carbo: 20,
+          gordura: 1,
+        });
+      store.getState().adicionarAgua(2450, 99999);
+      assert.equal(store.getState().dados.streak, 1);
+      timestamp = new NativeDate(2026, 9, 24, 0, 1).getTime();
+      store.getState().verificarViradaDeDia();
+      assert.equal(store.getState().dados.streak, 1);
+      assert.equal(store.getState().dados.aguaConsumida, 0);
+      assert.equal(store.getState().dados.ultimaData, "2026-10-24");
+      store.getState().verificarStreak();
+      assert.equal(store.getState().dados.streak, 1);
+      assert.equal(
+        store.getState().dados.diasMetasConcluidas["2026-10-24"],
+        undefined,
+      );
+      timestamp = new NativeDate(2026, 9, 25, 0, 1).getTime();
+      store.getState().adicionarAgua(200, 99999);
+      assert.equal(store.getState().dados.streak, 0);
+      assert.equal(
+        store.getState().dados.diasMetasConcluidas["2026-10-23"],
+        true,
+      );
+    } finally {
+      globalThis.Date = NativeDate;
+      reset();
+    }
+  });
+
+  const features = await server.ssrLoadModule("/src/utils/appFeatures.ts");
+  const reminders = await server.ssrLoadModule("/src/utils/reminders.ts");
+  test("Editar refeição substitui calorias e macros sem duplicar registro nem sequência", () => {
+    reset();
+    store.getState().setDados({ peso: "70", refeicoesAtivas: ["cafeManha"] });
+    store.getState().adicionarAgua(2450, 99999);
+    store
+      .getState()
+      .registrarRefeicao(
+        "cafeManha",
+        "Café",
+        "☕",
+        100,
+        ["Pão"],
+        { proteina: 2, carbo: 20, gordura: 1 },
+        { pao: 50 },
+      );
+    store
+      .getState()
+      .registrarRefeicao(
+        "cafeManha",
+        "Café",
+        "☕",
+        200,
+        ["Pão"],
+        { proteina: 4, carbo: 40, gordura: 2 },
+        { pao: 100 },
+        true,
+      );
+    const d = store.getState().dados;
+    assert.equal(d.caloriasConsumidas, 200);
+    assert.deepEqual(d.macrosConsumidos, {
+      proteina: 4,
+      carbo: 40,
+      gordura: 2,
+    });
+    assert.equal(d.refeicoesConcluidas.length, 1);
+    assert.equal(d.streak, 1);
+    assert.equal(
+      d.historico[today()].refeicoesDetalhadas.cafeManha.porcoes.pao,
+      100,
+    );
+    store
+      .getState()
+      .registrarRefeicao(
+        "cafeManha",
+        "Café",
+        "☕",
+        150,
+        ["Pão"],
+        { proteina: 3, carbo: 30, gordura: 1 },
+        { pao: 75 },
+        true,
+      );
+    assert.equal(store.getState().dados.caloriasConsumidas, 150);
+  });
+  test("Desfazer último copo mantém água legada, ordem e histórico", () => {
+    reset();
+    store.getState().setDados({ aguaConsumida: 300 });
+    store.getState().adicionarAgua(200, 99999);
+    store.getState().adicionarAgua(500, 99999);
+    store.getState().desfazerUltimaAgua();
+    assert.equal(store.getState().dados.aguaConsumida, 500);
+    assert.equal(store.getState().dados.registrosAgua.length, 1);
+    store.getState().desfazerUltimaAgua();
+    assert.equal(store.getState().dados.aguaConsumida, 300);
+    store.getState().desfazerUltimaAgua();
+    assert.equal(store.getState().dados.aguaConsumida, 300);
+    assert.equal(store.getState().dados.historico[today()].aguaConsumida, 300);
+    store.getState().zerarAgua();
+    assert.equal(store.getState().dados.registrosAgua.length, 0);
+  });
+  test("Catálogo personalizado calcula porções e combinações aceitam alimentos de outra refeição", () => {
+    const custom = {
+      id: "custom_test",
+      nome: "Alimento teste",
+      emoji: "🍽️",
+      kcal100g: 200,
+      prot: 10,
+      carbo: 30,
+      gord: 5,
+    };
+    const d = { ...initial, alimentosPersonalizados: [custom] };
+    assert.equal(
+      food.calcularPorcoes({ custom_test: 50 }, features.mealCatalog(d))
+        .calorias,
+      100,
+    );
+    assert.deepEqual(
+      features.recipeForCatalog(d, { custom_test: 50, desconhecido: 100 }),
+      { custom_test: 50 },
+    );
+    const dinner = food.DICIONARIO_ALIMENTOS.janta[0];
+    const mapped = features.recipeForCatalog(
+      d,
+      { [dinner.id]: 80 },
+      "cafeManha",
+    );
+    assert.ok(Object.values(mapped).includes(80));
+    assert.equal(
+      food.calcularPorcoes(
+        mapped,
+        features.mealCatalog(d, "cafeManha", Object.keys(mapped)),
+      ).calorias,
+      Math.round(dinner.kcal100g * 0.8),
+    );
+    assert.ok(
+      features
+        .mealCatalog(d, "cafeManha", Object.keys(mapped))
+        .some((f) => f.id === Object.keys(mapped)[0]),
+    );
+  });
+  test("Compras usa apenas plano ativo, inclui IDs legados e não altera consumo", () => {
+    const d = {
+      ...initial,
+      refeicoesAtivas: ["janta"],
+      alimentos: {
+        janta: [food.DICIONARIO_ALIMENTOS.janta[0].id],
+        cafeManha: ["pao"],
+      },
+      porcoesPlano: { janta: { [food.DICIONARIO_ALIMENTOS.janta[0].id]: 150 } },
+    };
+    const list = features.shoppingItems(d);
+    assert.equal(list.length, 1);
+    assert.equal(list[0].grams, 150);
+    assert.equal(d.caloriasConsumidas, 0);
+  });
+  test("Resumo semanal considera sete dias e preserva zeros sem duplicar hoje", () => {
+    const d = {
+      ...initial,
+      ultimaData: "2026-10-23",
+      aguaConsumida: 300,
+      caloriasConsumidas: 100,
+      refeicoesConcluidas: ["cafeManha"],
+      historico: {
+        "2026-10-22": {
+          aguaConsumida: 200,
+          caloriasConsumidas: 80,
+          refeicoesDetalhadas: { a: {} },
+        },
+        "2026-10-23": {
+          aguaConsumida: 999,
+          caloriasConsumidas: 999,
+          refeicoesDetalhadas: {},
+        },
+      },
+      diasMetasConcluidas: { "2026-10-22": true },
+    };
+    const week = features.weeklySummary(d, "2026-10-23");
+    assert.equal(week.length, 7);
+    assert.equal(
+      week.reduce((n, d) => n + d.water, 0),
+      500,
+    );
+    assert.equal(
+      week.reduce((n, d) => n + d.meals, 0),
+      2,
+    );
+    assert.equal(week.filter((d) => d.complete).length, 1);
+  });
+  test("Lembretes respeitam refeições escolhidas, intervalo e silêncio através da meia-noite", () => {
+    const d = {
+      ...initial,
+      horaAcorda: "06:00",
+      horaDorme: "23:00",
+      refeicoesAtivas: ["cafeManha", "janta"],
+      horariosRefeicoes: { cafeManha: "08:00", janta: "23:00" },
+      lembretes: {
+        refeicoes: ["janta"],
+        motivacao: false,
+        aguaIntervalo: 120,
+        silencioInicio: "22:00",
+        silencioFim: "07:00",
+      },
+    };
+    const slots = reminders.reminderSlots(d);
+    assert.ok(slots.length > 0);
+    assert.ok(slots.every((s) => s.minute >= 420 && s.minute < 1320));
+    assert.ok(slots.every((s) => s.title.includes("água")));
+    const none = reminders.reminderSlots({
+      ...d,
+      lembretes: { ...d.lembretes, refeicoes: [], aguaIntervalo: 0 },
+    });
+    assert.equal(none.length, 0);
+    const meals = reminders.reminderSlots({
+      ...d,
+      lembretes: { ...d.lembretes, refeicoes: ["cafeManha"], aguaIntervalo: 0 },
+    });
+    assert.equal(meals.length, 1);
+    assert.equal(meals[0].minute, 480);
+  });
+
+  test("Catálogo evita opções repetidas e preserva IDs de porções antigas na edição", () => {
+    const catalog = features.mealCatalog(initial, "janta");
+    assert.equal(new Set(catalog.map((f) => f.nome)).size, catalog.length);
+    const alias = food.DICIONARIO_ALIMENTOS.janta.find(
+      (f) => f.nome === "Arroz",
+    );
+    const original = food.todosAlimentos.find((f) => f.nome === "Arroz");
+    const editing = features.mealCatalog(initial, "janta", [original.id]);
+    assert.ok(editing.some((f) => f.id === original.id));
+    assert.equal(
+      food.calcularPorcoes({ [original.id]: 100 }, editing).calorias,
+      original.kcal100g,
+    );
+    assert.ok(alias);
+  });
+  test("Refazer configuração preserva alimento personalizado e substituição de outra refeição", () => {
+    const custom = {
+      id: "custom_kept",
+      nome: "Meu alimento",
+      emoji: "🍽️",
+      kcal100g: 200,
+      prot: 10,
+      carbo: 30,
+      gord: 5,
+    };
+    const d = { ...initial, alimentosPersonalizados: [custom] };
+    const normalized = normalizeMealPreferences(
+      { cafeManha: ["custom_kept", "frango"] },
+      features.fullCatalog(d),
+    );
+    assert.deepEqual(normalized.cafeManha, ["custom_kept", "frango"]);
+  });
+
+  const shopping = await server.ssrLoadModule("/src/utils/shoppingList.ts");
+  test("Lista de compras multiplica porções pelo período sem inventar quantidades ausentes", () => {
+    const data = {
+      ...initial,
+      refeicoesAtivas: ["cafeManha"],
+      alimentos: { cafeManha: ["pao", "banana"] },
+      porcoesPlano: { cafeManha: { pao: 50 } },
+    };
+    const items = shopping.buildShoppingList(data, 7);
+    assert.equal(items.find((i) => i.nome === "Pão Francês").quantidade, "350");
+    assert.equal(items.find((i) => i.nome === "Banana").quantidade, "");
+    const bulk = shopping.buildShoppingList(data, 30);
+    assert.equal(bulk.find((i) => i.nome === "Pão Francês").quantidade, "1.5");
+    assert.equal(bulk.find((i) => i.nome === "Pão Francês").unidade, "kg");
+  });
+  test("Atualizar compras mantém quantidades editadas, despensa, comprados e itens manuais", () => {
+    const data = {
+      ...initial,
+      refeicoesAtivas: ["cafeManha"],
+      alimentos: { cafeManha: ["pao"] },
+      porcoesPlano: { cafeManha: { pao: 50 } },
+    };
+    const items = shopping.buildShoppingList(data, 7);
+    items[0] = {
+      ...items[0],
+      quantidade: "2",
+      unidade: "un",
+      quantidadeEditada: true,
+      emCasa: true,
+    };
+    const manual = {
+      ...items[0],
+      id: "manual:1",
+      nome: "Detergente",
+      emCasa: false,
+      comprado: true,
+      manual: true,
+    };
+    const updated = shopping.buildShoppingList(data, 14, [...items, manual]);
+    assert.equal(updated.find((i) => i.id === items[0].id).quantidade, "2");
+    assert.equal(updated.find((i) => i.id === items[0].id).unidade, "un");
+    assert.equal(updated.find((i) => i.id === "manual:1").comprado, true);
+    assert.deepEqual(shopping.shoppingProgress(updated), {
+      bought: 1,
+      pantry: 1,
+      pending: 0,
+      missing: 0,
+    });
+    assert.equal(new Set(updated.map((i) => i.id)).size, updated.length);
+  });
+  test("Notificações variam mensagens, permitem desligar humor e evitam alarmes colados", () => {
+    const data = {
+      ...initial,
+      nome: "Teste",
+      horaAcorda: "07:00",
+      horaDorme: "23:00",
+      refeicoesAtivas: ["cafeManha", "janta"],
+      horariosRefeicoes: { cafeManha: "07:00", janta: "20:30" },
+    };
+    const slots = reminders.reminderSlots(data);
+    assert.ok(slots.every((s) => s.messages.length >= 3));
+    for (let i = 0; i < slots.length; i++)
+      for (let j = i + 1; j < slots.length; j++)
+        assert.ok(
+          Math.min(
+            Math.abs(slots[i].minute - slots[j].minute),
+            1440 - Math.abs(slots[i].minute - slots[j].minute),
+          ) >= 10,
+        );
+    assert.equal(slots.filter((s) => s.minute === 420).length, 1);
+    assert.equal(slots.find((s) => s.minute === 420).kind, "meal");
+    const plain = reminders.reminderSlots({
+      ...data,
+      lembretes: {
+        ...reminders.defaultReminders,
+        refeicoes: ["cafeManha"],
+        humor: false,
+        motivacao: false,
+      },
+    });
+    assert.ok(
+      plain.every(
+        (s) => s.messages.length === 1 && s.messages[0].body === s.body,
+      ),
+    );
+  });
+  test("Plano nativo usa metas atuais sem carregar consumo de ontem para os avisos de hoje", () => {
+    const current = {
+      ...initial,
+      nome: "Teste",
+      ultimaData: today(),
+      peso: "70",
+      aguaConsumida: 2450,
+      refeicoesAtivas: ["cafeManha"],
+      refeicoesConcluidas: ["cafeManha"],
+    };
+    const plan = reminders.nativeReminderPlan(current);
+    assert.equal(plan.waterDone, true);
+    assert.equal(plan.complete, true);
+    assert.deepEqual(plan.doneMeals, ["cafeManha"]);
+    const stale = reminders.nativeReminderPlan({
+      ...current,
+      ultimaData: "2020-01-01",
+    });
+    assert.equal(stale.waterDone, false);
+    assert.equal(stale.complete, false);
+    assert.deepEqual(stale.doneMeals, []);
+    assert.equal(
+      reminders.nativeReminderPlan({ ...current, notificacoes: false }).enabled,
+      false,
+    );
+    assert.equal(
+      reminders.nativeReminderPlan({ ...current, nome: "" }).enabled,
+      false,
+    );
+  });
+
+  const diagnostics = await server.ssrLoadModule(
+    "/src/utils/notificationDiagnostics.ts",
+  );
+  test("Teste imediato não confirma agendamento e teste futuro continua aguardando", () => {
+    assert.equal(
+      diagnostics.notificationTestResult({ lastShown: 999 }, 1000).state,
+      "none",
+    );
+    assert.equal(
+      diagnostics.notificationTestResult(
+        { testAt: 2000, testReceivedAt: 0 },
+        1000,
+      ).state,
+      "waiting",
+    );
+  });
+  test("Diagnóstico separa atraso do Android, restrição de exibição e entrega real", () => {
+    assert.equal(
+      diagnostics.notificationTestResult({ testAt: 2000, exact: false }, 3000)
+        .state,
+      "approximate",
+    );
+    assert.equal(
+      diagnostics.notificationTestResult({ testAt: 2000, exact: true }, 3000)
+        .state,
+      "overdue",
+    );
+    assert.equal(
+      diagnostics.notificationTestResult(
+        { testAt: 2000, testReceivedAt: 3000, testShown: false },
+        3000,
+      ).state,
+      "blocked",
+    );
+    assert.equal(
+      diagnostics.notificationTestResult(
+        { testAt: 2000, testReceivedAt: 3000, testShown: true },
+        3000,
+      ).state,
+      "received",
+    );
+    assert.equal(
+      diagnostics.notificationTestResult(
+        { testAt: 20000, testReceivedAt: 3000, testShown: true },
+        10000,
+      ).state,
+      "waiting",
+    );
+  });
+
+  const experience = await server.ssrLoadModule(
+    "/src/utils/dailyExperience.ts",
+  );
+  test("Próxima ação acompanha o horário sem prender o usuário ao café esquecido", () => {
+    const data = {
+      ...initial,
+      horaAcorda: "06:00",
+      horaDorme: "23:00",
+      refeicoesAtivas: ["cafeManha", "almoco", "janta"],
+      refeicoesConcluidas: [],
+    };
+    const result = experience.nextDailyAction(
+      data,
+      new Date(2026, 9, 23, 20, 0),
+    );
+    assert.equal(result.meal.key, "janta");
+    assert.equal(result.earlier, true);
+    const early = experience.nextDailyAction(data, new Date(2026, 9, 23, 6, 0));
+    assert.equal(early.meal.key, "cafeManha");
+    assert.equal(early.upcoming, true);
+    assert.equal(
+      experience.nextDailyAction({
+        ...data,
+        refeicoesConcluidas: data.refeicoesAtivas,
+      }).meal,
+      undefined,
+    );
+  });
+  test("Troca aproxima calorias sem reutilizar os macros do alimento anterior", () => {
+    const a = { kcal100g: 200 },
+      b = { kcal100g: 100 };
+    assert.equal(experience.replacementPortion(a, 150, b), 300);
+    assert.equal(experience.replacementPortion(a, 150, { kcal100g: 0 }), null);
+    assert.equal(experience.replacementPortion(a, NaN, b), null);
+    assert.equal(experience.replacementPortion(a, 9999, { kcal100g: 1 }), null);
+  });
+  test("Datas inválidas e futuras não entram nas correções", () => {
+    const now = new Date(2026, 9, 23, 12);
+    assert.equal(experience.validPastOrToday("2026-02-30", now), false);
+    assert.equal(experience.validPastOrToday("2026-10-24", now), false);
+    assert.equal(experience.validPastOrToday("2026-10-23", now), true);
+  });
+  test("Editar ontem preserva consumo, macros e sequência de hoje, sem duplicar calorias", () => {
+    reset();
+    store.getState().setDados({
+      ultimaData: today(),
+      aguaConsumida: 600,
+      caloriasConsumidas: 420,
+      macrosConsumidos: { proteina: 20, carbo: 30, gordura: 10 },
+      diasMetasConcluidas: { "2020-01-01": true },
+      historico: {
+        "2020-01-01": {
+          aguaConsumida: 100,
+          caloriasConsumidas: 500,
+          refeicoesDetalhadas: {
+            almoco: {
+              titulo: "Almoço",
+              icone: "🍽️",
+              calorias: 300,
+              alimentos: ["Arroz"],
+              macros: { proteina: 1, carbo: 2, gordura: 3 },
+            },
+          },
+        },
+      },
+    });
+    const before = structuredClone(store.getState().dados);
+    const meal = {
+      titulo: "Almoço",
+      icone: "🍽️",
+      calorias: 200,
+      alimentos: ["Arroz"],
+      macros: { proteina: 1, carbo: 2, gordura: 3 },
+    };
+    assert.equal(
+      store
+        .getState()
+        .corrigirDia("2020-01-01", { key: "almoco", refeicao: meal }),
+      true,
+    );
+    store
+      .getState()
+      .corrigirDia("2020-01-01", { key: "almoco", refeicao: meal });
+    const after = store.getState().dados;
+    assert.equal(after.historico["2020-01-01"].caloriasConsumidas, 400);
+    assert.equal(after.caloriasConsumidas, before.caloriasConsumidas);
+    assert.equal(after.aguaConsumida, before.aguaConsumida);
+    assert.deepEqual(after.macrosConsumidos, before.macrosConsumidos);
+    assert.deepEqual(after.diasMetasConcluidas, before.diasMetasConcluidas);
+    store.getState().corrigirDia("2020-01-01", { key: "almoco" });
+    assert.equal(
+      store.getState().dados.historico["2020-01-01"].caloriasConsumidas,
+      200,
+    );
+  });
+  test("Correção de água passada rejeita valores inválidos e não reescreve hoje", () => {
+    reset();
+    store.getState().setDados({ ultimaData: today(), aguaConsumida: 500 });
+    assert.equal(
+      store.getState().corrigirDia("2020-01-02", { agua: 1250 }),
+      true,
+    );
+    assert.equal(
+      store.getState().corrigirDia("2020-01-02", { agua: -1 }),
+      false,
+    );
+    assert.equal(store.getState().corrigirDia(today(), { agua: 900 }), false);
+    assert.equal(
+      store.getState().corrigirDia("2099-01-01", { agua: 900 }),
+      false,
+    );
+    assert.equal(store.getState().dados.aguaConsumida, 500);
+    assert.equal(
+      store.getState().dados.historico["2020-01-02"].aguaConsumida,
+      1250,
+    );
+  });
+  test("Peso antigo pode ser corrigido sem substituir o peso mais recente", () => {
+    reset();
+    store
+      .getState()
+      .setDados({ peso: "80", historicoPeso: { [today()]: "80" } });
+    assert.equal(store.getState().salvarPesoNaData("2020-01-01", "90,5"), true);
+    assert.equal(store.getState().dados.peso, "80");
+    assert.equal(store.getState().dados.historicoPeso["2020-01-01"], "90.5");
+    assert.equal(store.getState().salvarPesoNaData(today(), "79.5"), true);
+    assert.equal(store.getState().dados.peso, "79.5");
+    assert.equal(store.getState().salvarPesoNaData("2099-01-01", "70"), false);
+  });
+  test("Gráfico filtra o período por datas reais e ignora pesos futuros ou inválidos", () => {
+    const weights = {
+      "2026-09-23": "82",
+      "2026-09-24": "81",
+      "2026-10-23": "80",
+      "2026-10-24": "79",
+      "2026-02-30": "78",
+      "2026-10-20": "abc",
+    };
+    assert.deepEqual(
+      experience
+        .weightSeries(weights, 30, new Date(2026, 9, 23))
+        .map((w) => w.value),
+      [81, 80],
+    );
+    assert.equal(
+      experience.weightSeries(weights, null, new Date(2026, 9, 23)).length,
+      3,
+    );
+  });
+
+  test("Substituições priorizam composição semelhante e evitam porções impraticáveis", () => {
+    const chicken = {
+      id: "chicken",
+      nome: "Frango",
+      kcal100g: 165,
+      prot: 31,
+      carbo: 0,
+      gord: 3,
+    };
+    const fish = {
+      id: "fish",
+      nome: "Peixe",
+      kcal100g: 105,
+      prot: 23,
+      carbo: 0,
+      gord: 1,
+    };
+    const rice = {
+      id: "rice",
+      nome: "Arroz",
+      kcal100g: 130,
+      prot: 2,
+      carbo: 28,
+      gord: 1,
+    };
+    const coffee = {
+      id: "coffee",
+      nome: "Café",
+      kcal100g: 2,
+      prot: 0,
+      carbo: 0,
+      gord: 0,
+    };
+    const choices = experience.replacementCandidates(chicken, 100, [
+      rice,
+      coffee,
+      chicken,
+      fish,
+    ]);
+    assert.equal(choices[0].id, "fish");
+    assert.equal(
+      choices.some((f) => f.id === "coffee" || f.id === "chicken"),
+      false,
+    );
+  });
+  test("Primeiro peso retroativo não apaga o peso atual sem data histórica", () => {
+    reset();
+    store.getState().setDados({ peso: "80", historicoPeso: {} });
+    store.getState().salvarPesoNaData("2020-01-01", "90");
+    assert.equal(store.getState().dados.peso, "80");
+  });
+
+  const weightValidation = await server.ssrLoadModule(
+    "/src/utils/weightValidation.ts",
+  );
+  test("Todos os caminhos de peso respeitam os mesmos limites e aceitam vírgula", () => {
+    for (const value of ["29.9", "300.1", "", "NaN", "-80", "Infinity"]) {
+      reset();
+      store.getState().setDados({ peso: "80", historicoPeso: {} });
+      assert.equal(weightValidation.parseWeight(value), null);
+      assert.equal(store.getState().salvarPesoNaData(today(), value), false);
+      store.getState().atualizarPeso(value);
+      assert.equal(store.getState().dados.peso, "80");
+      assert.deepEqual(store.getState().dados.historicoPeso, {});
+    }
+    assert.equal(weightValidation.parseWeight("30"), 30);
+    assert.equal(weightValidation.parseWeight("300"), 300);
+    assert.equal(weightValidation.parseWeight("80,5"), 80.5);
+    store.getState().atualizarPeso("80,5");
+    assert.equal(store.getState().dados.historicoPeso[today()], "80.5");
+  });
+
+  const support = await server.ssrLoadModule("/src/services/supportService.ts");
+  test("Suporte envia somente mensagem e contato informado, sem dados do perfil", () => {
+    const payload = support.supportPayload({
+      kind: "support",
+      message: "Preciso de ajuda",
+      contact: "teste@example.com",
+      peso: "80",
+      altura: "180",
+      nome: "Privado",
+      historico: { privado: true },
+    });
+    assert.deepEqual(
+      payload.embeds[0].fields.map((f) => f.name),
+      ["Mensagem", "Contato informado"],
+    );
+    assert.deepEqual(payload.allowed_mentions, { parse: [] });
+    assert.equal(JSON.stringify(payload).includes("Privado"), false);
+    assert.equal(JSON.stringify(payload).includes("historico"), false);
+    assert.equal(
+      support.supportPayload({
+        kind: "idea",
+        message: "Sugestão",
+        contact: "teste@example.com",
+      }).embeds[0].fields.length,
+      1,
+    );
+    assert.throws(() =>
+      support.supportPayload({
+        kind: "support",
+        message: "Olá",
+        contact: "........",
+      }),
+    );
+    assert.throws(() =>
+      support.supportPayload({ kind: "idea", message: " ".repeat(20) }),
+    );
+  });
+  const testSupport = support.createSupportClient({
+    support: "https://discord.com/api/webhooks/test-only/test-only",
+    idea: "https://discord.com/api/webhooks/test-only/test-only",
+  });
+  const asyncTest = async (name, run) => {
+    await run();
+    passed++;
+    console.log("✓ " + name);
+  };
+  await asyncTest(
+    "Envio exige confirmação e só registra sucesso após resposta do Discord",
+    async () => {
+      const originalFetch = globalThis.fetch;
+      const key = "louri_support_support";
+      storage.delete(key);
+      let requests = 0;
+      globalThis.fetch = async (url, options) => {
+        requests++;
+        assert.equal(new URL(url).searchParams.get("wait"), "true");
+        assert.equal(
+          JSON.parse(options.body).embeds[0].fields[0].value,
+          "Teste local",
+        );
+        return { ok: false, status: 500 };
+      };
+      try {
+        await assert.rejects(
+          testSupport.send({ kind: "support", message: "Teste local" }, false),
+          /Confirme/,
+        );
+        assert.equal(requests, 0);
+        await assert.rejects(
+          testSupport.send({ kind: "support", message: "Teste local" }, true),
+          /Não foi possível/,
+        );
+        assert.equal(storage.has(key), false);
+        globalThis.fetch = async () => ({ ok: true, status: 200 });
+        await testSupport.send(
+          { kind: "support", message: "Teste local" },
+          true,
+        );
+        assert.equal(storage.has(key), true);
+        await assert.rejects(
+          testSupport.send({ kind: "support", message: "Teste local" }, true),
+          /Aguarde/,
+        );
+      } finally {
+        globalThis.fetch = originalFetch;
+        storage.delete(key);
+      }
+    },
+  );
+
+  await asyncTest(
+    "Suporte evita envios simultâneos e preserva nova tentativa após limite do Discord",
+    async () => {
+      const originalFetch = globalThis.fetch;
+      storage.delete("louri_support_idea");
+      let release,
+        requests = 0;
+      const client = support.createSupportClient({
+        support: undefined,
+        idea: "https://discord.com/api/webhooks/test-only/test-only",
+      });
+      globalThis.fetch = () => {
+        requests++;
+        return new Promise((resolve) => {
+          release = resolve;
+        });
+      };
+      try {
+        const first = client.send(
+          { kind: "idea", message: "Sugestão de teste" },
+          true,
+        );
+        await assert.rejects(
+          client.send({ kind: "idea", message: "Outra sugestão" }, true),
+          /ainda está sendo enviada/,
+        );
+        assert.equal(requests, 1);
+        release({ ok: false, status: 429 });
+        await assert.rejects(first, /Muitas mensagens/);
+        assert.equal(storage.has("louri_support_idea"), false);
+        globalThis.fetch = async () => ({ ok: true, status: 200 });
+        await client.send({ kind: "idea", message: "Sugestão de teste" }, true);
+      } finally {
+        globalThis.fetch = originalFetch;
+        storage.delete("louri_support_idea");
+      }
+    },
+  );
+
+  const back = await server.ssrLoadModule("/src/utils/backNavigation.ts");
+  const viewport = await server.ssrLoadModule("/src/utils/viewport.ts");
+  const persisted = await server.ssrLoadModule("/src/utils/persistedUser.ts");
+  const drafts = await server.ssrLoadModule("/src/utils/supportDraft.ts");
+  test("Voltar fecha primeiro a janela interna e remove apenas o próprio registro", () => {
+    const stack = back.createBackStack(),
+      closed = [];
+    const removePage = stack.register(() => closed.push("página"));
+    const removeModal = stack.register(() => closed.push("janela"));
+    assert.equal(stack.dismiss(), true);
+    assert.deepEqual(closed, ["janela"]);
+    removeModal();
+    stack.dismiss();
+    assert.deepEqual(closed, ["janela", "página"]);
+    removePage();
+    removePage();
+    assert.equal(stack.dismiss(), false);
+  });
+  test("Teclado sobreposto e WebView já redimensionada usam a mesma altura sem desconto duplo", () => {
+    assert.equal(viewport.visibleAppHeight(800, 800, 800, 300), 500);
+    assert.equal(viewport.visibleAppHeight(500, 500, 800, 300), 500);
+    assert.equal(viewport.visibleAppHeight(800, 500, 800, 0), 500);
+    assert.equal(viewport.visibleAppHeight(800, 800, 800, 0), 800);
+  });
+  test("Dados parciais antigos recebem somente os campos ausentes, sem apagar histórico", () => {
+    const history = {
+      "2020-01-01": {
+        aguaConsumida: 900,
+        caloriasConsumidas: 100,
+        refeicoesDetalhadas: {},
+      },
+    };
+    const result = persisted.mergePersistedUser(
+      {
+        nome: "Antigo",
+        peso: 83,
+        historico: history,
+        favoritos: null,
+        macrosConsumidos: { proteina: 20 },
+        alimentos: ["pao"],
+      },
+      initial,
+    );
+    assert.equal(result.peso, "83");
+    assert.deepEqual(result.historico, history);
+    assert.deepEqual(result.alimentos, ["pao"]);
+    assert.deepEqual(result.favoritos, []);
+    assert.deepEqual(result.macrosConsumidos, {
+      proteina: 20,
+      carbo: 0,
+      gordura: 0,
+    });
+  });
+  await asyncTest(
+    "Atualização reidrata a versão antiga e preserva plano, histórico, alimentos e sequência",
+    async () => {
+      reset();
+      const legacy = {
+        ...structuredClone(initial),
+        nome: "Perfil existente",
+        peso: "83.7",
+        ultimaData: today(),
+        aguaConsumida: 900,
+        favoritos: ["pao"],
+        alimentos: { cafeManha: ["pao"] },
+        historicoPeso: { "2020-01-01": "84" },
+        ultimasPorcoes: { cafeManha: { pao: 50 } },
+        porcoesPlano: { cafeManha: { pao: 75 } },
+        horariosRefeicoes: { cafeManha: "07:30" },
+        diasMetasConcluidas: { "2020-01-01": true },
+        historico: {
+          "2020-01-01": {
+            aguaConsumida: 900,
+            caloriasConsumidas: 140,
+            refeicoesDetalhadas: {
+              cafeManha: {
+                titulo: "Café",
+                icone: "☕",
+                calorias: 140,
+                alimentos: ["Pão"],
+                porcoes: { pao: 50 },
+                macros: { proteina: 4, carbo: 20, gordura: 1 },
+              },
+            },
+          },
+        },
+        refeicoesSalvas: [{ id: "r1", nome: "Meu café", porcoes: { pao: 50 } }],
+        alimentosPersonalizados: [
+          {
+            id: "custom_teste",
+            nome: "Alimento",
+            emoji: "🍽️",
+            kcal100g: 100,
+            prot: 4,
+            carbo: 10,
+            gord: 2,
+          },
+        ],
+      };
+      storage.set(
+        "nutri-app-storage",
+        JSON.stringify({ state: { dados: legacy }, version: 0 }),
+      );
+      await store.persist.rehydrate();
+      for (const key of Object.keys(legacy))
+        assert.deepEqual(store.getState().dados[key], legacy[key], key);
+      assert.equal(JSON.parse(storage.get("nutri-app-storage")).version, 1);
+    },
+  );
+  test("Rascunho do suporte sobrevive ao fechamento na sessão, sem misturar canais", () => {
+    drafts.supportDraft.set("support", "Minha mensagem offline");
+    assert.equal(drafts.supportDraft.get("support"), "Minha mensagem offline");
+    assert.equal(drafts.supportDraft.get("idea"), "");
+    drafts.supportDraft.clear("support");
+    assert.equal(drafts.supportDraft.get("support"), "");
+  });
+
+  await asyncTest(
+    "Sem internet, água e refeições persistem e o suporte não tenta enviar",
+    async () => {
+      const descriptor = Object.getOwnPropertyDescriptor(
+        globalThis,
+        "navigator",
+      );
+      const originalFetch = globalThis.fetch;
+      let requests = 0;
+      Object.defineProperty(globalThis, "navigator", {
+        value: { onLine: false },
+        configurable: true,
+      });
+      globalThis.fetch = async () => {
+        requests++;
+        throw Error("Rede não deveria ser usada");
+      };
+      try {
+        reset();
+        store.getState().setDados({ ultimaData: today() });
+        store.getState().adicionarAgua(300, 99999);
+        store
+          .getState()
+          .registrarRefeicao(
+            "cafeManha",
+            "Café",
+            "☕",
+            140,
+            ["Pão"],
+            { proteina: 4, carbo: 20, gordura: 1 },
+            { pao: 50 },
+          );
+        await store.persist.rehydrate();
+        assert.equal(store.getState().dados.aguaConsumida, 300);
+        assert.equal(store.getState().dados.caloriasConsumidas, 140);
+        assert.equal(
+          store.getState().dados.historico[today()].refeicoesDetalhadas
+            .cafeManha.porcoes.pao,
+          50,
+        );
+        drafts.supportDraft.set("support", "Não consigo enviar agora");
+        await assert.rejects(
+          testSupport.send(
+            { kind: "support", message: drafts.supportDraft.get("support") },
+            true,
+          ),
+          /sem internet/,
+        );
+        assert.equal(requests, 0);
+        assert.equal(
+          drafts.supportDraft.get("support"),
+          "Não consigo enviar agora",
+        );
+      } finally {
+        if (descriptor)
+          Object.defineProperty(globalThis, "navigator", descriptor);
+        else delete globalThis.navigator;
+        globalThis.fetch = originalFetch;
+        drafts.supportDraft.clear("support");
+      }
+    },
+  );
+
+  test("Override de uuid mantém a geração de IDs utilizada pelo xcode", () => {
+    const project = require("xcode").project("nao-executado.pbxproj");
+    project.hash = {
+      project: { objects: { PBXProject: {}, PBXNativeTarget: {} } },
+    };
+    const ids = Array.from({ length: 100 }, () => project.generateUuid());
+    assert.equal(new Set(ids).size, 100);
+    assert.ok(ids.every((id) => /^[A-F0-9]{24}$/.test(id)));
+  });
+  const easyMeals = await server.ssrLoadModule("/src/utils/easyMeals.ts");
+  test("Repetir refeição recupera porções antigas sem alterar registros ou totais", () => {
+    reset();
+    const meal = {
+      titulo: "Café",
+      icone: "☕",
+      calorias: 155,
+      alimentos: ["Ovo"],
+      macros: { proteina: 13, carbo: 1, gordura: 11 },
+      porcoes: { ovo: 100, alimento_removido: 50 },
+    };
+    store.getState().setDados({
+      historico: {
+        "2026-01-01": {
+          aguaConsumida: 200,
+          caloriasConsumidas: 155,
+          refeicoesDetalhadas: { cafeManha: meal },
+        },
+      },
+    });
+    const before = structuredClone(store.getState().dados);
+    const portions = easyMeals.lastMealPortions(before, "cafeManha");
+    assert.deepEqual(portions, { ovo: 100 });
+    portions.ovo = 50;
+    assert.deepEqual(store.getState().dados, before);
+    assert.deepEqual(easyMeals.lastMealPortions(before, "janta"), {});
+  });
+  test("Última combinação usa memória válida e recupera histórico se alimento foi removido", () => {
+    const base = structuredClone(store.getState().dados);
+    assert.deepEqual(
+      easyMeals.lastMealPortions(
+        { ...base, ultimasPorcoes: { cafeManha: { ovo: 150 } } },
+        "cafeManha",
+      ),
+      { ovo: 150 },
+    );
+    assert.deepEqual(
+      easyMeals.lastMealPortions(
+        { ...base, ultimasPorcoes: { cafeManha: { inexistente: 150 } } },
+        "cafeManha",
+      ),
+      { ovo: 100 },
+    );
+    assert.deepEqual(
+      easyMeals.lastMealPortions(
+        {
+          ...base,
+          historico: { "2999-01-01": base.historico["2026-01-01"] },
+          ultimasPorcoes: {},
+        },
+        "cafeManha",
+      ),
+      {},
+    );
+  });
+  test("Medida caseira só se aplica ao alimento correspondente e preserva meios de unidade", () => {
+    const egg = food.todosAlimentos.find((f) => f.id === "ovo");
+    assert.equal(easyMeals.householdMeasure(egg).grams * 2, 100);
+    assert.equal(easyMeals.householdMeasure(egg).grams * 0.5, 25);
+    assert.equal(
+      easyMeals.householdMeasure({ ...egg, id: "custom_ovo" }),
+      undefined,
+    );
+    assert.equal(
+      easyMeals.householdMeasure({ ...egg, nome: "Ovo com bacon" }),
+      undefined,
+    );
+  });
+  test("Tutorial e dicas dispensadas persistem sem alterar os dados da rotina", () => {
+    reset();
+    store.getState().verificarViradaDeDia();
+    const before = structuredClone(store.getState().dados);
+    store
+      .getState()
+      .setDados({ tutorialVisto: true, dicasVistas: ["history-edit"] });
+    const saved = JSON.parse(storage.get("nutri-app-storage")).state.dados;
+    assert.equal(saved.tutorialVisto, true);
+    assert.deepEqual(saved.dicasVistas, ["history-edit"]);
+    delete saved.tutorialVisto;
+    delete saved.dicasVistas;
+    assert.deepEqual(saved, before);
+  });
+  const search = await server.ssrLoadModule("/src/utils/foodSearch.ts");
+  const custom = await server.ssrLoadModule("/src/utils/customFood.ts");
+  const remindersNav = await server.ssrLoadModule(
+    "/src/utils/reminderNavigation.ts",
+  );
+  const grocery = await server.ssrLoadModule("/src/utils/shoppingList.ts");
+  test("Busca aceita acentos, nomes populares e palavras em qualquer ordem sem confundir preparos", () => {
+    const bread = food.todosAlimentos.find((f) => f.id === "pao");
+    assert.ok(search.foodMatches(bread, "  PAO francês "));
+    assert.ok(search.foodMatches(bread, "cacetinho"));
+    assert.ok(search.foodMatches(bread, "sal pao"));
+    const cassava = food.todosAlimentos.find((f) => f.id === "mandioca_cozida");
+    assert.ok(search.foodMatches(cassava, "macaxeira"));
+    assert.ok(
+      search.foodMatches(cassava, "aipim cozido".replace("cozido", "cozida")),
+    );
+    assert.equal(
+      search.foodMatches(
+        food.todosAlimentos.find((f) => f.id === "batatadoce"),
+        "mandioca",
+      ),
+      false,
+    );
+    assert.ok(
+      search.foodMatches(
+        food.todosAlimentos.find((f) => f.id === "arroz"),
+        "arroz cozido",
+      ),
+    );
+    assert.equal(
+      search.foodMatches(
+        food.todosAlimentos.find((f) => f.id === "arroz_cru"),
+        "arroz cozido",
+      ),
+      false,
+    );
+  });
+  test("Recentes respeitam a data e não transformam preferência ou busca em consumo", () => {
+    reset();
+    const data = structuredClone(store.getState().dados);
+    const meal = (id) => ({
+      titulo: "Refeição",
+      icone: "🍽️",
+      calorias: 10,
+      alimentos: [id],
+      macros: { proteina: 0, carbo: 0, gordura: 0 },
+      porcoes: { [id]: 100 },
+    });
+    data.historico = {
+      "2026-01-01": {
+        aguaConsumida: 0,
+        caloriasConsumidas: 10,
+        refeicoesDetalhadas: { a: meal("pao") },
+      },
+      "2026-01-02": {
+        aguaConsumida: 0,
+        caloriasConsumidas: 10,
+        refeicoesDetalhadas: { b: meal("ovo") },
+      },
+      "2999-01-01": {
+        aguaConsumida: 0,
+        caloriasConsumidas: 10,
+        refeicoesDetalhadas: { c: meal("frango") },
+      },
+    };
+    const before = structuredClone(data),
+      ranks = search.recentFoodRanks(data);
+    assert.ok(ranks.get("ovo") < ranks.get("pao"));
+    assert.equal(ranks.has("frango"), false);
+    assert.deepEqual(data, before);
+  });
+  test("Comparação de alterações aceita ordem diferente e identifica quantidade removida ou editada", () => {
+    assert.ok(
+      search.samePortions(
+        { pao: 50, ovo: 100 },
+        { ovo: 100, pao: 50, banana: 0 },
+      ),
+    );
+    assert.equal(search.samePortions({ pao: 50 }, { pao: 25 }), false);
+    assert.equal(search.samePortions({ pao: 50 }, {}), false);
+  });
+  test("Alimento personalizado converte a porção do rótulo, aceita vírgula e exige dados completos", () => {
+    const item = custom.createCustomFood(
+      "Meu cereal",
+      "30",
+      ["90", "3", "18", "0,5"],
+      "custom_cereal",
+    );
+    assert.equal(item.kcal100g, 300);
+    assert.equal(item.prot, 10);
+    assert.equal(item.carbo, 60);
+    assert.equal(item.porcaoReferencia, 30);
+    assert.equal(
+      typeof custom.createCustomFood(
+        "Meu cereal",
+        "30",
+        ["90", "", "18", "0,5"],
+        "custom_a",
+      ),
+      "string",
+    );
+    assert.equal(
+      typeof custom.createCustomFood(
+        "Meu cereal",
+        "0",
+        ["90", "3", "18", "0,5"],
+        "custom_a",
+      ),
+      "string",
+    );
+    assert.equal(
+      typeof custom.createCustomFood(
+        "Meu cereal",
+        "30",
+        ["90", "30", "30", "30"],
+        "custom_a",
+      ),
+      "string",
+    );
+    reset();
+    store.getState().setDados({ alimentosPersonalizados: [item] });
+    assert.ok(
+      features
+        .mealCatalog(store.getState().dados, "janta")
+        .some((f) => f.id === item.id),
+    );
+    assert.equal(
+      JSON.parse(storage.get("nutri-app-storage")).state.dados
+        .alimentosPersonalizados[0].porcaoReferencia,
+      30,
+    );
+  });
+  test("Personalizado de zero calorias registra porção real sem aceitar refeição vazia", () => {
+    reset();
+    const item = custom.createCustomFood(
+      "Gelatina zero",
+      "100",
+      ["0", "0", "0", "0"],
+      "custom_zero",
+    );
+    assert.equal(item.kcal100g, 0);
+    store
+      .getState()
+      .registrarRefeicao(
+        "refeicaoLivre_zero",
+        "Gelatina",
+        "🍽️",
+        0,
+        [item.nome],
+        { proteina: 0, carbo: 0, gordura: 0 },
+        { custom_zero: 100 },
+      );
+    assert.ok(
+      store.getState().dados.refeicoesConcluidas.includes("refeicaoLivre_zero"),
+    );
+    store
+      .getState()
+      .registrarRefeicao(
+        "vazia",
+        "Vazia",
+        "🍽️",
+        0,
+        [],
+        { proteina: 0, carbo: 0, gordura: 0 },
+        {},
+      );
+    assert.equal(
+      store.getState().dados.refeicoesConcluidas.includes("vazia"),
+      false,
+    );
+  });
+  test("Toque de lembrete aguarda montagem e uma confirmação antiga não apaga o aviso seguinte", () => {
+    const inbox = remindersNav.createReminderInbox();
+    inbox.publish({ meal: "janta" });
+    const first = inbox.get();
+    let notified = 0;
+    const stop = inbox.subscribe(() => notified++);
+    assert.equal(first.meal, "janta");
+    inbox.publish({ meal: "almoco" });
+    inbox.acknowledge(first);
+    assert.equal(inbox.get().meal, "almoco");
+    inbox.acknowledge(inbox.get());
+    assert.equal(inbox.get(), null);
+    assert.equal(notified, 2);
+    stop();
+  });
+  test("Lembrete abre refeição pendente, mostra registro concluído e mantém o dia anterior", () => {
+    reset();
+    const data = {
+      ...store.getState().dados,
+      refeicoesAtivas: ["janta"],
+      refeicoesConcluidas: [],
+    };
+    assert.equal(
+      remindersNav.resolveReminder(data, { meal: "janta" }).type,
+      "meal",
+    );
+    assert.equal(
+      remindersNav.resolveReminder(
+        { ...data, refeicoesConcluidas: ["janta"] },
+        { meal: "janta" },
+      ).type,
+      "record",
+    );
+    assert.equal(
+      remindersNav.resolveReminder(data, { meal: "almoco" }).type,
+      "unavailable",
+    );
+    assert.equal(
+      remindersNav.resolveReminder(data, { meal: "janta", day: "2026-01-01" })
+        .type,
+      "history",
+    );
+  });
+  test("Compras agrupa unidades compatíveis sem misturar preparo, despensa ou quantidade desconhecida", () => {
+    const item = {
+      id: "a",
+      nome: "Feijão",
+      emoji: "🍲",
+      categoria: "Mercearia",
+      quantidade: "500",
+      unidade: "g",
+      comprado: false,
+      emCasa: false,
+      manual: true,
+      quantidadeEditada: true,
+      referenciaGramas: 500,
+    };
+    const merged = grocery.consolidateShoppingItems([
+      item,
+      { ...item, id: "b", nome: "feijao", quantidade: "1", unidade: "kg" },
+    ]);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].quantidade, "1500");
+    assert.equal(merged[0].unidade, "g");
+    assert.equal(item.quantidade, "500");
+    assert.equal(
+      grocery.consolidateShoppingItems([
+        item,
+        { ...item, id: "b", preparo: "Cru" },
+      ]).length,
+      2,
+    );
+    assert.equal(
+      grocery.consolidateShoppingItems([
+        item,
+        { ...item, id: "b", emCasa: true },
+      ]).length,
+      2,
+    );
+    assert.equal(
+      grocery.consolidateShoppingItems([
+        item,
+        { ...item, id: "b", quantidade: "" },
+      ]).length,
+      2,
+    );
+  });
+  test("Revisão mantém IDs e referências distinguem arroz cru de cozido sem reescrever histórico", () => {
+    const cooked = food.todosAlimentos.find((f) => f.id === "arroz"),
+      raw = food.todosAlimentos.find((f) => f.id === "arroz_cru");
+    assert.equal(cooked.kcal100g, 128);
+    assert.equal(raw.kcal100g, 358);
+    assert.match(cooked.fonte, /TACO/);
+    assert.equal(
+      food.todosAlimentos.find((f) => f.id === "tapioca").kcal100g,
+      289,
+    );
+    reset();
+    store
+      .getState()
+      .registrarRefeicao(
+        "cafeManha",
+        "Café",
+        "☕",
+        777,
+        ["Arroz antigo"],
+        { proteina: 1, carbo: 2, gordura: 3 },
+        { arroz: 100 },
+      );
+    features.mealCatalog(store.getState().dados, "cafeManha");
+    assert.equal(store.getState().dados.caloriasConsumidas, 777);
+  });
+  test("Atualizar compra preserva item homônimo com unidade ou estado diferente", () => {
+    reset();
+    const data = {
+      ...store.getState().dados,
+      refeicoesAtivas: ["almoco"],
+      alimentos: { almoco: ["arroz"] },
+      porcoesPlano: { almoco: { arroz: 100 } },
+    };
+    const original = grocery.buildShoppingList(data, 1)[0];
+    const other = {
+      ...original,
+      id: "manual:extra",
+      quantidade: "1",
+      unidade: "un",
+      emCasa: true,
+      manual: true,
+      quantidadeEditada: true,
+    };
+    const result = grocery.buildShoppingList(data, 7, [original, other]);
+    assert.equal(result.length, 2);
+    assert.equal(result.find((i) => i.id === other.id).unidade, "un");
+    assert.equal(result.find((i) => i.id === other.id).emCasa, true);
+  });
+  test("Personalizado com o mesmo nome mantém valores e identidade próprios no registro", () => {
+    reset();
+    const own = custom.createCustomFood(
+      "Ovo",
+      "100",
+      ["200", "10", "2", "15"],
+      "custom_own_ovo",
+    );
+    const data = { ...store.getState().dados, alimentosPersonalizados: [own] };
+    const catalog = features.mealCatalog(data, "cafeManha", ["ovo", own.id]);
+    assert.ok(catalog.some((f) => f.id === "ovo"));
+    assert.ok(catalog.some((f) => f.id === own.id));
+    assert.equal(food.calcularPorcoes({ [own.id]: 50 }, catalog).calorias, 100);
+  });
+  const removal = await server.ssrLoadModule("/src/utils/removeCustomFood.ts");
+  test("Apagar personalizado limpa o plano e preserva histórico e valores", () => {
+    const item = custom.createCustomFood(
+      "Teste remoção",
+      "100",
+      ["100", "2", "10", "4"],
+      "custom_remove",
+    );
+    const data = {
+      ...initial,
+      alimentosPersonalizados: [item],
+      favoritos: [item.id, "ovo"],
+      alimentos: { cafeManha: [item.id, "ovo"] },
+      porcoesPlano: { cafeManha: { [item.id]: 40, ovo: 50 } },
+      ultimasPorcoes: { cafeManha: { [item.id]: 40 } },
+      refeicoesSalvas: [{ id: "r", nome: "Teste", porcoes: { [item.id]: 40 } }],
+    };
+    const changed = { ...data, ...removal.removeCustomFood(data, item.id) };
+    assert.equal(changed.alimentosPersonalizados[0].arquivado, true);
+    assert.equal(data.alimentosPersonalizados[0].arquivado, undefined);
+    assert.deepEqual(changed.favoritos, ["ovo"]);
+    assert.deepEqual(changed.alimentos.cafeManha, ["ovo"]);
+    assert.deepEqual(changed.porcoesPlano.cafeManha, { ovo: 50 });
+    assert.deepEqual(changed.ultimasPorcoes.cafeManha, {});
+    assert.deepEqual(changed.refeicoesSalvas, []);
+    assert.equal(changed.historico, data.historico);
+    assert.ok(
+      !features.mealCatalog(changed, "cafeManha").some((f) => f.id === item.id),
+    );
+    assert.ok(
+      features
+        .mealCatalog(changed, "cafeManha", [item.id])
+        .some((f) => f.id === item.id),
+    );
+    assert.equal(
+      food.calcularPorcoes({ [item.id]: 40 }, features.fullCatalog(changed))
+        .calorias,
+      40,
+    );
+    assert.deepEqual(removal.removeCustomFood(data, "ovo"), {});
+  });
+  const editing = await server.ssrLoadModule("/src/utils/editCustomFood.ts");
+  test("Bebida calcula por ml sem converter volume em massa", () => {
+    const drink = custom.createCustomFood(
+      "Bebida",
+      "200",
+      ["120", "6", "20", "2"],
+      "custom_drink",
+      "ml",
+    );
+    assert.equal(drink.unidade, "ml");
+    assert.equal(drink.porcaoReferencia, 200);
+    assert.equal(drink.kcal100g, 60);
+    assert.deepEqual(food.calcularPorcoes({ [drink.id]: 300 }, [drink]), {
+      calorias: 180,
+      macros: { proteina: 9, carbo: 30, gordura: 3 },
+    });
+    const dense = custom.createCustomFood(
+      "Concentrado",
+      "100",
+      ["500", "0", "120", "0"],
+      "custom_dense",
+      "ml",
+    );
+    assert.equal(typeof dense, "object");
+    assert.equal(
+      typeof custom.createCustomFood(
+        "Inválido",
+        "100",
+        ["500", "0", "120", "0"],
+        "custom_dense_g",
+      ),
+      "string",
+    );
+  });
+  test("Compras de bebida usa ml e litros e mantém massa separada", () => {
+    const drink = custom.createCustomFood(
+      "Bebida teste",
+      "200",
+      ["120", "6", "20", "2"],
+      "custom_drink",
+      "ml",
+    );
+    const data = {
+      ...initial,
+      refeicoesAtivas: ["cafeManha"],
+      alimentosPersonalizados: [drink],
+      alimentos: { cafeManha: [drink.id] },
+      porcoesPlano: { cafeManha: { [drink.id]: 200 } },
+    };
+    assert.equal(grocery.buildShoppingList(data, 1)[0].unidade, "ml");
+    const week = grocery.buildShoppingList(data, 7)[0];
+    assert.equal(week.unidade, "L");
+    assert.equal(week.quantidade, "1.4");
+    const legacy = {
+      ...week,
+      id: "antigo",
+      unidade: "g",
+      quantidade: "500",
+      quantidadeEditada: true,
+    };
+    assert.equal(grocery.buildShoppingList(data, 7, [legacy]).length, 2);
+  });
+  test("Editar alimento preserva definição antiga, imagens e histórico", () => {
+    const original = {
+      ...custom.createCustomFood(
+        "Original",
+        "30",
+        ["90", "3", "18", "1"],
+        "custom_before",
+      ),
+      emoji: "🥣",
+      imagem: "data:image/jpeg;base64,test",
+    };
+    const replacement = custom.createCustomFood(
+      "Editado",
+      "50",
+      ["100", "2", "20", "1"],
+      "custom_after",
+    );
+    const data = {
+      ...initial,
+      alimentosPersonalizados: [original],
+      favoritos: [original.id],
+      alimentos: { cafeManha: [original.id] },
+      porcoesPlano: { cafeManha: { [original.id]: 60 } },
+      ultimasPorcoes: { cafeManha: { [original.id]: 30 } },
+      refeicoesSalvas: [
+        { id: "r", nome: "Combinacao", porcoes: { [original.id]: 60 } },
+      ],
+    };
+    const changed = {
+      ...data,
+      ...editing.editCustomFood(data, original.id, replacement),
+    };
+    assert.equal(changed.historico, data.historico);
+    assert.equal(changed.caloriasConsumidas, data.caloriasConsumidas);
+    assert.equal(changed.alimentosPersonalizados[0].arquivado, true);
+    assert.equal(data.alimentosPersonalizados[0].arquivado, undefined);
+    assert.equal(changed.alimentosPersonalizados[1].emoji, original.emoji);
+    assert.equal(changed.alimentosPersonalizados[1].imagem, original.imagem);
+    assert.deepEqual(changed.favoritos, [replacement.id]);
+    assert.deepEqual(changed.alimentos.cafeManha, [replacement.id]);
+    assert.deepEqual(changed.porcoesPlano.cafeManha, { [replacement.id]: 60 });
+    assert.deepEqual(changed.refeicoesSalvas[0].porcoes, {
+      [replacement.id]: 60,
+    });
+    assert.deepEqual(
+      features.recipeForCatalog(changed, { [original.id]: 60 }, "cafeManha"),
+      { [replacement.id]: 60 },
+    );
+    assert.equal(
+      food.calcularPorcoes({ [original.id]: 60 }, features.fullCatalog(changed))
+        .calorias,
+      180,
+    );
+    assert.equal(
+      food.calcularPorcoes(
+        { [replacement.id]: 60 },
+        features.fullCatalog(changed),
+      ).calorias,
+      120,
+    );
+    assert.deepEqual(editing.editCustomFood(data, original.id, original), {});
+    const drink = { ...replacement, unidade: "ml", porcaoReferencia: 200 };
+    const converted = editing.editCustomFood(data, original.id, drink);
+    assert.equal(converted.porcoesPlano.cafeManha[drink.id], 400);
+    assert.deepEqual(
+      features.recipeForCatalog(
+        { ...data, ...converted },
+        { [original.id]: 60 },
+        "cafeManha",
+      ),
+      { [drink.id]: 400 },
+    );
+    const removed = {
+      ...changed,
+      ...removal.removeCustomFood(changed, replacement.id),
+    };
+    assert.deepEqual(
+      features.recipeForCatalog(removed, { [original.id]: 60 }, "cafeManha"),
+      {},
+    );
+  });
+  test("Ovo usa unidades e açúcar tem colheres com cálculo proporcional", () => {
+    const egg = food.todosAlimentos.find((f) => f.id === "ovo");
+    const sugar = food.todosAlimentos.find((f) => f.id === "acucar_refinado");
+    assert.equal(easyMeals.householdMeasure(egg).choice, "Unidades");
+    assert.equal(
+      food.calcularPorcoes(
+        { [egg.id]: 2 * easyMeals.householdMeasure(egg).grams },
+        [egg],
+      ).calorias,
+      155,
+    );
+    assert.equal(easyMeals.householdMeasure(sugar).choice, "Colheres");
+    assert.equal(
+      food.calcularPorcoes(
+        { [sugar.id]: easyMeals.householdMeasure(sugar).grams },
+        [sugar],
+      ).calorias,
+      116,
+    );
+  });
+  test("Bebidas do catálogo usam ml sem trocar IDs ou alterar registros salvos", () => {
+    const ids = [
+      "leite",
+      "cafe",
+      "cafe_tarde",
+      "cha",
+      "chapa_noite",
+      "vitamina",
+      "iogurte_noite",
+    ];
+    const catalog = features.fullCatalog(initial);
+    for (const id of ids) {
+      const drink = catalog.find((f) => f.id === id);
+      assert.equal(drink.unidade, "ml", id);
+      assert.ok(drink.preparo.includes("100 ml"), id);
+      assert.equal(easyMeals.householdMeasure(drink), undefined);
+      const data = {
+        ...initial,
+        refeicoesAtivas: ["cafeManha"],
+        alimentos: { cafeManha: [id] },
+        porcoesPlano: { cafeManha: { [id]: 200 } },
+      };
+      const item = grocery.buildShoppingList(data, 1)[0];
+      assert.equal(item.unidade, "ml");
+      assert.equal(item.quantidade, "200");
+      assert.equal(
+        features.mealCatalog(data, "cafeManha").find((f) => f.id === id)
+          .unidade,
+        "ml",
+      );
+    }
+    assert.equal(catalog.find((f) => f.id === "iogurte").unidade, undefined);
+    assert.equal(catalog.find((f) => f.id === "ovo").unidade, undefined);
+    reset();
+    store
+      .getState()
+      .registrarRefeicao(
+        "cafeManha",
+        "Café",
+        "☕",
+        120,
+        ["Leite integral"],
+        { proteina: 6, carbo: 10, gordura: 6 },
+        { leite: 200 },
+      );
+    const saved = structuredClone(store.getState().dados);
+    assert.equal(food.calcularPorcoes({ leite: 200 }, catalog).calorias, 120);
+    features.mealCatalog(saved, "cafeManha", ["leite"]);
+    assert.deepEqual(store.getState().dados, saved);
+  });
+  console.log(`${passed} verificações passaram.`);
+} finally {
+  await server.close();
+}

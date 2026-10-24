@@ -1,28 +1,54 @@
-import { HashRouter, Routes, Route } from 'react-router-dom';
-import { Home } from './pages/Home';
-import { Onboarding } from './pages/Onboarding';
-import { Plano } from './pages/Plano';
-import { Evolucao } from './pages/Evolucao';
-import { Perfil } from './pages/Perfil';
-import { RefeicaoLivre } from './pages/RefeicaoLivre';
-import { Layout } from './components/Layout';
-import { SwipeNavigator } from './components/SwipeNavigator';
-
+import { ScreenErrorBoundary } from "./components/ScreenErrorBoundary";
+import {
+  HashRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { Layout } from "./components/Layout";
+import { SwipeNavigator } from "./components/SwipeNavigator";
+import { DeviceNavigation } from "./components/DeviceNavigation";
+const Onboarding = lazy(() =>
+  import("./pages/Onboarding").then((module) => ({
+    default: module.Onboarding,
+  })),
+);
+const RefeicaoLivre = lazy(() =>
+  import("./pages/RefeicaoLivre").then((module) => ({
+    default: module.RefeicaoLivre,
+  })),
+);
 export function App() {
   return (
     <HashRouter>
+      <AppScreens />
+    </HashRouter>
+  );
+}
+function AppScreens() {
+  const { pathname } = useLocation();
+  return (
+    <ScreenErrorBoundary resetKey={pathname}>
+      <DeviceNavigation />
       <Layout>
         <SwipeNavigator>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/plano" element={<Plano />} />
-            <Route path="/evolucao" element={<Evolucao />} />
-            <Route path="/perfil" element={<Perfil />} />
-            <Route path="/refeicao-livre" element={<RefeicaoLivre />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-          </Routes>
+          <Suspense
+            fallback={
+              <div className="app-page" role="status">
+                Abrindo sua tela…
+              </div>
+            }
+          >
+            <Routes>
+              <Route path="/refeicao-livre" element={<RefeicaoLivre />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
         </SwipeNavigator>
       </Layout>
-    </HashRouter>
+    </ScreenErrorBoundary>
   );
 }

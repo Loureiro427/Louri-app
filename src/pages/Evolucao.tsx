@@ -1,128 +1,214 @@
-import { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { useUserStore } from '../store/useUserStore';
-import CalendarHistory from '../components/CalendarHistory';
-
+import { ContextTip } from "../components/AppGuide";
+import { WeightHistory } from "../components/WeightHistory";
+import { WeeklySummary } from "../components/WeeklySummary";
+import { useState } from "react";
+import { useUserStore } from "../store/useUserStore";
+import CalendarHistory from "../components/CalendarHistory";
+import { dailyGoals, localDayKey, previousDay } from "../utils/dailyStreak";
+import {
+  Icon,
+  PageHeader,
+  SectionHeading,
+  Sheet,
+} from "../components/ui/AppUI";
+import { litersText, numberText } from "../components/ui/format";
 export function Evolucao() {
   const dados = useUserStore((state) => state.dados);
-  const temaEscuro = dados.temaEscuro ?? true;
-  const pesoNum = Number(dados.peso) || 70;
-  const streakAtual = dados.streak || 0;
-
-  // Estado para controlar o modal do Streak
-  const [mostrarModalStreak, setMostrarModalStreak] = useState(false);
-
-  // Calcula o próximo marco de dias
-  const proximoMarco = streakAtual < 7 ? 7 : streakAtual < 14 ? 14 : streakAtual < 30 ? 30 : streakAtual < 90 ? 90 : streakAtual + 10;
-  const diasParaMarco = proximoMarco - streakAtual;
-
+  const [streakInfo, setStreakInfo] = useState(false);
+  const streak = dados.streak || 0;
+  const goals = dailyGoals(dados);
+  const today = localDayKey(new Date());
+  const week = [today];
+  for (let i = 1; i < 7; i++) week.unshift(previousDay(week[0]));
+  const milestone =
+    [7, 14, 30, 90].find((value) => value > streak) || streak + 10;
+  const openWeight = () => useUserStore.getState().setModalPesoAberto(true);
   return (
-    <div className={`flex flex-col px-6 py-8 gap-6 pb-28 max-w-md mx-auto w-full min-h-full transition-colors duration-300 ${
-      temaEscuro ? 'text-white' : 'text-zinc-900'
-    }`}>
-      
-      <header className="shrink-0">
-        <p className={`text-xs uppercase tracking-wider ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Consistência</p>
-        <h1 className={`text-2xl font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>A Tua Evolução</h1>
-      </header>
-
-      <div className="grid grid-cols-2 gap-3 shrink-0">
-        <div className={`border rounded-3xl p-4 flex flex-col justify-between gap-2 shadow-lg transition-colors ${
-          temaEscuro ? 'bg-zinc-900/60 border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
-        }`}>
-          <span className={`text-xs font-medium ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Peso Atual</span>
-          <p className="text-3xl font-black text-green-500">{pesoNum} <span className={`text-sm font-normal ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>kg</span></p>
-        </div>
-        
-        {/* Cartão do Streak com interatividade (onClick) */}
-        <div 
-          onClick={() => setMostrarModalStreak(true)}
-          className={`border rounded-3xl p-4 flex flex-col justify-between gap-2 shadow-lg cursor-pointer transition-all active:scale-95 ${
-            temaEscuro ? 'bg-zinc-900/60 border-zinc-800 hover:bg-zinc-900' : 'bg-white border-zinc-200 hover:bg-zinc-50 shadow-sm'
-          }`}
-        >
-          <div className="flex justify-between items-start">
-            <span className={`text-xs font-medium ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Sequência</span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-500`}>Info</span>
-          </div>
-          <p className="text-3xl font-black text-orange-500">
-            🔥 {streakAtual} <span className={`text-sm font-normal ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>{streakAtual === 1 ? 'dia' : 'dias'}</span>
+    <div className="app-page custom-scrollbar">
+      <PageHeader
+        eyebrow="Seu acompanhamento"
+        title="Evolução"
+        action={
+          <button
+            className="app-icon-button"
+            aria-label="Registrar peso"
+            onClick={openWeight}
+          >
+            <Icon name="plus" size={21} />
+          </button>
+        }
+      />
+      <ContextTip id="history-edit">
+        Esqueceu ou registrou algo errado? Toque em um dia do calendário para
+        ver e corrigir os registros. Você não precisa apagar tudo.
+      </ContextTip>
+      <div className="app-stat-pair">
+        <button className="app-card app-stat-card" onClick={openWeight}>
+          <span>
+            <Icon name="scale" size={18} /> Peso atual
+          </span>
+          <strong>
+            {numberText(Number(dados.peso) || 70, 1)}
+            <small> kg</small>
+          </strong>
+          <p>
+            Atualizar peso <Icon name="chevron" size={13} />
           </p>
-        </div>
+        </button>
+        <button
+          className="app-card app-stat-card app-streak-card"
+          onClick={() => setStreakInfo(true)}
+        >
+          <span>
+            <Icon name="flame" size={18} /> Sequência{" "}
+            <Icon name="help" size={14} />
+          </span>
+          <strong>
+            {streak}
+            <small> {streak === 1 ? "dia" : "dias"}</small>
+          </strong>
+          <p>Dias de metas completas</p>
+        </button>
       </div>
-
-      <div className={`border rounded-3xl p-5 flex flex-col gap-3 shrink-0 transition-colors ${
-        temaEscuro ? 'bg-zinc-900/40 border-zinc-800' : 'bg-white border-zinc-200 shadow-sm'
-      }`}>
-        <h3 className={`text-sm font-bold ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>Registo de Hoje</h3>
-        
-        <div className={`flex justify-between items-center py-2 border-b ${temaEscuro ? 'border-zinc-800' : 'border-zinc-100'}`}>
-          <span className={`text-xs ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Água Consumida</span>
-          <span className="text-xs font-bold text-blue-500">{(dados.aguaConsumida || 0) / 1000}L</span>
+      <section
+        className="app-card app-daily-goals"
+        aria-label="Progresso da sequência diária"
+      >
+        <div className="app-section-heading">
+          <h2>
+            {goals.complete
+              ? "Dia completo!"
+              : streak > 0
+                ? "Mais um dia no seu ritmo"
+                : "Um cuidado de cada vez"}
+          </h2>
+          <Icon name={goals.complete ? "check" : "flame"} size={20} />
         </div>
-        <div className="flex justify-between items-center py-2">
-          <span className={`text-xs ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>Calorias Ingeridas</span>
-          <span className="text-xs font-bold text-orange-500">{dados.caloriasConsumidas || 0} Kcal</span>
-        </div>
-      </div>
-
-      {/* --- CALENDÁRIO DE HISTÓRICO --- */}
-      <div className="shrink-0">
-        <h3 className={`text-lg font-bold mb-3 ${temaEscuro ? 'text-white' : 'text-zinc-900'}`}>Histórico Mensal</h3>
-        <CalendarHistory />
-      </div>
-
-      {/* MODAL: INFORMAÇÕES DO STREAK */}
-      {mostrarModalStreak && createPortal(
-        <div className="fixed inset-0 z-50 animate-in fade-in duration-200 overscroll-none">
-          {/* Overlay escuro */}
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMostrarModalStreak(false)}></div>
-          
-          <div className="absolute inset-0 flex items-center justify-center p-6 pointer-events-none">
-            <div className={`pointer-events-auto w-full max-w-sm rounded-3xl p-6 flex flex-col gap-5 shadow-2xl transition-colors ${
-              temaEscuro ? 'bg-zinc-900 border border-zinc-800 text-white' : 'bg-white border border-zinc-200 text-zinc-900'
-            }`}>
-              
-              <div className="flex justify-between items-start">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl bg-orange-500/20 border border-orange-500/30`}>
-                  🔥
-                </div>
-                <button onClick={() => setMostrarModalStreak(false)} className={`text-2xl font-bold ${temaEscuro ? 'text-zinc-400 hover:text-white' : 'text-zinc-500 hover:text-zinc-900'}`}>×</button>
-              </div>
-              
-              <div>
-                <h3 className="text-xl font-bold">O que é a Sequência?</h3>
-                <p className={`text-sm mt-2 leading-relaxed ${temaEscuro ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                  A tua sequência (streak) regista os dias consecutivos em que entraste na aplicação e registaste pelo menos uma refeição ou copo de água. Serve para medir a tua consistência!
-                </p>
-              </div>
-
-              <div className={`p-4 rounded-2xl border ${temaEscuro ? 'bg-zinc-950/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
-                <div className="flex justify-between items-end mb-2">
-                  <span className="text-xs font-bold text-orange-500">Próximo Marco: {proximoMarco} dias</span>
-                  <span className={`text-[10px] ${temaEscuro ? 'text-zinc-500' : 'text-zinc-400'}`}>Faltam {diasParaMarco} dias</span>
-                </div>
-                <div className={`w-full h-2 rounded-full overflow-hidden border transition-colors ${
-                  temaEscuro ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-100 border-zinc-200'
-                }`}>
-                  <div className="bg-orange-500 h-full rounded-full transition-all duration-500" style={{ width: `${(streakAtual / proximoMarco) * 100}%` }} />
-                </div>
-              </div>
-              
-              <button 
-                onClick={() => setMostrarModalStreak(false)}
-                className={`w-full py-4 rounded-xl font-bold transition-colors ${
-                  temaEscuro ? 'bg-zinc-800 text-white hover:bg-zinc-700' : 'bg-zinc-100 text-zinc-900 hover:bg-zinc-200'
+        <p>
+          {goals.complete
+            ? "Mais um dia de cuidado registrado."
+            : streak > 0
+              ? "Seu progresso de hoje fica aqui. Continue quando fizer sentido."
+              : "Água e refeições ajudam a acompanhar sua rotina. Cada registro conta."}
+        </p>
+        <div className="app-streak-week" aria-label="Últimos sete dias">
+          {week.map((key) => {
+            const completed = Boolean(dados.diasMetasConcluidas?.[key]);
+            const date = new Date(`${key}T12:00:00`);
+            return (
+              <div
+                key={key}
+                className={`${completed ? "is-complete" : ""} ${
+                  key === today ? "is-today" : ""
+                }`}
+                aria-label={`${date.toLocaleDateString("pt-BR")}: ${
+                  completed
+                    ? "metas completas"
+                    : key === today
+                      ? "em andamento"
+                      : "sem dia completo"
                 }`}
               >
-                Continuar o foco
-              </button>
-            </div>
+                <span>
+                  {date
+                    .toLocaleDateString("pt-BR", { weekday: "short" })
+                    .replace(".", "")}
+                </span>
+                <i>
+                  {completed ? <Icon name="check" size={15} /> : date.getDate()}
+                </i>
+              </div>
+            );
+          })}
+        </div>
+        <div className="app-daily-goal-row">
+          <Icon name={goals.waterDone ? "check" : "water"} size={18} />
+          <span>Meta de água</span>
+          <strong>
+            {litersText(dados.aguaConsumida || 0)} /{" "}
+            {litersText(goals.waterGoal)} L
+          </strong>
+        </div>
+        <div className="app-daily-goal-row">
+          <Icon
+            name={
+              goals.active > 0 && goals.completed === goals.active
+                ? "check"
+                : "plan"
+            }
+            size={18}
+          />
+          <span>Refeições do plano</span>
+          <strong>
+            {goals.completed} de {goals.active}
+          </strong>
+        </div>
+      </section>
+      <WeeklySummary />
+      <section>
+        <SectionHeading title="Histórico de peso" />
+        <WeightHistory />
+      </section>
+      <section>
+        <SectionHeading title="Hoje" />
+        <div className="app-card app-today-list">
+          <div>
+            <span>
+              <Icon name="water" size={19} /> Água consumida
+            </span>
+            <strong className="app-text-blue">
+              {litersText(dados.aguaConsumida || 0)} L
+            </strong>
           </div>
-        </div>,
-        document.body
+          <div>
+            <span>
+              <Icon name="flame" size={19} /> Alimentação
+            </span>
+            <strong>{numberText(dados.caloriasConsumidas || 0)} kcal</strong>
+          </div>
+        </div>
+      </section>
+      <section>
+        <SectionHeading title="Seu histórico" />
+        <CalendarHistory />
+      </section>
+      {streakInfo && (
+        <Sheet
+          title="Sua sequência de dias"
+          description="Um incentivo para acompanhar sua rotina."
+          onClose={() => setStreakInfo(false)}
+        >
+          <div className="app-streak-detail">
+            <Icon name="flame" size={28} />
+            <strong>
+              {streak}
+              <small> {streak === 1 ? "dia" : "dias"}</small>
+            </strong>
+          </div>
+          <p className="app-body-copy">
+            Cada dia em que você atinge a meta de água e registra todas as
+            refeições do plano soma um ponto à sua sequência.
+          </p>
+          <p className="app-body-copy">
+            Cada dia conta uma vez, até a meia-noite no seu aparelho. Sua
+            sequência continua durante o dia seguinte; se passar um dia inteiro
+            sem completar as metas, ela reinicia. Refeições livres não
+            substituem as do plano. Se você desfizer um registro de hoje, o
+            ponto é recalculado.
+          </p>
+          <div className="app-streak-milestone">
+            <span>Próximo marco</span>
+            <strong>{milestone} dias</strong>
+            <p>Faltam {milestone - streak} dias completos.</p>
+          </div>
+          <button
+            className="app-button app-button--secondary app-wide-button"
+            onClick={() => setStreakInfo(false)}
+          >
+            Entendi
+          </button>
+        </Sheet>
       )}
-
     </div>
   );
 }
