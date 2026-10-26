@@ -1,0 +1,22 @@
+{
+  "project_info": {
+    "project_number": "545572517246",
+    "project_id": "louri-fit-auth"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:545572517246:android:925974293115d82a476f2f",
+        "android_client_info": { "package_name": "com.loureiro.louri" }
+      },
+      "oauth_client": [
+        {
+          "client_id": "545572517246-eudsfsbrrqgarpl7vrdrgaad2h26k7vg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [{ "current_key": "AIzaSyDX4OkNjhVXvVCl1mQNndz5Z86YO8E_wqY" }]
+    }
+  ],
+  "configuration_version": "1"
+}

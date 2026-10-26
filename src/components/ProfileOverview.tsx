@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { AccountPanel } from "./AccountPanel";
+
 import { FoodLibrary } from "./FoodLibrary";
 import { AppGuide } from "./AppGuide";
 import { ReminderSettings } from "./ReminderSettings";
@@ -14,15 +16,14 @@ export function ProfileOverview({
   openSupport,
   openFeedback,
   openTerms,
-  onSignOut,
 }: {
   openIdea: () => void;
   openSupport: () => void;
   openFeedback: () => void;
   openTerms: () => void;
-  onSignOut: () => void;
 }) {
   const navigate = useNavigate();
+
   const [foodsOpen, setFoodsOpen] = useState(false);
   const dados = useUserStore((state) => state.dados);
   const dark = dados.temaEscuro ?? true;
@@ -57,6 +58,7 @@ export function ProfileOverview({
           <Icon name="edit" size={18} />
         </button>
       </section>
+      <AccountPanel />
       <section>
         <SectionHeading title="Suas medidas" />
         <div className="app-card app-settings-list">
@@ -187,12 +189,6 @@ export function ProfileOverview({
           icon="settings"
           title="Refazer configuração"
           onClick={edit}
-        />
-        <ActionRow
-          icon="exit"
-          title="Sair do perfil"
-          danger
-          onClick={onSignOut}
         />
       </div>
       {foodsOpen && <FoodLibrary onClose={() => setFoodsOpen(false)} />}

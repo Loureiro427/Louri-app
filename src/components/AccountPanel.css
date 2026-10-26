@@ -1,0 +1,142 @@
+.louri-account {
+  padding: 22px;
+  min-width: 0;
+}
+.louri-account-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.louri-account-heading > span {
+  color: #05cf65;
+  font-size: 28px;
+}
+.louri-account h2 {
+  margin: 0;
+  font-size: 17px;
+}
+.louri-account p {
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.louri-account-heading p {
+  margin: 3px 0 0;
+  opacity: 0.65;
+}
+.louri-account-status {
+  color: #00b85b;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.louri-account small {
+  opacity: 0.65;
+  font-size: 11px;
+}
+.louri-account .louri-account-note {
+  font-size: 11px;
+  opacity: 0.65;
+  margin-bottom: 0;
+}
+.louri-google-button {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #707c7655;
+  border-radius: 18px;
+  background: #ffffff0a;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+}
+.louri-google-symbol {
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #4285f4;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font:
+    700 17px Arial,
+    sans-serif;
+}
+.louri-account button:disabled,
+.louri-google-button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.louri-account button:focus-visible,
+.louri-google-button:focus-visible {
+  outline: 2px solid #05cf65;
+  outline-offset: 3px;
+}
+.louri-account-link {
+  border: 0;
+  background: none;
+  color: inherit;
+  padding: 14px 0 0;
+  font: inherit;
+  font-size: 12px;
+  display: block;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.louri-account-actions button,
+.louri-account [role="alert"] button {
+  background: #05cf6518;
+  color: inherit;
+  border: 1px solid #05cf6540;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 8px 8px 0 0;
+  min-height: 44px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.louri-account-message {
+  color: #e9a14c;
+}
+.louri-account-gate {
+  min-height: 100dvh;
+  padding: 32px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  background: #090b0a;
+  color: #f7f8f7;
+  text-align: center;
+}
+.louri-account-gate button {
+  margin-top: 12px;
+  padding: 14px 24px;
+  border: 0;
+  border-radius: 18px;
+  background: #05cf65;
+  color: #06150b;
+}
+.louri-account-gate > .louri-account {
+  width: 100%;
+  max-width: 460px;
+  border: 1px solid #29342e;
+  border-radius: 24px;
+  background: #111713;
+  text-align: left;
+}
+.louri-intro-footer .louri-account-note {
+  font-size: 10px;
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+.louri-intro-footer .louri-account-message {
+  font-size: 12px;
+  line-height: 1.4;
+}

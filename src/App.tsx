@@ -6,7 +6,14 @@ import {
   Navigate,
   useLocation,
 } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import {
+  initializeAccount,
+  watchAccountConnection,
+} from "./services/accountService";
+import { useAccountStore } from "./store/useAccountStore";
+import "./components/AccountPanel.css";
+import { AccountPanel } from "./components/AccountPanel";
 import { Layout } from "./components/Layout";
 import { SwipeNavigator } from "./components/SwipeNavigator";
 import { DeviceNavigation } from "./components/DeviceNavigation";
@@ -21,9 +28,31 @@ const RefeicaoLivre = lazy(() =>
   })),
 );
 export function App() {
+  const { ready, owner, message, status } = useAccountStore();
+  useEffect(() => {
+    void initializeAccount();
+    return watchAccountConnection();
+  }, []);
+  if (!ready)
+    return (
+      <div className="louri-account-gate" role="status">
+        <p>{message || "Abrindo seu Louri…"}</p>
+        {message && (
+          <button onClick={() => void initializeAccount()}>
+            Tentar novamente
+          </button>
+        )}
+      </div>
+    );
+  if (status === "conflict")
+    return (
+      <div className="louri-account-gate">
+        <AccountPanel />
+      </div>
+    );
   return (
     <HashRouter>
-      <AppScreens />
+      <AppScreens key={owner} />
     </HashRouter>
   );
 }

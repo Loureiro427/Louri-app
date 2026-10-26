@@ -413,8 +413,11 @@ export function Onboarding() {
                     ↳
                   </span>
                   <div>
-                    <strong>Comece sem criar uma conta</strong>
-                    <p>Seus registros ficam salvos neste dispositivo.</p>
+                    <strong>Seu progresso, do seu jeito</strong>
+                    <p>
+                      Use sem conta neste aparelho ou conecte o Google no Perfil
+                      para sincronizar. Fotos continuam locais.
+                    </p>
                   </div>
                 </div>
                 <label className="ob-terms">

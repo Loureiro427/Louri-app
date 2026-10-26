@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import "./WelcomeScreen.css";
+import { GoogleEntry } from "./AccountPanel";
+import { useAccountStore } from "../store/useAccountStore";
 
 const orbitItems = [
   { name: "apple", emoji: "🍎" },
@@ -13,6 +15,7 @@ const orbitItems = [
 
 export function WelcomeScreen({ dark }: { dark: boolean }) {
   const navigate = useNavigate();
+  const { owner, message, busy } = useAccountStore();
   return (
     <section
       className={`louri-intro ${dark ? "" : "louri-intro--light"}`}
@@ -63,9 +66,12 @@ export function WelcomeScreen({ dark }: { dark: boolean }) {
           <button
             type="button"
             className="louri-intro-start"
+            disabled={busy}
             onClick={() => navigate("/onboarding")}
           >
-            <span>Começar Agora</span>
+            <span>
+              {owner === "local" ? "Continuar sem conta" : "Criar meu perfil"}
+            </span>
             <svg
               aria-hidden="true"
               width="20"
@@ -80,8 +86,16 @@ export function WelcomeScreen({ dark }: { dark: boolean }) {
               <path d="M5 12h14m-6-6 6 6-6 6" />
             </svg>
           </button>
-          <p>
-            <span aria-hidden="true">✦</span> Um plano com a sua cara.
+          {owner === "local" && <GoogleEntry />}
+          {message && (
+            <p className="louri-account-message" role="alert">
+              {message}
+            </p>
+          )}
+          <p className="louri-account-note">
+            {owner === "local"
+              ? "Sem conta, seus dados ficam neste aparelho. Com Google, perfil e histórico são salvos na sua conta. Fotos continuam locais."
+              : "Sua conta está conectada. Vamos montar seu perfil."}
           </p>
         </footer>
       </div>

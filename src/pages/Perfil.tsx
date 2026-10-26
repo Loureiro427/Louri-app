@@ -1,24 +1,22 @@
 import { SupportForm } from "../components/SupportForm";
+
 import { useBackLayer } from "../hooks/useBackLayer";
 import { ProfileOverview } from "../components/ProfileOverview";
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+
 import { useUserStore } from "../store/useUserStore";
 
 export function Perfil() {
-  const navigate = useNavigate();
   const dados = useUserStore((state) => state.dados);
-  const setDados = useUserStore((state) => state.setDados);
 
   const temaEscuro = dados.temaEscuro ?? true;
 
-  const [mostrarModalSair, setMostrarModalSair] = useState(false);
   const [modalSuporte, setModalSuporte] = useState(false);
   const [modalIdeia, setModalIdeia] = useState(false);
   const [modalFeedback, setModalFeedback] = useState(false);
   const [modalTermos, setModalTermos] = useState(false);
-  useBackLayer(mostrarModalSair, () => setMostrarModalSair(false));
+
   useBackLayer(modalTermos, () => setModalTermos(false));
 
   const [estrelas, setEstrelas] = useState(0);
@@ -30,12 +28,6 @@ export function Perfil() {
   };
   useBackLayer(modalFeedback, fecharFeedback);
 
-  const confirmarSaida = () => {
-    setDados({ nome: "" });
-    setMostrarModalSair(false);
-    navigate("/");
-  };
-
   return (
     <div className="app-page app-profile custom-scrollbar">
       <ProfileOverview
@@ -43,7 +35,6 @@ export function Perfil() {
         openSupport={() => setModalSuporte(true)}
         openFeedback={() => setModalFeedback(true)}
         openTerms={() => setModalTermos(true)}
-        onSignOut={() => setMostrarModalSair(true)}
       />
 
       {/* --- MODAIS --- */}
@@ -114,9 +105,12 @@ export function Perfil() {
                     Seus dados nesta versão
                   </p>
                   <p>
-                    O perfil, os alimentos e o histórico ficam salvos no
-                    dispositivo. Esta versão não usa conta nem sincronização
-                    online.
+                    Sem conta, o perfil, os alimentos e o histórico ficam neste
+                    dispositivo. Ao escolher Google, seu nome, e-mail e
+                    identificação são usados para entrar. Perfil, medidas,
+                    preferências, refeições, hidratação e histórico são
+                    sincronizados no Firebase, vinculado à sua conta. Fotos de
+                    alimentos continuam somente neste aparelho.
                   </p>
                   <p>
                     Os lembretes usam os horários e registros locais para
@@ -132,9 +126,13 @@ export function Perfil() {
                   </p>
                   <p>
                     Limpar os dados do aplicativo ou remover o app pode apagar
-                    seus registros. O texto de suporte fica disponível enquanto
-                    esta sessão do app estiver aberta; contato e confirmação não
-                    são guardados ao fechar o formulário.
+                    seus registros locais e fotos. Na conta Google, somente o
+                    que já foi sincronizado pode ser recuperado. Você pode sair
+                    da conta e continuar sem conta, ou excluir sua conta e seus
+                    dados sincronizados na seção Sua conta Google do Perfil. O
+                    texto de suporte fica disponível enquanto esta sessão do app
+                    estiver aberta; contato e confirmação não são guardados ao
+                    fechar o formulário.
                   </p>
                 </div>
                 <div>
@@ -170,7 +168,7 @@ export function Perfil() {
               </div>
             </div>
           </div>,
-          document.body
+          document.body,
         )}
 
       {/* MODAL FEEDBACK */}
@@ -259,62 +257,7 @@ export function Perfil() {
               )}
             </div>
           </div>,
-          document.body
-        )}
-
-      {/* MODAL SAIR */}
-      {mostrarModalSair &&
-        createPortal(
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Sair do perfil"
-            className={`app-themed app-legacy-dialog ${
-              temaEscuro ? "" : "app-light"
-            } fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-6 animate-in fade-in overscroll-none`}
-          >
-            <div
-              className={`border rounded-3xl p-6 w-full max-w-xs flex flex-col gap-5 text-center shadow-2xl ${
-                temaEscuro
-                  ? "bg-zinc-900 border-zinc-800 text-white"
-                  : "bg-white border-zinc-200 text-zinc-900"
-              }`}
-            >
-              <div className="w-14 h-14 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center text-2xl mx-auto text-red-500">
-                🚪
-              </div>
-              <div className="flex flex-col gap-1">
-                <h3 className="text-lg font-bold">Terminar Sessão?</h3>
-                <p
-                  className={`text-xs leading-relaxed ${
-                    temaEscuro ? "text-zinc-400" : "text-zinc-600"
-                  }`}
-                >
-                  Você voltará para a tela inicial. Seu histórico continuará
-                  salvo neste dispositivo.
-                </p>
-              </div>
-              <div className="flex gap-2 mt-1">
-                <button
-                  onClick={() => setMostrarModalSair(false)}
-                  className={`flex-1 py-3.5 rounded-2xl font-semibold text-xs border ${
-                    temaEscuro
-                      ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700"
-                      : "bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-zinc-200"
-                  }`}
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmarSaida}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-zinc-950 font-bold py-3.5 rounded-2xl text-xs shadow-lg shadow-red-500/25"
-                >
-                  Sim, Sair
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
+          document.body,
         )}
     </div>
   );

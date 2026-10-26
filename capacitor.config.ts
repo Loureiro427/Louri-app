@@ -6,6 +6,10 @@ const config: CapacitorConfig = {
   appName: "Louri",
   webDir: "dist",
   plugins: {
+    FirebaseAuthentication: {
+      skipNativeAuth: true,
+      providers: ["google.com"],
+    },
     Keyboard: {
       resize: KeyboardResize.Native,
       resizeOnFullScreen: true,
